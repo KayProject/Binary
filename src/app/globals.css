@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #0057d5;
+  --color-brand-deep: #0033a0;
+  --color-brand-sky: #2789f5;
+  --color-ink: #04123a;
+  --color-yes: #4ade80;
+  --color-no: #f87171;
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #0044bb;
+  color: #ffffff;
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Fixed gradient backdrop — survives long pages and iOS scroll */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, #0033a0 0%, #0057d5 55%, #2789f5 100%);
+}
+
+::selection {
+  background: #ffffff;
+  color: #0033a0;
+}
