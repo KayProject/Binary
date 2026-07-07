@@ -1,4 +1,4 @@
-# Polarity
+# Binary
 
 KAYPROJECT subproject.
 
