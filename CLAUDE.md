@@ -1,4 +1,4 @@
-# Binary
+# Polarity
 
 Part of KAYPROJECT. All commits use `KayProject <jadonsunshine@gmail.com>`.
 
