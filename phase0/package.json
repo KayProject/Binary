@@ -1,0 +1,28 @@
+{
+  "name": "binary-phase0",
+  "private": true,
+  "description": "Phase 0 broker round-trip spike — see docs/PHASE0.md",
+  "scripts": {
+    "00": "tsx scripts/00-verify-config.ts",
+    "01": "tsx scripts/01-signer.ts",
+    "02": "tsx scripts/02-deploy-safe.ts",
+    "03": "tsx scripts/03-approvals.ts",
+    "04": "tsx scripts/04-api-creds.ts",
+    "05": "tsx scripts/05-order.ts",
+    "06": "tsx scripts/06-close-position.ts",
+    "07": "tsx scripts/07-bridge-quote.ts",
+    "08": "tsx scripts/08-bridge-execute.ts"
+  },
+  "dependencies": {
+    "@polymarket/builder-relayer-client": "^0.0.6",
+    "@polymarket/builder-signing-sdk": "^0.0.8",
+    "@polymarket/clob-client": "^4.22.8",
+    "dotenv": "^16.4.5",
+    "ethers": "^5.8.0",
+    "viem": "^2.39.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  }
+}

@@ -20,7 +20,9 @@ These are not preferences — they are physics, and they dictate every decision 
    Polymarket order (an EIP-712 message on Polygon) or hold pUSD. Confirmed against
    MiniPay docs.
 2. **Polymarket lives on Polygon**; orders are off-chain EIP-712 signatures against a
-   per-user proxy wallet; collateral is **pUSD** (1:1 USDC, contract-enforced).
+   per-user proxy wallet; collateral is **USDC.e** (verified live 2026-07-10: clob-client
+   v4.22.8 config + on-chain symbol at `0x2791Bca1…84174`; the pUSD migration has not
+   reached the CLOB contract set).
 3. **No float.** Binary has no capital to front bets or take positions. Every cent that
    reaches Polymarket is the user's own money.
 4. **Proof of Ship** requires a Celo-mainnet smart contract generating real MiniPay
@@ -70,10 +72,16 @@ in a Binary-managed wallet (custody), and withdrawal has bridge latency (shown a
 TOP UP (once; pays bridge latency):
   USDm (user's MiniPay wallet, Celo)               [1 MiniPay tx, self-authenticating]
     → Binary Deposit Contract on Celo (logs deposit for audit + Proof of Ship)
-    → swap USDm→USDC (Mento) on Celo
-    → CCTP v2 Fast Transfer USDC Celo→Polygon        [the one slow leg, ~tens of seconds]
-    → wrap USDC→pUSD on Polygon
+    → swap USDm→USDT (Mento/DEX) on Celo
+    → bridge USDT Celo→Polygon (Allbridge via LI.FI)  [THE slow leg — ~22 min, 0.35–0.6%]
+    → swap USDT→USDC.e on Polygon
     → user's per-user proxy (Gnosis Safe) balance    [ready to trade]
+
+  ⚠ Celo is NOT a CCTP domain (verified 2026-07-10: absent from Circle's supported-domains
+  list; no TokenMessengerV2 code on Celo). Deposits ride bridge aggregation instead. Live
+  quotes (LI.FI, 2026-07-10): fast route (Squid/axlUSDC, ~20 s) collapses above ~$5 (44%
+  price impact at $20 — dust liquidity); the viable route is Allbridge USDT at 0.35–0.62%
+  but ~22 min. See "Deposit-leg decision" below.
 
 BET (instant, gasless, many times):
   tap YES/NO → backend builds order → Binary-managed signer signs (type-2, on behalf of
@@ -81,11 +89,11 @@ BET (instant, gasless, many times):
   real book. Position = real outcome shares in the user's Safe.
 
 CASH OUT / RESOLUTION:
-  sell via CLOB, or redeem winning shares after Polymarket/UMA resolution → pUSD in Safe.
+  sell via CLOB, or redeem winning shares after Polymarket/UMA resolution → USDC.e in Safe.
 
-WITHDRAW (pays bridge latency; funds only ever go to the user's recorded Celo address):
-  unwrap pUSD→USDC → CCTP Fast Transfer Polygon→Celo → swap USDC→USDm
-    → user's MiniPay wallet.
+WITHDRAW (fast + cheap; funds only ever go to the user's recorded Celo address):
+  USDC.e → bridge Polygon→Celo (Squid via LI.FI, ~80 s, ~0.28% at all sizes)
+    → swap USDC→USDm → user's MiniPay wallet.
 ```
 
 ---
@@ -95,9 +103,10 @@ WITHDRAW (pays bridge latency; funds only ever go to the user's recorded Celo ad
 | Leg | Naive | Optimized | How |
 |---|---|---|---|
 | Deposit tx (Celo) | ~5 s | ~1–5 s | Celo ~1 s blocks; single tx into Deposit Contract |
-| Swap USDm→USDC (Celo) | ~5 s | ~1–3 s | Mento; batch into deposit tx where possible |
-| Bridge Celo→Polygon | ~13–19 min | **~8–25 s** | **CCTP v2 Fast Transfer** (soft finality) instead of standard hard-finality |
-| Wrap USDC→pUSD | ~5 s | ~2–5 s | Polygon ~2 s blocks |
+| Swap USDm→USDT (Celo) | ~5 s | ~1–3 s | Mento/DEX; batch into deposit tx where possible |
+| Bridge Celo→Polygon | **~22 min** (Allbridge, 0.35–0.6%) | **seconds** *only with buffer* | No CCTP for Celo. Either honest ~22 min pending state, or a small Polygon working buffer credits the Safe instantly and is replenished by the batched bridge (see Deposit-leg decision) |
+| Bridge Polygon→Celo (withdraw) | — | **~80 s, ~0.28%** | Squid via LI.FI — verified live quotes, all sizes $5–$100 |
+| Swap USDT→USDC.e (Polygon) | ~5 s | ~2–5 s | Polygon ~2 s blocks |
 | **Place bet** | seconds | **< 1 s** | **Funded-balance model** removes the bridge from the bet path; gasless via Builder relayer |
 | Price/odds display | — | real-time | Polymarket public CLOB **websocket** + Gamma API; cached, streamed to client; no wallet needed to read |
 
@@ -112,6 +121,22 @@ Additional wins:
   from a working pool and replenishing from the user's inbound funds — deferred until there
   is capital; the architecture is built so it slots in without user-facing change.
 
+### Deposit-leg decision (OPEN — forced by the CCTP finding)
+
+The fast+cheap deposit route we designed around does not exist. Two honest options:
+
+- **A. No-capital launch:** deposits show a truthful "funding your balance (~20–25 min)"
+  pending state; push notification when ready. Withdrawals stay fast (~80 s), which is the
+  leg users emotionally care most about. $0 capital, worse first-session UX.
+- **B. Working buffer (small float, ~$200–500):** a Binary-operated USDC.e buffer on Polygon
+  credits the user's Safe within seconds of the Celo deposit confirming; the buffer is
+  replenished by batched Allbridge transfers (batching also amortizes the fixed fees). Not
+  "being the house" — no market exposure, strictly working capital in transit — but it does
+  soften the original no-float rule and adds bridge-failure risk on Binary.
+
+Decision owner: Jadon. The deposit state machine is built the same either way; B is a
+config change on top of A.
+
 ---
 
 ## Components
@@ -122,7 +147,7 @@ Additional wins:
 | Celo Deposit Contract | Canonical on-chain record of deposits/withdrawals per user (audit + Proof of Ship activity); receives USDm; emits events the backend acts on | Solidity (Celo) |
 | Key-management / signer service | One Binary-managed Polygon EOA **per user** (they can't sign for Polygon); signs orders on behalf of each user's Safe | Privy server wallets or Turnkey (MPC/KMS) |
 | Per-user proxy wallet | Gnosis Safe (type 2) owned by the user's managed EOA; holds pUSD + outcome shares | Safe proxy factory + Polymarket builder-relayer-client |
-| Bridge pipeline | swap → CCTP Fast Transfer → wrap (and reverse), retries, idempotency, status | Node service + CCTP v2 |
+| Bridge pipeline | swap → bridge (LI.FI-routed: Allbridge in, Squid out) → swap, retries, idempotency, status | Node service + LI.FI API |
 | Polymarket integration | Order routing with Builder attribution; balances, positions, redemption | `@polymarket/clob-client` v4, `builder-relayer-client`, `builder-signing-sdk` |
 | Price/odds stream | Live prices via Polymarket CLOB websocket + Gamma market/event data; cached fan-out to clients | Node service + WS |
 | Resolver / settlement | Detects Polymarket/UMA resolution; redeems shares; triggers withdrawal path | Node service |
@@ -192,14 +217,15 @@ a money-router into Polymarket — this carries operational-security and regulat
 
 **Phase 0 — broker spike (blocks everything; scripts only, ~$5–10).** Prove the full
 courier round-trip for ONE server-managed user, no UI: create a Binary-managed Polygon
-signer → deploy its Safe via factory → fund it (USDm on Celo → swap → CCTP Fast Transfer →
-wrap pUSD) → place a real ~$1 order on Polymarket via the Builder path → sell/redeem →
+signer → deploy its Safe via factory → fund it (USDm on Celo → swap → Allbridge USDT →
+swap USDC.e) → place a real ~$1 order on Polymarket via the Builder path → sell/redeem →
 withdraw back to USDm on Celo. Record real latency per leg and real per-round-trip cost →
 set minimum top-up and confirm the funded-balance model. See `PHASE0.md`.
 
 **Phase 1 — MiniPay MVP.** MiniPay Mini App shell (implicit connect, no connect button);
 Celo Deposit Contract; per-user managed signer + Safe auto-provision on first open;
-funded-balance top-up (Fast CCTP) with honest pending states; live odds via Polymarket WS;
+funded-balance top-up with honest pending states (or buffer, per Deposit-leg decision);
+live odds via Polymarket WS;
 tap-to-bet (instant, gasless); positions; cash-out; withdraw. Curated liquid markets.
 
 **Phase 2+ — see Future versions.**
@@ -208,15 +234,19 @@ tap-to-bet (instant, gasless); positions; cash-out; withdraw. Curated liquid mar
 
 - [ ] **Broker round-trip works** end-to-end for a fresh server-managed user (Safe deploy →
       fund → real order/fill → sell/redeem → withdraw to Celo).
-- [ ] **CCTP v2 Fast Transfer supports Celo↔Polygon** and real observed latency (target
-      < ~30 s). If Fast Transfer domain isn't supported for Celo, fall back to standard and
-      re-plan UX (or bring forward the operating float).
-- [ ] **Current pUSD address + CTF Exchange V2 contract addresses** (the official example
-      predates the pUSD migration — verify before spending real funds).
+- [x] ~~CCTP v2 Fast Transfer supports Celo↔Polygon~~ **Resolved 2026-07-10: Celo is not a
+      CCTP domain at all** (Circle docs + no TokenMessengerV2 code on Celo). Replacement:
+      LI.FI-routed Allbridge USDT in (~22 min, 0.35–0.6%), Squid out (~80 s, ~0.28%). Live
+      quote table: `phase0/scripts/07-bridge-quote.ts`. Opens the Deposit-leg decision (A/B).
+- [x] **Contract addresses verified live 2026-07-10** via installed clob-client v4.22.8 +
+      on-chain reads (`phase0/scripts/00-verify-config.ts`): collateral is still USDC.e
+      `0x2791Bca1…84174`; exchange/adapter set unchanged from the official example.
 - [ ] **Builder Program terms + geoblock policy** for relayed order flow.
-- [ ] **Real per-round-trip cost** → minimum top-up/withdraw floor.
+- [ ] **Real per-round-trip cost measured with funds** (quotes say ~0.7–0.9% round trip at
+      $20–50) → minimum top-up/withdraw floor.
+- [ ] **Deposit-leg decision:** honest ~22 min pending vs small working buffer (see above).
 - [x] Custody model = per-user Binary-managed Polygon wallets, trade-or-return-only,
-      pinned payout address. Collateral = pUSD (1:1 USDC).
+      pinned payout address. Collateral = USDC.e (verified).
 
 ## Future versions
 
