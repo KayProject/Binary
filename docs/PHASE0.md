@@ -86,6 +86,11 @@ State (throwaway key, Safe, creds, timings) persists in `phase0/.state.json` (gi
 3. **~$5–10**: USDC.e on Polygon (trading half first) and/or USDT on Celo (bridge half).
    Fund the **Safe** printed by step 01 for trading; fund the **EOA** for bridge legs.
 
+## How to run it
+
+Step-by-step execution order, expected outputs, and the results table live in
+**`RUNBOOK.md`** — Tier 1 (free checks) must pass before Tier 2 (the money run).
+
 ## Exit criteria
 
 - [x] Contract set + collateral verified live (00).
