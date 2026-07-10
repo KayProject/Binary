@@ -73,15 +73,22 @@ TOP UP (once; pays bridge latency):
   USDm (user's MiniPay wallet, Celo)               [1 MiniPay tx, self-authenticating]
     → Binary Deposit Contract on Celo (logs deposit for audit + Proof of Ship)
     → swap USDm→USDT (Mento/DEX) on Celo
-    → bridge USDT Celo→Polygon (Allbridge via LI.FI)  [THE slow leg — ~22 min, 0.35–0.6%]
-    → swap USDT→USDC.e on Polygon
+    → USDT0 Legacy Mesh: Celo →(0.03% + ~$0.07)→ Arbitrum hub →(0% + ~$0.08)→ Polygon
+    → swap USDT→USDC.e on Polygon                    [est. minutes; measured in Phase 0]
     → user's per-user proxy (Gnosis Safe) balance    [ready to trade]
 
-  ⚠ Celo is NOT a CCTP domain (verified 2026-07-10: absent from Circle's supported-domains
-  list; no TokenMessengerV2 code on Celo). Deposits ride bridge aggregation instead. Live
-  quotes (LI.FI, 2026-07-10): fast route (Squid/axlUSDC, ~20 s) collapses above ~$5 (44%
-  price impact at $20 — dust liquidity); the viable route is Allbridge USDT at 0.35–0.62%
-  but ~22 min. See "Deposit-leg decision" below.
+  Why this rail (all verified 2026-07-10):
+  - Celo is NOT a CCTP domain (Circle docs; no TokenMessengerV2 code on Celo). CCTP is out.
+  - Aggregators miss the best route: LI.FI doesn't integrate USDT0; its best was Allbridge
+    USDT at 0.35–0.62% and ~22 min (fast Squid route collapses above ~$5 — dust axlUSDC
+    liquidity on Celo).
+  - Celo's native USDT is in Tether's **USDT0 Legacy Mesh** (LayerZero OFT, hub-and-spoke
+    via Arbitrum; Celo→Polygon has no direct peer). Quoted on-chain: hop 1 exactly 0.03%
+    + 1.05 CELO (~$0.07); hop 2 zero-fee + ~$0.08 ETH. **Fixed fees per message, not per
+    dollar → batching amortizes to ~0.03–0.2% total.**
+    Contracts: Celo OFT 0xf10E161027410128E63E75D0200Fb6d34b2db243 (eid 30125) ·
+    Arbitrum hub 0x14E4A1B13bf7F943c8ff7C51fb60FA964A298D92 (eid 30110) ·
+    Polygon 0x6BA10300f0DC58B7a1e4c0e41f5daBb7D7829e13 (eid 30109).
 
 BET (instant, gasless, many times):
   tap YES/NO → backend builds order → Binary-managed signer signs (type-2, on behalf of
@@ -104,7 +111,7 @@ WITHDRAW (fast + cheap; funds only ever go to the user's recorded Celo address):
 |---|---|---|---|
 | Deposit tx (Celo) | ~5 s | ~1–5 s | Celo ~1 s blocks; single tx into Deposit Contract |
 | Swap USDm→USDT (Celo) | ~5 s | ~1–3 s | Mento/DEX; batch into deposit tx where possible |
-| Bridge Celo→Polygon | **~22 min** (Allbridge, 0.35–0.6%) | **seconds** *only with buffer* | No CCTP for Celo. Either honest ~22 min pending state, or a small Polygon working buffer credits the Safe instantly and is replenished by the batched bridge (see Deposit-leg decision) |
+| Bridge Celo→Polygon | ~22 min (Allbridge, 0.35–0.6%) | **est. 2–5 min** (USDT0 mesh 2-hop, ~0.03% + ~$0.15/msg; Phase 0 measures) | No CCTP for Celo; USDT0 Legacy Mesh via Arbitrum hub. Netting + batching cut cost and frequency further (see Deposit-leg design) |
 | Bridge Polygon→Celo (withdraw) | — | **~80 s, ~0.28%** | Squid via LI.FI — verified live quotes, all sizes $5–$100 |
 | Swap USDT→USDC.e (Polygon) | ~5 s | ~2–5 s | Polygon ~2 s blocks |
 | **Place bet** | seconds | **< 1 s** | **Funded-balance model** removes the bridge from the bet path; gasless via Builder relayer |
@@ -121,21 +128,28 @@ Additional wins:
   from a working pool and replenishing from the user's inbound funds — deferred until there
   is capital; the architecture is built so it slots in without user-facing change.
 
-### Deposit-leg decision (OPEN — forced by the CCTP finding)
+### Deposit-leg design (three layers, in priority order)
 
-The fast+cheap deposit route we designed around does not exist. Two honest options:
+Layer 1 — **Netting (most volume never bridges).** Binary has flow in BOTH directions:
+user A's deposit on Celo can pay user B's withdrawal on Celo, while B's surrendered
+Polygon balance credits A's Safe. An internal netting engine matches opposing flows
+first; only the **net imbalance** actually bridges. Zero bridge fee, near-instant, zero
+capital — it's the users' own simultaneous flows. Early on the book will be one-sided
+(mostly deposits), so layers 2–3 carry the residual.
 
-- **A. No-capital launch:** deposits show a truthful "funding your balance (~20–25 min)"
-  pending state; push notification when ready. Withdrawals stay fast (~80 s), which is the
-  leg users emotionally care most about. $0 capital, worse first-session UX.
-- **B. Working buffer (small float, ~$200–500):** a Binary-operated USDC.e buffer on Polygon
-  credits the user's Safe within seconds of the Celo deposit confirming; the buffer is
-  replenished by batched Allbridge transfers (batching also amortizes the fixed fees). Not
-  "being the house" — no market exposure, strictly working capital in transit — but it does
-  soften the original no-float rule and adds bridge-failure risk on Binary.
+Layer 2 — **Batched USDT0 mesh transfers (the rail).** Residual imbalance bridges in
+batches (time window or $-threshold). LZ message fees are per-message, so a $200 batch
+costs ~0.03% + $0.15 ≈ **0.1% total**; latency est. 2–5 min (Phase 0 measures). User's
+deposit shows an honest short "funding" state at worst.
 
-Decision owner: Jadon. The deposit state machine is built the same either way; B is a
-config change on top of A.
+Layer 3 — **Optional working buffer (Jadon's call, still open).** A small Polygon-side
+USDC.e buffer (~$200–500) credits Safes instantly on Celo deposit confirmation and is
+replenished by layer 2. Softens the no-float rule (working capital in transit, no market
+exposure). With layers 1–2 the batch cadence may already be short enough that this is
+unnecessary at launch — decide after Phase 0's measured latency.
+
+Withdrawals: netting first; residual via Squid (~80 s, ~0.28%, verified all sizes) or the
+mesh's return path — whichever prices better at execution time.
 
 ---
 
@@ -235,9 +249,13 @@ tap-to-bet (instant, gasless); positions; cash-out; withdraw. Curated liquid mar
 - [ ] **Broker round-trip works** end-to-end for a fresh server-managed user (Safe deploy →
       fund → real order/fill → sell/redeem → withdraw to Celo).
 - [x] ~~CCTP v2 Fast Transfer supports Celo↔Polygon~~ **Resolved 2026-07-10: Celo is not a
-      CCTP domain at all** (Circle docs + no TokenMessengerV2 code on Celo). Replacement:
-      LI.FI-routed Allbridge USDT in (~22 min, 0.35–0.6%), Squid out (~80 s, ~0.28%). Live
-      quote table: `phase0/scripts/07-bridge-quote.ts`. Opens the Deposit-leg decision (A/B).
+      CCTP domain at all** (Circle docs + no TokenMessengerV2 code on Celo). Replacement
+      rail: **USDT0 Legacy Mesh** Celo→Arbitrum→Polygon (0.03% + ~$0.15/msg, quoted
+      on-chain; `phase0/scripts/09-usdt0-transfer.ts`), with netting + batching on top.
+      Aggregator fallback quantified in `07-bridge-quote.ts` (Allbridge ~22 min / Squid
+      out ~80 s).
+- [ ] **Real USDT0 mesh latency** per hop (09) — the number that decides whether the
+      optional buffer (layer 3) is needed at all.
 - [x] **Contract addresses verified live 2026-07-10** via installed clob-client v4.22.8 +
       on-chain reads (`phase0/scripts/00-verify-config.ts`): collateral is still USDC.e
       `0x2791Bca1…84174`; exchange/adapter set unchanged from the official example.

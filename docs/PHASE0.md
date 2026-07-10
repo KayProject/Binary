@@ -12,7 +12,7 @@ key stands in for that managed signer.
 
 ## Status (2026-07-10)
 
-All scripts are written and typechecked in `phase0/` (`npm run 00` … `npm run 08`).
+All scripts are written and typechecked in `phase0/` (`npm run 00` … `npm run 09`).
 Steps 00, 01 and 07 already ran successfully against live endpoints. Two pre-flight
 questions are **resolved without spending funds**:
 
@@ -20,17 +20,20 @@ questions are **resolved without spending funds**:
   reads — collateral is still **USDC.e** (`0x2791Bca1…84174`), exchange/adapter set
   unchanged from the example. The pUSD migration has not reached the CLOB contract set.
 - **Bridge leg:** **Celo is not a CCTP domain** (Circle docs + no TokenMessengerV2 code
-  on Celo). The funding leg rides LI.FI-routed aggregation instead. Live quotes:
+  on Celo), and aggregators miss the best rail (LI.FI doesn't integrate USDT0). Landscape:
 
   | Leg | Route | Cost | Time |
   |---|---|---|---|
   | Celo→Polygon $5 | Squid (axlUSDC) | 2.7% | ~20 s |
   | Celo→Polygon $20 | Squid — **collapses, 9.4% price impact** | — | — |
-  | Celo→Polygon $20–100 | **Allbridge USDT** | 0.35–0.62% | **~22 min** |
-  | Polygon→Celo $5–100 | **Squid** | ~0.28% | **~80 s** |
+  | Celo→Polygon $20–100 | Allbridge USDT (LI.FI best) | 0.35–0.62% | ~22 min |
+  | **Celo→Polygon any size** | **USDT0 mesh via Arbitrum hub** | **0.03% + ~$0.15/msg** | **est. 2–5 min (09 measures)** |
+  | Polygon→Celo $5–100 | Squid | ~0.28% | ~80 s |
 
-  Deposits are the slow leg; withdrawals are fast and cheap. This forces the
-  **Deposit-leg decision** (honest pending vs small working buffer) — see ARCHITECTURE.md.
+  USDT0 quoted directly on-chain (`quoteOFT`/`quoteSend`): hop 1 Celo→Arbitrum exactly
+  0.03% + 1.05 CELO (~$0.07); hop 2 Arbitrum→Polygon zero-fee + ~$0.08 ETH. Fixed fees are
+  per message → batching amortizes. Deposit-leg design = netting → batched USDT0 →
+  optional buffer; see ARCHITECTURE.md.
 
 ## Two halves — tested separately, then joined
 
@@ -38,8 +41,8 @@ questions are **resolved without spending funds**:
    USDC.e directly on Polygon → place & fill a real ~$1 order → sell/redeem. Proves the
    trading path works for a *freshly created* wallet (the open question after Polymarket's
    April V2 upgrade).
-2. **Bridge half:** USDm→USDT swap on Celo → Allbridge Celo→Polygon (~22 min leg measured
-   for real) → USDT→USDC.e on Polygon; reverse via Squid (~80 s). Confirms the quoted
+2. **Bridge half:** USDm→USDT swap on Celo → USDT0 mesh Celo→Arbitrum→Polygon (09, timed
+   per hop) → USDT→USDC.e on Polygon; reverse via Squid (~80 s, 08). Confirms the quoted
    costs/latency hold in practice.
 
 Join them last for the full courier round-trip.
@@ -56,7 +59,8 @@ Join them last for the full courier round-trip.
 | 05 | `05-order.ts <tokenID> [usd]` | **~$1** | Real FOK market order with Builder attribution; verifies shares land in the Safe |
 | 06 | `06-close-position.ts` | — | Sell into the book, or redeem post-resolution (gasless batch) |
 | 07 | `07-bridge-quote.ts` | no | Live route/cost/ETA table both directions at several sizes |
-| 08 | `08-bridge-execute.ts deposit\|withdraw <usd>` | **real** | Executes one bridge leg, measures wall-clock latency + realized cost |
+| 08 | `08-bridge-execute.ts deposit\|withdraw <usd>` | **real** | Executes one aggregator bridge leg (fallback rail), measures latency + realized cost |
+| 09 | `09-usdt0-transfer.ts hop1\|hop2 <usd>` | **real** | USDT0 mesh legs Celo→Arbitrum→Polygon (primary rail), timed per hop |
 
 State (throwaway key, Safe, creds, timings) persists in `phase0/.state.json` (gitignored).
 
@@ -88,7 +92,9 @@ State (throwaway key, Safe, creds, timings) persists in `phase0/.state.json` (gi
 - [ ] Fresh Safe deployed for a server-managed signer via relayer, gasless (02).
 - [ ] Real ~$1 order placed and filled from that Safe; shares in the Safe (05).
 - [ ] Position sold/redeemed; USDC.e back in Safe (06).
-- [ ] Real bridge legs executed and measured both directions (08).
+- [ ] USDT0 mesh legs executed and measured (09) — decides if the optional buffer is
+      needed at all.
+- [ ] Aggregator fallback leg measured (08), at least Polygon→Celo (withdrawal path).
 - [ ] Full round-trip: Celo → bet on Polymarket → back to Celo; total cost recorded →
       minimum top-up floor.
-- [ ] Deposit-leg decision made (honest ~22 min pending vs small working buffer).
+- [ ] Deposit-leg layers signed off (netting → batched USDT0 → optional buffer).
