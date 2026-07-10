@@ -72,7 +72,10 @@ in a Binary-managed wallet (custody), and withdrawal has bridge latency (shown a
 TOP UP (once; pays bridge latency):
   USDm (user's MiniPay wallet, Celo)               [1 MiniPay tx, self-authenticating]
     → Binary Deposit Contract on Celo (logs deposit for audit + Proof of Ship)
-    → swap USDm→USDT (Mento/DEX) on Celo
+    → USDm→USDT via Mento Broker on Celo — the same rails MiniPay Pockets uses.
+      Verified on-chain: constant-sum oracle pricing, ~0% cost (quoted +0.059% in the
+      user's favor), flat $20–$500. Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD,
+      USDm/USDT exchangeId 0x773bcec109cee923b5e04706044fd9d6a5121b1a6a4c059c36fdbe5b845d4e9b.
     → USDT0 Legacy Mesh: Celo →(0.03% + ~$0.07)→ Arbitrum hub →(0% + ~$0.08)→ Polygon
     → swap USDT→USDC.e on Polygon                    [est. minutes; measured in Phase 0]
     → user's per-user proxy (Gnosis Safe) balance    [ready to trade]

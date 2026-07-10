@@ -12,7 +12,8 @@
     "06": "tsx scripts/06-close-position.ts",
     "07": "tsx scripts/07-bridge-quote.ts",
     "08": "tsx scripts/08-bridge-execute.ts",
-    "09": "tsx scripts/09-usdt0-transfer.ts"
+    "09": "tsx scripts/09-usdt0-transfer.ts",
+    "10": "tsx scripts/10-mento-swap.ts"
   },
   "dependencies": {
     "@polymarket/builder-relayer-client": "^0.0.6",

@@ -12,7 +12,7 @@ key stands in for that managed signer.
 
 ## Status (2026-07-10)
 
-All scripts are written and typechecked in `phase0/` (`npm run 00` … `npm run 09`).
+All scripts are written and typechecked in `phase0/` (`npm run 00` … `npm run 10`).
 Steps 00, 01 and 07 already ran successfully against live endpoints. Two pre-flight
 questions are **resolved without spending funds**:
 
@@ -61,6 +61,7 @@ Join them last for the full courier round-trip.
 | 07 | `07-bridge-quote.ts` | no | Live route/cost/ETA table both directions at several sizes |
 | 08 | `08-bridge-execute.ts deposit\|withdraw <usd>` | **real** | Executes one aggregator bridge leg (fallback rail), measures latency + realized cost |
 | 09 | `09-usdt0-transfer.ts hop1\|hop2 <usd>` | **real** | USDT0 mesh legs Celo→Arbitrum→Polygon (primary rail), timed per hop |
+| 10 | `10-mento-swap.ts <usd> [quote]` | quote free / swap **real** | Entry leg USDm→USDT via Mento Broker (~0%, verified live: −0.059% at $20–$500) |
 
 State (throwaway key, Safe, creds, timings) persists in `phase0/.state.json` (gitignored).
 
