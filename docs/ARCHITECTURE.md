@@ -1,146 +1,228 @@
 # Binary — Technical Architecture
 
-Mobile-first prediction market interface. Users deposit and think entirely in **USDm**
-(Mento Dollar, Celo); liquidity and settlement come from **Polymarket** on Polygon.
-Binary owns the UX; Polymarket owns the markets.
+**Binary is a MiniPay-native broker that routes real bets into Polymarket, settled in
+USDm on Celo.** Users see live Polymarket markets and odds, bet with their own USDm
+inside MiniPay, and get paid back in USDm. Binary carries the money to Polymarket and
+back; it never takes the other side of a bet and puts up no float of its own.
 
-## Product model
+Positioning: *"Polymarket's markets, in your pocket, in USDm."* Real money, real
+Polymarket liquidity — not points (beats Myriad, the points-only incumbent in MiniPay),
+not our own thin pools (no cold-start).
 
-- Every market is a binary question. YES/NO shares price 0–100¢; winners redeem at $1.
-- Prices, positions, and P&L are displayed in USDm. The user never sees Polygon,
-  USDC, bridges, or gas.
-- v1 accepts bridge latency: **funding is async, betting is instant from a settled
-  balance.** The two flows are never merged in the UI.
+---
+
+## Why the architecture is shaped this way (hard constraints)
+
+These are not preferences — they are physics, and they dictate every decision below.
+
+1. **MiniPay is Celo-only, legacy-tx-only, and cannot sign messages.** No EIP-712, no
+   `personal_sign`, no other chains. A MiniPay user therefore **cannot** place a
+   Polymarket order (an EIP-712 message on Polygon) or hold pUSD. Confirmed against
+   MiniPay docs.
+2. **Polymarket lives on Polygon**; orders are off-chain EIP-712 signatures against a
+   per-user proxy wallet; collateral is **pUSD** (1:1 USDC, contract-enforced).
+3. **No float.** Binary has no capital to front bets or take positions. Every cent that
+   reaches Polymarket is the user's own money.
+4. **Proof of Ship** requires a Celo-mainnet smart contract generating real MiniPay
+   transaction activity.
+
+**Consequence:** the user cannot reach Polygon, and we will not use our own money — so
+Binary must move the *user's* money to Polymarket for them. That makes Binary a
+**broker/courier**, and it makes the Polygon-side wallets **Binary-key-managed** (the
+user can't hold or sign for a Polygon key through MiniPay). This custody is unavoidable;
+we make it per-user, isolated, and trade-or-return-only. See Custody & Security.
+
+---
+
+## What Binary is NOT
+
+- **Not the house / not a bookmaker.** Binary never takes a side, never sets odds, holds
+  no float, bears no position risk. Users buy real Polymarket shares at Polymarket odds.
+- **Not an omnibus pool.** Funds are never commingled in one pot. One isolated Polygon
+  wallet per user; a user's shares are provably theirs.
+- **Not a market maker on Celo.** No Celo AMM/parimutuel — that would lose the Polymarket
+  liquidity that is the entire selling point.
+
+Binary is a **courier + broker**: it authenticates the user (MiniPay), moves their money
+(Celo↔Polygon), places their order (Polymarket Builder Program), and returns their money.
+
+---
+
+## Core UX/latency decision: funded balance, not bet-by-bet bridging
+
+The one slow leg is the Celo↔Polygon bridge (~tens of seconds even at best). If every bet
+triggered a fresh bridge, every bet would be slow. So:
+
+> **Users top up once; bets are instant.** A deposit bridges USDm → the user's Polygon
+> wallet (as pUSD) a single time. From then on, bets are placed against that
+> already-on-Polygon balance — **sub-second, gasless**. Only top-up and withdrawal pay
+> the bridge latency; the bet itself never does.
+
+This is the decisive latency optimization and it costs no float — the money on Polygon is
+the user's own top-up, not ours. Trade-off: between bets the user's balance sits on Polygon
+in a Binary-managed wallet (custody), and withdrawal has bridge latency (shown as pending).
+
+---
 
 ## Money flow
 
-Each user has their **own Polymarket proxy wallet** (a per-user smart-contract wallet
-on Polygon), owned/controlled by their Privy embedded EOA. Non-custodial: Binary never
-pools funds and never holds a master account. This is Polymarket's native model, not
-something we invented.
-
 ```
-Deposit:
-  USDm (user, Celo)
-    → swap USDm→USDC on Celo (Mento/Uniswap)
-    → bridge USDC Celo→Polygon (CCTP; verified supported)
-    → wrap USDC→pUSD on Polygon (1:1, contract-enforced)
-    → user's own Polymarket proxy wallet (funder)
-    → approvals set on CTF Exchange V2
+TOP UP (once; pays bridge latency):
+  USDm (user's MiniPay wallet, Celo)               [1 MiniPay tx, self-authenticating]
+    → Binary Deposit Contract on Celo (logs deposit for audit + Proof of Ship)
+    → swap USDm→USDC (Mento) on Celo
+    → CCTP v2 Fast Transfer USDC Celo→Polygon        [the one slow leg, ~tens of seconds]
+    → wrap USDC→pUSD on Polygon
+    → user's per-user proxy (Gnosis Safe) balance    [ready to trade]
 
-Trade:
-  app builds order → user's Privy EOA signs on behalf of their proxy
-    (signature type 2 = Gnosis Safe; type 3 = POLY_1271 when client bug fixed)
-    → Polymarket CLOB API → on-chain settlement by their operator
+BET (instant, gasless, many times):
+  tap YES/NO → backend builds order → Binary-managed signer signs (type-2, on behalf of
+  the user's Safe) → Polymarket CLOB API (Builder attribution) → filled in Polymarket's
+  real book. Position = real outcome shares in the user's Safe.
 
-Cash out / resolution:
-  sell via CLOB (or redeem winning shares after resolution)
-    → pUSD in user's proxy → unwrap pUSD→USDC
-    → bridge Polygon→Celo → swap USDC→USDm → user's Celo wallet
+CASH OUT / RESOLUTION:
+  sell via CLOB, or redeem winning shares after Polymarket/UMA resolution → pUSD in Safe.
+
+WITHDRAW (pays bridge latency; funds only ever go to the user's recorded Celo address):
+  unwrap pUSD→USDC → CCTP Fast Transfer Polygon→Celo → swap USDC→USDm
+    → user's MiniPay wallet.
 ```
+
+---
+
+## Latency budget & optimizations
+
+| Leg | Naive | Optimized | How |
+|---|---|---|---|
+| Deposit tx (Celo) | ~5 s | ~1–5 s | Celo ~1 s blocks; single tx into Deposit Contract |
+| Swap USDm→USDC (Celo) | ~5 s | ~1–3 s | Mento; batch into deposit tx where possible |
+| Bridge Celo→Polygon | ~13–19 min | **~8–25 s** | **CCTP v2 Fast Transfer** (soft finality) instead of standard hard-finality |
+| Wrap USDC→pUSD | ~5 s | ~2–5 s | Polygon ~2 s blocks |
+| **Place bet** | seconds | **< 1 s** | **Funded-balance model** removes the bridge from the bet path; gasless via Builder relayer |
+| Price/odds display | — | real-time | Polymarket public CLOB **websocket** + Gamma API; cached, streamed to client; no wallet needed to read |
+
+**Off the critical path entirely** (pre-provisioned in the background at first app open):
+per-user Safe deployment and token approvals. So a user's *first* bet isn't delayed by
+one-time setup.
+
+Additional wins:
+- **Optimistic UI**: bet shows "placing…" then confirms on fill (sub-second on Polygon).
+- **Market orders with a slippage cap**; partial fills surfaced, never hidden.
+- **v2 operating float** (see Future) makes even top-up feel instant by fronting the bridge
+  from a working pool and replenishing from the user's inbound funds — deferred until there
+  is capital; the architecture is built so it slots in without user-facing change.
+
+---
 
 ## Components
 
 | Component | Responsibility | Stack |
 |---|---|---|
-| Mobile web app (PWA) | Market feed, tap YES/NO, positions, deposit/withdraw | Next.js, TypeScript, Tailwind |
-| Wallet layer | Embedded EOA per user (Celo + Polygon) + a per-user Polymarket proxy (Gnosis Safe) it controls; client-side signing | Privy + Safe proxy factory |
-| Delegated signer | Server-side signing for flows where the user is absent: sweeping bridged deposits, redeeming resolved positions | Privy server-delegated actions |
-| Bridge pipeline | Per-user swap → CCTP bridge → pUSD wrap orchestration, retries, status tracking | Node service |
-| Market service | Curated market list, price cache, order routing (builder attribution) | Node service + Polymarket CLOB API |
-| Relayer | Trades are gasless via Polymarket's proxy relayer; own relayer only for Polygon-side approvals/wrap/redemptions | Gelato/Biconomy (proxy/EOA relay, **not** 4337) |
-| Rate oracle | Live USDm/USDC quote for display + deposit/withdraw conversion | Mento SDK |
+| MiniPay Mini App (PWA) | Market feed, live odds, tap-to-bet, balance, top-up/withdraw. Detect `window.ethereum.isMiniPay`; implicit connect; no "Connect Wallet" button | Next.js, TS, Tailwind, viem/wagmi (fee-currency aware) |
+| Celo Deposit Contract | Canonical on-chain record of deposits/withdrawals per user (audit + Proof of Ship activity); receives USDm; emits events the backend acts on | Solidity (Celo) |
+| Key-management / signer service | One Binary-managed Polygon EOA **per user** (they can't sign for Polygon); signs orders on behalf of each user's Safe | Privy server wallets or Turnkey (MPC/KMS) |
+| Per-user proxy wallet | Gnosis Safe (type 2) owned by the user's managed EOA; holds pUSD + outcome shares | Safe proxy factory + Polymarket builder-relayer-client |
+| Bridge pipeline | swap → CCTP Fast Transfer → wrap (and reverse), retries, idempotency, status | Node service + CCTP v2 |
+| Polymarket integration | Order routing with Builder attribution; balances, positions, redemption | `@polymarket/clob-client` v4, `builder-relayer-client`, `builder-signing-sdk` |
+| Price/odds stream | Live prices via Polymarket CLOB websocket + Gamma market/event data; cached fan-out to clients | Node service + WS |
+| Resolver / settlement | Detects Polymarket/UMA resolution; redeems shares; triggers withdrawal path | Node service |
+| Ledger | Off-chain source of truth mapping user ↔ Safe ↔ balance/positions, reconciled to on-chain | Postgres |
 
-## Accounting rules
+---
 
-1. **Ledger source of truth is USDC**: on-chain balances + Polymarket positions.
-   USDm is a render-time skin. Balances are never stored in USDm.
-2. USDm/USDC conversion is quoted live at deposit and withdrawal; never hardcoded 1:1.
-   Spread is surfaced as a single "conversion fee" line.
-3. One-tap bets are market orders with a slippage cap; partial fills are surfaced
-   in the position, not hidden.
+## Accounting & ledger rules
 
-## Custody model
+1. **On-chain truth for user funds is two-sided**: the Celo Deposit Contract records what
+   each user put in / took out (auditable, Proof-of-Ship activity); the user's Polygon Safe
+   holds the real pUSD + Polymarket shares. The off-chain ledger maps and reconciles both.
+2. **Accounting unit is USDC/pUSD** (1:1). USDm is a **display skin** + the deposit/withdraw
+   token; the USDm↔USDC rate is quoted live (Mento), surfaced as one "conversion fee" line.
+   Never store balances in USDm.
+3. **Payouts only ever go to the user's Celo address recorded at first deposit.** Even a
+   compromised session cannot redirect funds — a key security invariant.
+4. One-tap bets are market orders with a slippage cap; partial fills are shown in the position.
 
-**Non-custodial per-user, via Polymarket's native proxy wallets.** Each user gets their
-own smart-contract wallet on Polygon (a Gnosis Safe / deposit wallet), controlled by
-their own Privy embedded key. Funds and positions live there. Binary never pools funds,
-never holds a master account, is never the counterparty. Omnibus (pooled/custodial) and
-own-contract-fork (cold-start liquidity) are both explicitly **rejected**.
+---
 
-Delegated signing is scoped and consented to at onboarding (sweep-on-arrival,
-redeem-on-resolution only) — it lets Binary act *for* the user's own wallet when they're
-offline; it does not give Binary custody.
+## Auth (no SIWE — MiniPay can't sign messages)
 
-## Build order
+- The user's identity is their **MiniPay Celo address**, read from the injected provider
+  inside MiniPay's trusted webview. There is **no signature-based login** (SIWE impossible).
+- State-changing actions are **self-authenticating on-chain Celo transactions** (deposits,
+  withdrawal requests) signed by the user's own MiniPay wallet — no message signing needed.
+- Each Celo address maps deterministically to one Binary-managed Polygon signer + Safe.
 
-**Phase 0 — walking skeleton (blocks everything).** Scripts only, no UI, one fresh test
-user: create Privy EOA → deploy its Safe proxy via factory → fund (swap USDm→USDC →
-CCTP bridge → wrap pUSD) → place a real ~$1 order (type 2, per `privy-safe-builder-example`)
-→ sell → redeem/withdraw back to USDm on Celo. Record fixed costs per round trip; set the
-v1 minimum deposit from the real number. Fallback if type-2 new-wallet orders are blocked:
-patch type-3 client auth or engage Polymarket builder program.
+---
 
-**Phase 1 — v1 product.** Privy onboarding, curated market feed, tap-to-bet,
-positions, async deposit/withdraw with honest status states, delegated
-sweep + redemption.
+## Custody & Security (the honest core)
 
-**Phase 2+ — see Future versions.**
+Binary holds the keys to per-user Polygon wallets. This is unavoidable (MiniPay users
+cannot sign for Polygon). It is made safe, not eliminated:
 
-## Polymarket integration findings (2026-07-08)
+- **MPC/KMS-backed keys** (Turnkey / Privy server wallets) — never plaintext, never a hot
+  `.env` key. Per-user isolation; no single key controls everyone.
+- **Trade-or-return only**: automated flows can buy on Polymarket or return funds to the
+  user's recorded Celo address — nothing else. No arbitrary transfers.
+- **Payout address is pinned** at first deposit (see ledger rule 3).
+- **Deposit/exposure caps** in v1; monitoring, alerting, rate-limits.
+- **Positions are the user's real Polymarket shares** — Binary never rehypothecates or
+  takes the other side.
 
-- **Per-user proxy wallets are Polymarket's native model — this IS our non-custodial path.**
-  Every Polymarket user has their own smart-contract wallet on Polygon (Gnosis Safe,
-  type 2; or ERC-1967 deposit wallet, type 3), controlled by their own EOA. The Privy
-  EOA signs orders on behalf of the proxy. Deployed via public factories
-  (Safe proxy factory `0xaacfeea0…d20e3541b`; proxy-wallet factory `0xaB45c5A4…e1A254052`).
-- **Plain EOA orders (type 0) were removed** in the Apr 28 2026 "V2 exchange upgrade" —
-  `"maker address not allowed, please use the deposit wallet flow"`. Expected: the proxy
-  wallet *is* the maker. Doesn't affect us; we were never going to use bare EOAs as makers.
-- **Two proxy flavors, current state:**
-  - **Type 2 (Gnosis Safe):** proven working; Polymarket's official `privy-safe-builder-example`
-    (Privy + Safe, new-user flow, gasless, builder attribution) demonstrates deploy →
-    fund → approve → trade. Repo archived 2026-05-11 (reference-frozen as they push type 3).
-  - **Type 3 (POLY_1271 deposit wallet):** the docs' *recommended* path for new builders,
-    but a client-library auth bug currently blocks newly-created wallets:
-    `"the order signer address has to be the address of the API KEY"`
-    (`py-clob-client-v2` #64, #70, #51; open, maintainers quiet since early May).
-    Root cause is client-side (`_l1_headers()` ignores funder) — patchable, not a protocol wall.
-- **Collateral is now pUSD** — ERC-20 on Polygon, 1:1 USDC-backed, contract-enforced,
-  redeemable 1:1 no fee, non-rebasing. Money flow gains one clean wrap step.
-- **CCTP supports Celo→Polygon** — native burn-and-mint USDC, no wrapped-asset risk.
+Residual honestly stated: Binary is a custodian of funds-in-transit and open positions, and
+a money-router into Polymarket — this carries operational-security and regulatory weight
+(see Risks). It is the minimal custody that "MiniPay + real Polymarket + no float" allows.
 
-Reference: `docs.polymarket.com/developers/proxy-wallet`, `/trading/deposit-wallets`,
-`Polymarket/privy-safe-builder-example`, `Polymarket/proxy-factories`.
-
-## Open verifications (Phase 0 exit criteria)
-
-- [ ] **THE spike:** deploy one per-user Safe (type 2) from a fresh Privy EOA via the
-      factory, fund with a few pUSD, place & fill one real ~$1 order, sell, confirm
-      settlement. Follow `privy-safe-builder-example`. If type-2 new-wallet orders are
-      blocked too → patch type-3 client auth, or engage Polymarket's builder program.
-- [ ] Real per-deposit round-trip cost (swap + bridge + wrap + gas) → minimum deposit floor.
-- [ ] Privy delegated signing covers the sweep + redeem flows (offline user).
-- [x] Collateral = pUSD (1:1 USDC). CCTP Celo→Polygon supported. Custody = non-custodial
-      per-user proxy wallets (omnibus and fork both rejected).
+---
 
 ## Risks
 
 | Risk | Position |
 |---|---|
-| Polymarket revokes API access / geoblocks | No contract with them. Mitigate via builder program; accept as v1 platform risk. |
-| USDm peg drift | Rate oracle + dynamic conversion quote; never 1:1 hardcode. |
-| Thin books on long-tail markets | Curate liquid markets only in v1; slippage caps. |
-| Nigerian gambling/betting regulation | Open business question; tracked, not a v1 blocker. |
-| Bridge downtime | Deposits queue with visible status; no funds at risk (per-user, no float). |
+| Key compromise (we hold Polygon keys) | MPC/KMS, per-user isolation, trade-or-return-only, pinned payout address, caps, monitoring |
+| Polymarket geoblock / Builder ToS | The example ships a geoblock check; verify our relayed flow + region policy against Builder terms before launch; register in the Builder Program |
+| Regulatory (real-money betting; Nigerian/African users) | Open business/legal question; tracked, decided before public launch — not a code blocker |
+| Bridge downtime / latency spike | Top-up/withdraw queue with visible pending state; funds are the user's own, never at position risk |
+| USDm peg drift | Live Mento quote on convert; never hardcode 1:1 |
+| Fixed per-transfer cost | Minimum top-up/withdraw (~$2–5) so bridge fees don't dominate |
+| Fill slippage on thin markets | Curate liquid Polymarket markets in v1; slippage caps |
+
+---
+
+## Build order
+
+**Phase 0 — broker spike (blocks everything; scripts only, ~$5–10).** Prove the full
+courier round-trip for ONE server-managed user, no UI: create a Binary-managed Polygon
+signer → deploy its Safe via factory → fund it (USDm on Celo → swap → CCTP Fast Transfer →
+wrap pUSD) → place a real ~$1 order on Polymarket via the Builder path → sell/redeem →
+withdraw back to USDm on Celo. Record real latency per leg and real per-round-trip cost →
+set minimum top-up and confirm the funded-balance model. See `PHASE0.md`.
+
+**Phase 1 — MiniPay MVP.** MiniPay Mini App shell (implicit connect, no connect button);
+Celo Deposit Contract; per-user managed signer + Safe auto-provision on first open;
+funded-balance top-up (Fast CCTP) with honest pending states; live odds via Polymarket WS;
+tap-to-bet (instant, gasless); positions; cash-out; withdraw. Curated liquid markets.
+
+**Phase 2+ — see Future versions.**
+
+## Open verifications (Phase 0 exit criteria)
+
+- [ ] **Broker round-trip works** end-to-end for a fresh server-managed user (Safe deploy →
+      fund → real order/fill → sell/redeem → withdraw to Celo).
+- [ ] **CCTP v2 Fast Transfer supports Celo↔Polygon** and real observed latency (target
+      < ~30 s). If Fast Transfer domain isn't supported for Celo, fall back to standard and
+      re-plan UX (or bring forward the operating float).
+- [ ] **Current pUSD address + CTF Exchange V2 contract addresses** (the official example
+      predates the pUSD migration — verify before spending real funds).
+- [ ] **Builder Program terms + geoblock policy** for relayed order flow.
+- [ ] **Real per-round-trip cost** → minimum top-up/withdraw floor.
+- [x] Custody model = per-user Binary-managed Polygon wallets, trade-or-return-only,
+      pinned payout address. Collateral = pUSD (1:1 USDC).
 
 ## Future versions
 
-- **Float + batching**: pre-funded Polygon/Celo working wallets front deposits and
-  withdrawals for instant UX; bridging becomes a batched treasury rebalance instead
-  of per-user transfers. Cuts per-deposit fixed costs and removes latency from UX.
-  Requires treasury ops: monitoring, alerts, rebalancer.
-- Limit orders and full order-book UI.
-- Full Polymarket catalog browsing (v1 is a curated feed).
-- User market discovery/watchlists, streaks, shareable win cards.
-- In-app USDm on-ramp via MiniPay deep links.
+- **Operating float** (needs capital): a working pool fronts the bridge so even top-up is
+  instant; replenished by users' inbound funds. Slots in with no user-facing change.
+- **In-app top-up UX**: MiniPay pocket-swap deep links; recurring balance.
+- **Limit orders, full catalog browse** (v1 is a curated feed + market orders).
+- **Streaks, shareable win cards, leaderboards** (retention; the blue/dot-matrix design).
+- **Progressive decentralization** of custody if/when Polymarket enables MiniPay-signable flows.
