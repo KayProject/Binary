@@ -7,8 +7,8 @@
   --color-ink: #04123a;
   --color-yes: #4ade80;
   --color-no: #f87171;
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), monospace;
+  --font-sans: var(--font-bricolage), system-ui, sans-serif;
+  --font-mono: var(--font-spline-mono), monospace;
 }
 
 html {
