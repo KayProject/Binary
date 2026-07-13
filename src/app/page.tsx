@@ -31,9 +31,12 @@ export default function Home() {
       {/* Nav */}
       <header className="flex items-center justify-between py-6">
         <Logo />
-        <span className="rounded-full border border-white/30 px-3 py-1 font-mono text-xs tracking-widest text-white/80">
-          COMING SOON
-        </span>
+        <a
+          href="/app"
+          className="rounded-full bg-white px-4 py-1.5 text-sm font-bold text-brand-deep active:scale-95"
+        >
+          Open app →
+        </a>
       </header>
 
       {/* Hero */}
@@ -49,15 +52,21 @@ export default function Home() {
           with USDm — powered by Polymarket liquidity, built on Celo.
         </p>
         <div className="relative mt-8 flex w-full max-w-xs gap-3">
-          <span className="flex-1 rounded-2xl bg-yes py-4 text-center text-lg font-bold text-ink">
+          <a
+            href="/app"
+            className="flex-1 rounded-2xl bg-yes py-4 text-center text-lg font-bold text-ink active:scale-95"
+          >
             YES
-          </span>
-          <span className="flex-1 rounded-2xl bg-no py-4 text-center text-lg font-bold text-ink">
+          </a>
+          <a
+            href="/app"
+            className="flex-1 rounded-2xl bg-no py-4 text-center text-lg font-bold text-ink active:scale-95"
+          >
             NO
-          </span>
+          </a>
         </div>
         <p className="relative mt-3 font-mono text-xs tracking-widest text-white/60">
-          PICK A SIDE
+          PICK A SIDE — IT’S LIVE
         </p>
       </section>
 
@@ -113,15 +122,16 @@ export default function Home() {
 
       {/* CTA */}
       <section className="mt-20 rounded-3xl bg-ink/40 p-8 text-center backdrop-blur-sm">
-        <h2 className="text-3xl font-extrabold">Be first in line.</h2>
+        <h2 className="text-3xl font-extrabold">Pick your first market.</h2>
         <p className="mt-2 text-white/80">
-          Binary is in build. Follow along — launch starts on Celo.
+          Free picks are live on Celo mainnet — build a streak, then back your
+          view with real USDm.
         </p>
         <a
-          href="https://github.com/KayProject/Binary"
-          className="mt-6 inline-block rounded-2xl bg-white px-8 py-4 font-bold text-brand-deep"
+          href="/app"
+          className="mt-6 inline-block rounded-2xl bg-white px-8 py-4 font-bold text-brand-deep active:scale-95"
         >
-          Watch the build →
+          Open the app →
         </a>
       </section>
 

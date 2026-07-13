@@ -180,7 +180,7 @@ export default function AppHome() {
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-(--s-line) bg-(--s-bg-blur) px-4 py-3 backdrop-blur">
         <LogoChip />
         <div className="flex items-center gap-2">
-          {!address && hasWallet && !isMiniPay && (
+          {!address && !isMiniPay && (
             <button
               onClick={connect}
               className="rounded-full bg-(--s-act) px-3 py-1 text-sm font-bold text-white"
@@ -213,6 +213,30 @@ export default function AppHome() {
       {/* ── Markets ───────────────────────────────────────────── */}
       {tab === "markets" && (
         <>
+          {!address && (
+            <div className="mx-4 mt-4 rounded-2xl border border-(--s-act) bg-(--s-act-tint) p-4">
+              <p className="text-[15px] font-bold">Play free. Win real cash.</p>
+              <p className="mt-1 text-sm text-(--s-sub)">
+                Pick a side on real Polymarket markets — free picks build your streak,
+                deposits win USDm.
+              </p>
+              {hasWallet ? (
+                <button
+                  onClick={connect}
+                  className="mt-3 w-full rounded-xl bg-(--s-act) py-3 text-sm font-bold text-white active:scale-[0.98]"
+                >
+                  Sign in to start
+                </button>
+              ) : (
+                <a
+                  href="https://www.opera.com/products/minipay"
+                  className="mt-3 block w-full rounded-xl bg-(--s-act) py-3 text-center text-sm font-bold text-white active:scale-[0.98]"
+                >
+                  Get MiniPay to start
+                </a>
+              )}
+            </div>
+          )}
           {error && (
             <p className="p-6 text-center text-sm text-(--s-sub)">
               Feed unavailable — pull to retry.
