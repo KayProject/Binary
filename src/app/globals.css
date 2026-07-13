@@ -7,6 +7,20 @@
   --color-ink: #04123a;
   --color-yes: #4ade80;
   --color-no: #f87171;
+
+  /* Midnight Settlement — the app's dark identity.
+     Gold is reserved for streaks and wins; act-blue is the only action color. */
+  --color-mid: #0b0f1a; /* ground */
+  --color-mid-2: #141b2e; /* raised surface */
+  --color-mid-3: #1e2840; /* borders / pressed */
+  --color-act: #3d74ff; /* action blue */
+  --color-act-soft: #7aa2ff; /* action text on dark tints */
+  --color-gold: #e4c87e; /* streaks + wins only */
+  --color-win: #31d3a2; /* payout green */
+  --color-lose: #ff6b5e; /* NO / negative */
+  --color-ice: #edf0f7; /* primary text */
+  --color-fog: #8e96ab; /* secondary text */
+
   --font-sans: var(--font-bricolage), system-ui, sans-serif;
   --font-mono: var(--font-spline-mono), monospace;
 }
