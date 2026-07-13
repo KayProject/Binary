@@ -2,8 +2,9 @@ import type { DepositJob, DepositState, Executor, Job, WithdrawalJob, Withdrawal
 
 // Legal transitions. Anything else is a bug — throw loudly, never guess.
 const DEPOSIT_FLOW: Record<DepositState, DepositState[]> = {
-  RECEIVED: ["NETTED", "SWAPPED"],
+  RECEIVED: ["NETTED", "BRIDGED_FAST", "SWAPPED"],
   NETTED: ["CREDITED"],
+  BRIDGED_FAST: ["CREDITED"],
   SWAPPED: ["BRIDGED_HOP1"],
   BRIDGED_HOP1: ["BRIDGED_HOP2"],
   BRIDGED_HOP2: ["CONVERTED"],
@@ -13,8 +14,9 @@ const DEPOSIT_FLOW: Record<DepositState, DepositState[]> = {
 };
 
 const WITHDRAWAL_FLOW: Record<WithdrawalState, WithdrawalState[]> = {
-  REQUESTED: ["NETTED", "BRIDGED"],
+  REQUESTED: ["NETTED", "UNWRAPPED"],
   NETTED: ["PAID"],
+  UNWRAPPED: ["BRIDGED"],
   BRIDGED: ["PAID"],
   PAID: [],
   FAILED: [],

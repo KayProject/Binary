@@ -77,12 +77,12 @@ export default function AppHome() {
   const [theme, toggleTheme] = useTheme();
   const { address, isMiniPay, hasWallet, userLabel, connect, logout, sendTx } = useWallet();
   const [player, setPlayer] = useState<PlayerState | null>(null);
-  const [txBusy, setTxBusy] = useState<"pick" | "checkin" | null>(null);
+  const [txBusy, setTxBusy] = useState<"pick" | "checkin" | "bet" | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
 
-  // Real bets stay locked until the broker backend lands; everything the
-  // chain can already tell us is live: streak, pick count, net deposits.
-  const funded = false;
+  // Funded = money has entered the pipeline via the deposits contract. The
+  // bets API double-checks the credited pUSD balance before every order.
+  const funded = (player?.depositedUsd ?? 0) > 0;
   const balance = player?.depositedUsd ?? 0;
   const streak = player?.streak ?? 0;
 
@@ -134,6 +134,39 @@ export default function AppHome() {
       setTimeout(refreshPlayer, 8_000);
     } catch {
       setTxError("Pick didn’t go through — try again.");
+    } finally {
+      setTxBusy(null);
+    }
+  };
+
+  const doBet = async (market: Market, outcome: 0 | 1, usd: number) => {
+    setTxError(null);
+    const from = await ensureAddress();
+    if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
+    setTxBusy("bet");
+    try {
+      const res = await fetch("/api/bets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user: from,
+          tokenID: market.outcomes[outcome].clobTokenId,
+          usd,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTxError(
+          res.status === 409
+            ? "Your deposit is still funding — give it a minute."
+            : data.error ?? "Bet didn’t go through — try again."
+        );
+        return;
+      }
+      setSheet(null);
+      setTimeout(refreshPlayer, 3_000);
+    } catch {
+      setTxError("Bet didn’t go through — try again.");
     } finally {
       setTxBusy(null);
     }
@@ -481,11 +514,13 @@ export default function AppHome() {
                   </p>
                 </div>
 
+                {txError && <p className="mb-2 text-center text-xs text-(--s-lose)">{txError}</p>}
                 <button
-                  className="w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98]"
-                  onClick={() => setSheet(null)} // TODO: POST /api/bets (broker backend)
+                  className="w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98] disabled:opacity-60"
+                  disabled={txBusy === "bet"}
+                  onClick={() => doBet(sheet.market, sheet.outcome, amount)}
                 >
-                  Place bet · ${amount}
+                  {txBusy === "bet" ? "Placing…" : `Place bet · $${amount}`}
                 </button>
               </>
             ) : (

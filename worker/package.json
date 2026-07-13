@@ -1,0 +1,24 @@
+{
+  "name": "binary-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Funding pipeline worker: watches BinaryDeposits on Celo, drives deposit/withdrawal jobs through the bridge rails to Polymarket and back.",
+  "scripts": {
+    "start": "tsx index.ts",
+    "once": "tsx index.ts --once",
+    "withdraw": "tsx cli.ts withdraw",
+    "jobs": "tsx cli.ts jobs"
+  },
+  "dependencies": {
+    "@polymarket/builder-relayer-client": "^0.0.10",
+    "@polymarket/builder-signing-sdk": "^0.0.8",
+    "@polymarket/clob-client-v2": "^1.0.8",
+    "dotenv": "^16.4.5",
+    "ethers": "^5.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  }
+}

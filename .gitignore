@@ -46,3 +46,7 @@ reference/
 # phase 0 secrets
 phase0/.env.local
 phase0/node_modules/
+
+# funding worker state (job files, cursor, journal)
+worker/.jobs/
+worker/node_modules/

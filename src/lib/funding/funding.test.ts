@@ -48,6 +48,27 @@ test("deposit walks the full bridge path", async () => {
   assert.ok(isTerminal(final));
 });
 
+test("deposit walks the fast rail", async () => {
+  const executors = {
+    RECEIVED: async () => ({ next: "BRIDGED_FAST", leg: { txHash: "0x2" } }),
+    BRIDGED_FAST: async () => ({ next: "CREDITED" }),
+  };
+  const final = await drive(dep(), executors as never, async () => {});
+  assert.equal(final.state, "CREDITED");
+  assert.equal(final.legs.BRIDGED_FAST?.txHash, "0x2");
+});
+
+test("withdrawal walks unwrap → bridge → paid", async () => {
+  const executors = {
+    REQUESTED: async () => ({ next: "UNWRAPPED" }),
+    UNWRAPPED: async () => ({ next: "BRIDGED", leg: { txHash: "0x3" } }),
+    BRIDGED: async () => ({ next: "PAID" }),
+  };
+  const final = await drive(wd(), executors as never, async () => {});
+  assert.equal(final.state, "PAID");
+  assert.equal(final.legs.BRIDGED?.txHash, "0x3");
+});
+
 test("illegal transition throws", async () => {
   const bad = { RECEIVED: async () => ({ next: "CREDITED" }) };
   await assert.rejects(

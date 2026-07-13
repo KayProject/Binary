@@ -39,6 +39,7 @@
   "exclude": [
     "contracts",
     "node_modules",
-    "phase0"
+    "phase0",
+    "worker"
   ]
 }

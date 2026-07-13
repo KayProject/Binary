@@ -5,17 +5,21 @@
 export type DepositState =
   | "RECEIVED" // Deposited event seen on Celo
   | "NETTED" // matched against a withdrawal — skips the bridge entirely
+  // FAST rail (interactive): one Squid/LI.FI call, Celo USDm → Polygon USDC.e.
+  | "BRIDGED_FAST" // USDC.e landed on Polygon
+  // CHEAP rail (bulk rebalancing): Mento + USDT0 mesh via the Arbitrum hub.
   | "SWAPPED" // USDm → USDT on Celo (Mento)
   | "BRIDGED_HOP1" // USDT landed on Arbitrum (USDT0 mesh)
   | "BRIDGED_HOP2" // USDT landed on Polygon
   | "CONVERTED" // USDT → USDC.e on Polygon
-  | "CREDITED" // user's Safe funded — terminal
+  | "CREDITED" // wrapped to pUSD in the user's deposit wallet — terminal
   | "FAILED"; // terminal after retries exhausted; needs operator attention
 
 export type WithdrawalState =
-  | "REQUESTED" // user asked to cash out (balance already sold to USDC.e)
+  | "REQUESTED" // user asked to cash out (position already sold to pUSD)
   | "NETTED" // matched against a deposit — paid out on Celo directly
-  | "BRIDGED" // USDC.e swapped+bridged Polygon → Celo (Squid)
+  | "UNWRAPPED" // pUSD → USDC.e via CollateralOfframp (gasless, lands at EOA)
+  | "BRIDGED" // USDC.e bridged Polygon → USDm on Celo (Squid, one call)
   | "PAID" // payout() executed on the Deposit Contract — terminal
   | "FAILED";
 
