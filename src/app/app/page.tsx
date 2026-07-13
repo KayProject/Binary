@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Market } from "@/lib/polymarket/types";
+import { LogoChip } from "@/components/Logo";
 import { payoutIfWin, sharesFor, takerFee } from "@/lib/polymarket/fees";
 
 // MiniPay shell — market feed + tap-to-bet sheet. One sheet, two doors:
@@ -51,8 +52,8 @@ export default function AppHome() {
   return (
     <main className="mx-auto min-h-dvh max-w-md bg-white pb-28 text-neutral-900">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-100 bg-white/90 px-4 py-3 backdrop-blur">
-        <h1 className="text-lg font-bold tracking-tight" style={{ color: BLUE }}>
-          Binary
+        <h1>
+          <LogoChip />
         </h1>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-sm font-bold text-amber-600">

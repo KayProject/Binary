@@ -1,4 +1,5 @@
 import Globe from "@/components/Globe";
+import { Logo } from "@/components/Logo";
 
 const demoMarkets = [
   { q: "Will BTC close 2026 above $150K?", yes: 34 },
@@ -29,9 +30,7 @@ export default function Home() {
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 sm:max-w-2xl">
       {/* Nav */}
       <header className="flex items-center justify-between py-6">
-        <span className="font-mono text-lg font-bold tracking-[0.3em]">
-          BINARY
-        </span>
+        <Logo />
         <span className="rounded-full border border-white/30 px-3 py-1 font-mono text-xs tracking-widest text-white/80">
           COMING SOON
         </span>
