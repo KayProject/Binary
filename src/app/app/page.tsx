@@ -1,17 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Market } from "@/lib/polymarket/types";
 import { LogoChip } from "@/components/Logo";
 import { payoutIfWin, sharesFor, takerFee } from "@/lib/polymarket/fees";
+import { useWallet } from "@/hooks/useWallet";
+import {
+  DEPOSIT_CONTRACT,
+  PLAY_CONTRACT,
+  checkInData,
+  pickData,
+  fetchPlayerState,
+  type PlayerState,
+} from "@/lib/chain";
 
 // MiniPay app shell. Two themes — light (original) and Midnight Settlement
 // (dark) — behind a toggle; components read only the --s-* semantic tokens.
-// One bet sheet, two doors: unfunded taps are free picks (BinaryPlay / XP),
-// funded taps are real orders. `funded`/`balance` are the flags the broker
-// backend will provide; picks persist locally until the relay lands.
-
-const DEPOSIT_CONTRACT = "0xE75A70597501453Fb0DFBa9B34eA2b9495d67600";
+// One bet sheet, two doors: free picks are REAL BinaryPlay transactions on
+// Celo (user pays only gas); funded real-money bets await the broker backend.
 
 type Pick = { outcome: 0 | 1; label: string; price: number; question: string; at: number };
 type Tab = "markets" | "portfolio" | "you";
@@ -69,11 +75,69 @@ export default function AppHome() {
   const [amount, setAmount] = useState(2);
   const { picks, addPick } = usePicks();
   const [theme, toggleTheme] = useTheme();
+  const { address, isMiniPay, hasWallet, connect, sendTx } = useWallet();
+  const [player, setPlayer] = useState<PlayerState | null>(null);
+  const [txBusy, setTxBusy] = useState<"pick" | "checkin" | null>(null);
+  const [txError, setTxError] = useState<string | null>(null);
 
-  // Broker-backend flags (stubbed until the funding pipeline is wired).
+  // Real bets stay locked until the broker backend lands; everything the
+  // chain can already tell us is live: streak, pick count, net deposits.
   const funded = false;
-  const balance = 0;
-  const streak = Object.keys(picks).length > 0 ? 1 : 0; // BinaryPlay read lands with wallet wiring
+  const balance = player?.depositedUsd ?? 0;
+  const streak = player?.streak ?? 0;
+
+  const refreshPlayer = useCallback(() => {
+    if (!address) return;
+    fetchPlayerState(address).then(setPlayer).catch(() => {});
+  }, [address]);
+
+  useEffect(() => {
+    refreshPlayer();
+    const t = setInterval(refreshPlayer, 30_000);
+    return () => clearInterval(t);
+  }, [refreshPlayer]);
+
+  const ensureAddress = async () => address ?? (await connect());
+
+  const doCheckIn = async () => {
+    setTxError(null);
+    const from = await ensureAddress();
+    if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
+    setTxBusy("checkin");
+    try {
+      await sendTx(PLAY_CONTRACT, checkInData());
+      setTimeout(refreshPlayer, 3_000);
+      setTimeout(refreshPlayer, 8_000);
+    } catch {
+      setTxError("Check-in didn’t go through — try again.");
+    } finally {
+      setTxBusy(null);
+    }
+  };
+
+  const doPick = async (market: Market, outcome: 0 | 1) => {
+    setTxError(null);
+    const from = await ensureAddress();
+    if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
+    setTxBusy("pick");
+    try {
+      await sendTx(PLAY_CONTRACT, pickData(market.conditionId, outcome));
+      addPick(market.slug, {
+        outcome,
+        label: market.outcomes[outcome].label,
+        price: market.outcomes[outcome].price,
+        question: market.question,
+        at: Date.now(),
+      });
+      setSheet(null);
+      setTimeout(refreshPlayer, 3_000);
+      setTimeout(refreshPlayer, 8_000);
+    } catch {
+      setTxError("Pick didn’t go through — try again.");
+    } finally {
+      setTxBusy(null);
+    }
+  };
 
   useEffect(() => {
     let live = true;
@@ -241,23 +305,54 @@ export default function AppHome() {
             <p className="mt-1 font-mono text-3xl font-bold text-(--s-gold)">{streak}</p>
             <p className="text-sm text-(--s-sub)">day streak — check in daily to grow it</p>
             <button
-              className="mt-4 w-full rounded-xl bg-(--s-gold-solid) py-3 text-sm font-bold text-(--s-gold-contrast) active:scale-[0.98]"
-              onClick={() => {}} // TODO: relay BinaryPlay.checkIn()
+              className="mt-4 w-full rounded-xl bg-(--s-gold-solid) py-3 text-sm font-bold text-(--s-gold-contrast) active:scale-[0.98] disabled:opacity-60"
+              disabled={txBusy === "checkin" || player?.checkedInToday}
+              onClick={doCheckIn}
             >
-              Check in today
+              {player?.checkedInToday
+                ? "Checked in ✓ — back tomorrow"
+                : txBusy === "checkin"
+                  ? "Confirming…"
+                  : address
+                    ? "Check in today"
+                    : "Connect & check in"}
             </button>
+            {txError && <p className="mt-2 text-xs text-(--s-lose)">{txError}</p>}
           </div>
 
-          <div className="mb-4 grid grid-cols-2 gap-2">
+          <div className="mb-4 grid grid-cols-3 gap-2">
             <div className="rounded-2xl bg-(--s-card) p-4">
-              <p className="font-mono text-2xl font-bold tabular-nums">{pickList.length}</p>
-              <p className="text-xs text-(--s-sub)">free picks made</p>
+              <p className="font-mono text-2xl font-bold tabular-nums">
+                {player?.pickCount ?? pickList.length}
+              </p>
+              <p className="text-xs text-(--s-sub)">picks on-chain</p>
             </div>
             <div className="rounded-2xl bg-(--s-card) p-4">
-              <p className="font-mono text-2xl font-bold tabular-nums">0</p>
-              <p className="text-xs text-(--s-sub)">real bets placed</p>
+              <p className="font-mono text-2xl font-bold tabular-nums">
+                {player?.longestStreak ?? 0}
+              </p>
+              <p className="text-xs text-(--s-sub)">longest streak</p>
+            </div>
+            <div className="rounded-2xl bg-(--s-card) p-4">
+              <p className="font-mono text-2xl font-bold tabular-nums">
+                {player?.checkInCount ?? 0}
+              </p>
+              <p className="text-xs text-(--s-sub)">check-ins</p>
             </div>
           </div>
+
+          {address ? (
+            <p className="mb-4 break-all rounded-2xl bg-(--s-card) p-4 font-mono text-xs text-(--s-sub)">
+              {isMiniPay ? "MiniPay wallet" : "Wallet"} · {address}
+            </p>
+          ) : (
+            <button
+              onClick={connect}
+              className="mb-4 w-full rounded-2xl border border-(--s-act) py-3 text-sm font-bold text-(--s-act-soft) active:scale-[0.98]"
+            >
+              {hasWallet ? "Connect wallet" : "Open in MiniPay to play"}
+            </button>
+          )}
 
           <div className="rounded-2xl bg-(--s-card) p-4 text-sm">
             <p className="font-semibold">How Binary works</p>
@@ -363,21 +458,17 @@ export default function AppHome() {
                   </p>
                 </div>
 
+                {txError && <p className="mb-2 text-center text-xs text-(--s-lose)">{txError}</p>}
                 <button
-                  className="mb-2 w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98]"
-                  onClick={() => {
-                    // TODO: relay BinaryPlay.pick(keccak(conditionId), outcome)
-                    addPick(sheet.market.slug, {
-                      outcome: sheet.outcome,
-                      label: sel.label,
-                      price: sel.price,
-                      question: sheet.market.question,
-                      at: Date.now(),
-                    });
-                    setSheet(null);
-                  }}
+                  className="mb-2 w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98] disabled:opacity-60"
+                  disabled={txBusy === "pick"}
+                  onClick={() => doPick(sheet.market, sheet.outcome)}
                 >
-                  Free pick · {sel.label} ⚡
+                  {txBusy === "pick"
+                    ? "Confirming…"
+                    : address
+                      ? `Free pick · ${sel.label} ⚡`
+                      : `Connect & pick ${sel.label} ⚡`}
                 </button>
                 <button
                   className="w-full rounded-2xl border border-(--s-act) py-3.5 text-base font-bold text-(--s-act-soft) active:scale-[0.98]"

@@ -1,17 +1,11 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Spline_Sans_Mono } from "next/font/google";
+import { Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 
-// Brand face: Bricolage Grotesque carries the whole UI (its optical-size axis
-// holds up from body text to display). Spline Sans Mono shares its warm,
-// rounded character — it takes every number: odds, prices, payouts.
+// One face everywhere: Bricolage Grotesque — its optical-size axis holds up
+// from body text to display, and numerals get tabular-nums where they align.
 const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",
-  subsets: ["latin"],
-});
-
-const splineMono = Spline_Sans_Mono({
-  variable: "--font-spline-mono",
   subsets: ["latin"],
 });
 
@@ -33,7 +27,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bricolage.variable} ${splineMono.variable} h-full antialiased`}
+      className={`${bricolage.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

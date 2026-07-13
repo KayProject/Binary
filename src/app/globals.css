@@ -22,7 +22,7 @@
   --color-fog: #8e96ab; /* secondary text */
 
   --font-sans: var(--font-bricolage), system-ui, sans-serif;
-  --font-mono: var(--font-spline-mono), monospace;
+  --font-mono: var(--font-bricolage), system-ui, sans-serif; /* one face everywhere */
 }
 
 html {
