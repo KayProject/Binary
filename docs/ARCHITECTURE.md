@@ -173,7 +173,7 @@ Withdrawals: netting first; residual via Squid Polygon→USDm-on-Celo in one cal
 | Component | Responsibility | Stack |
 |---|---|---|
 | MiniPay Mini App (PWA) | Market feed, live odds, tap-to-bet, balance, top-up/withdraw. Detect `window.ethereum.isMiniPay`; implicit connect; no "Connect Wallet" button | Next.js, TS, Tailwind, viem/wagmi (fee-currency aware) |
-| Celo Deposit Contract | Canonical on-chain record of deposits/withdrawals per user (audit + Proof of Ship activity); receives USDm; emits events the backend acts on | Solidity (Celo) |
+| Celo Deposit Contract | **LIVE on Celo mainnet: `0xE75A70597501453Fb0DFBa9B34eA2b9495d67600`** (deployed + Sourcify-verified 2026-07-13; smoke-tested with a real $0.10 deposit). Canonical on-chain record of deposits/payouts per user (audit + Proof of Ship activity); receives USDm; emits events the backend acts on | Solidity (Celo), `contracts/` |
 | Key-management / signer service | One Binary-managed Polygon EOA **per user** (they can't sign for Polygon); signs POLY_1271 orders for the user's deposit wallet | Privy server wallets or Turnkey (MPC/KMS) |
 | Per-user deposit wallet | **EIP-1271 deposit wallet** (Polymarket's official server-signable primitive post-V2; type-2 Safes are rejected for new makers). Deployed gasless in ~5 s; holds pUSD + outcome shares | Relayer `deployDepositWallet` (factory 0x00000000000Fb5C9ADea0298D729A0CB3823Cc07) |
 | Bridge pipeline | Dual rail: Squid in/out (interactive) + USDT0 mesh (bulk); wrap/unwrap pUSD; sign-locally→multi-RPC-broadcast tx sender; per-chain gas policy; retries, idempotency, status | Node service + LI.FI API + funding state machine (`src/lib/funding/`) |
