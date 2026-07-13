@@ -36,6 +36,12 @@ function normalize(raw: GammaMarket): Market | null {
     bestAsk: raw.bestAsk ?? null,
     spread: raw.spread ?? null,
     oneDayPriceChange: raw.oneDayPriceChange ?? null,
+    feesEnabled: raw.feesEnabled ?? false,
+    // takerBaseFee is what the CLOB actually charged in the live calibration
+    // fill — feeSchedule.rate disagrees and loses (see fees.ts).
+    feeRateBps: raw.feesEnabled ? raw.takerBaseFee ?? 0 : 0,
+    feeExponent: raw.feeSchedule?.exponent ?? 1,
+    tickSize: raw.orderPriceMinTickSize ?? 0.001,
   };
 }
 

@@ -21,6 +21,12 @@ export interface Market {
   bestAsk: number | null;
   spread: number | null;
   oneDayPriceChange: number | null;
+  // Fee + order-book granularity (post-V2 the CLOB charges real trading fees;
+  // payout previews must price them in — see lib/polymarket/fees.ts).
+  feesEnabled: boolean;
+  feeRateBps: number; // taker fee scalar, bps (0 when feesEnabled=false)
+  feeExponent: number; // exponent on the p·(1−p) term
+  tickSize: number; // orderPriceMinTickSize — 0.001, 0.0025, …
 }
 
 // Raw Gamma market — only the fields we read.
@@ -42,4 +48,8 @@ export interface GammaMarket {
   bestAsk?: number;
   spread?: number;
   oneDayPriceChange?: number;
+  feesEnabled?: boolean;
+  takerBaseFee?: number; // bps
+  feeSchedule?: { exponent?: number; rate?: number; takerOnly?: boolean };
+  orderPriceMinTickSize?: number;
 }
