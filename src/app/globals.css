@@ -50,3 +50,45 @@ body::before {
   background: #ffffff;
   color: #0033a0;
 }
+
+/* ── App themes ─────────────────────────────────────────────────────────
+   The /app shell is themeable: light (the original look) and dark
+   (Midnight Settlement). Components read only these semantic tokens. */
+.app-light {
+  --s-bg: #ffffff;
+  --s-bg-blur: rgba(255, 255, 255, 0.92);
+  --s-card: #f4f5f7;
+  --s-line: #e5e7eb;
+  --s-text: #171923;
+  --s-sub: #6b7280;
+  --s-act: #0057d5;
+  --s-act-soft: #0057d5;
+  --s-act-tint: #e7f0fd;
+  --s-gold: #b45309;
+  --s-gold-tint: #fdf3e0;
+  --s-gold-line: rgba(180, 83, 9, 0.25);
+  --s-gold-solid: #d97706;
+  --s-gold-contrast: #ffffff;
+  --s-win: #16a34a;
+  --s-lose: #c2410c;
+  --s-lose-tint: #fdf0f0;
+}
+.app-dark {
+  --s-bg: #0b0f1a;
+  --s-bg-blur: rgba(11, 15, 26, 0.92);
+  --s-card: #141b2e;
+  --s-line: #1e2840;
+  --s-text: #edf0f7;
+  --s-sub: #8e96ab;
+  --s-act: #3d74ff;
+  --s-act-soft: #7aa2ff;
+  --s-act-tint: rgba(61, 116, 255, 0.15);
+  --s-gold: #e4c87e;
+  --s-gold-tint: rgba(228, 200, 126, 0.1);
+  --s-gold-line: rgba(228, 200, 126, 0.25);
+  --s-gold-solid: #e4c87e;
+  --s-gold-contrast: #0b0f1a;
+  --s-win: #31d3a2;
+  --s-lose: #ff6b5e;
+  --s-lose-tint: rgba(255, 107, 94, 0.1);
+}
