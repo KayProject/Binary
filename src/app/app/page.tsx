@@ -75,7 +75,7 @@ export default function AppHome() {
   const [amount, setAmount] = useState(2);
   const { picks, addPick } = usePicks();
   const [theme, toggleTheme] = useTheme();
-  const { address, isMiniPay, hasWallet, connect, sendTx } = useWallet();
+  const { address, isMiniPay, hasWallet, userLabel, connect, logout, sendTx } = useWallet();
   const [player, setPlayer] = useState<PlayerState | null>(null);
   const [txBusy, setTxBusy] = useState<"pick" | "checkin" | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
@@ -180,6 +180,14 @@ export default function AppHome() {
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-(--s-line) bg-(--s-bg-blur) px-4 py-3 backdrop-blur">
         <LogoChip />
         <div className="flex items-center gap-2">
+          {!address && hasWallet && !isMiniPay && (
+            <button
+              onClick={connect}
+              className="rounded-full bg-(--s-act) px-3 py-1 text-sm font-bold text-white"
+            >
+              Sign in
+            </button>
+          )}
           <button
             onClick={toggleTheme}
             aria-label="Toggle theme"
@@ -342,15 +350,27 @@ export default function AppHome() {
           </div>
 
           {address ? (
-            <p className="mb-4 break-all rounded-2xl bg-(--s-card) p-4 font-mono text-xs text-(--s-sub)">
-              {isMiniPay ? "MiniPay wallet" : "Wallet"} · {address}
-            </p>
+            <div className="mb-4 rounded-2xl bg-(--s-card) p-4">
+              <p className="break-all font-mono text-xs text-(--s-sub)">
+                {isMiniPay ? "MiniPay wallet" : userLabel ? `Signed in · ${userLabel}` : "Wallet"}
+                <br />
+                {address}
+              </p>
+              {logout && (
+                <button
+                  onClick={logout}
+                  className="mt-3 w-full rounded-xl border border-(--s-line) py-2 text-xs font-bold text-(--s-sub) active:scale-[0.98]"
+                >
+                  Sign out
+                </button>
+              )}
+            </div>
           ) : (
             <button
               onClick={connect}
               className="mb-4 w-full rounded-2xl border border-(--s-act) py-3 text-sm font-bold text-(--s-act-soft) active:scale-[0.98]"
             >
-              {hasWallet ? "Connect wallet" : "Open in MiniPay to play"}
+              {hasWallet ? "Sign in" : "Open in MiniPay to play"}
             </button>
           )}
 
