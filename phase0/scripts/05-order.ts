@@ -7,7 +7,7 @@
 // Find a tokenID: pick a liquid market on polymarket.com, or
 //   curl "https://gamma-api.polymarket.com/markets?closed=false&limit=5"
 import { ethers } from "ethers";
-import { Side, OrderType } from "@polymarket/clob-client";
+import { Side, OrderType } from "@polymarket/clob-client-v2";
 import { loadState, recordTiming, polygonProvider } from "../lib/env";
 import { makeClobClient, liveContractConfig } from "../lib/clients";
 
@@ -26,21 +26,45 @@ async function main() {
     ["function balanceOf(address) view returns (uint256)"],
     polygonProvider
   );
-  const bal = await erc20.balanceOf(state.safe!);
-  console.log(`Safe collateral balance: $${ethers.utils.formatUnits(bal, 6)}`);
+  const funder = state.depositWallet ?? state.safe!;
+  const bal = await erc20.balanceOf(funder);
+  console.log(`Funder (${state.depositWallet ? "deposit wallet" : "Safe"}) collateral: $${ethers.utils.formatUnits(bal, 6)}`);
   if (bal.lt(ethers.utils.parseUnits(usd.toString(), 6))) {
-    throw new Error(`Safe needs ≥ $${usd} collateral — fund ${state.safe} first`);
+    throw new Error(`Funder needs ≥ $${usd} collateral — fund ${funder} first`);
   }
 
-  const negRisk = await client.getNegRisk(tokenID);
-  const ask = parseFloat((await client.getPrice(tokenID, Side.SELL)).price);
+  // Flaky-network guard: these lookups intermittently fail and resolve
+  // undefined, which crashes the order builder — retry until sane.
+  const retry = async <T>(label: string, fn: () => Promise<T>, ok: (v: T) => boolean): Promise<T> => {
+    for (let i = 0; i < 6; i++) {
+      try {
+        const v = await fn();
+        if (ok(v)) return v;
+      } catch {}
+      console.log(`  retrying ${label}...`);
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+    throw new Error(`${label} kept failing`);
+  };
+
+  const negRisk = await retry("negRisk", () => client.getNegRisk(tokenID), (v) => typeof v === "boolean");
+  const ask = parseFloat(
+    (await retry("price", () => client.getPrice(tokenID, Side.SELL), (v) => !!v?.price)).price
+  );
   if (!(ask > 0 && ask < 1)) throw new Error(`No valid ask for ${tokenID}`);
   console.log(`Market ask: ${ask} | negRisk: ${negRisk} | spending $${usd} (FOK)`);
 
+  // V2 orders: fees are server-set, builder attribution rides as BUILDER_CODE
+  // on the client; tick sizes now include 0.005/0.0025.
+  const tickSize = await retry(
+    "tickSize",
+    () => client.getTickSize(tokenID),
+    (v) => ["0.1", "0.01", "0.005", "0.0025", "0.001", "0.0001"].includes(String(v))
+  );
   const t0 = Date.now();
   const response = await client.createAndPostMarketOrder(
-    { tokenID, amount: usd, side: Side.BUY, feeRateBps: 0 },
-    { negRisk },
+    { tokenID, amount: usd, side: Side.BUY },
+    { tickSize, negRisk },
     OrderType.FOK
   );
   recordTiming("order_place", Date.now() - t0);
@@ -57,8 +81,8 @@ async function main() {
     ["function balanceOf(address, uint256) view returns (uint256)"],
     polygonProvider
   );
-  const shares = await ctf.balanceOf(state.safe!, tokenID);
-  console.log(`✓ Outcome shares in Safe: ${ethers.utils.formatUnits(shares, 6)}`);
+  const shares = await ctf.balanceOf(state.depositWallet ?? state.safe!, tokenID);
+  console.log(`✓ Outcome shares in funder wallet: ${ethers.utils.formatUnits(shares, 6)}`);
 }
 
 main().catch((e) => {

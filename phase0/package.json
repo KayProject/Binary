@@ -1,8 +1,9 @@
 {
   "name": "binary-phase0",
   "private": true,
-  "description": "Phase 0 broker round-trip spike — see docs/PHASE0.md",
+  "description": "Phase 0 broker round-trip spike \u2014 see docs/PHASE0.md",
   "scripts": {
+    "10": "tsx scripts/10-mento-swap.ts",
     "00": "tsx scripts/00-verify-config.ts",
     "01": "tsx scripts/01-signer.ts",
     "02": "tsx scripts/02-deploy-safe.ts",
@@ -13,12 +14,14 @@
     "07": "tsx scripts/07-bridge-quote.ts",
     "08": "tsx scripts/08-bridge-execute.ts",
     "09": "tsx scripts/09-usdt0-transfer.ts",
-    "10": "tsx scripts/10-mento-swap.ts"
+    "11": "tsx scripts/11-wrap-pusd.ts",
+    "12": "tsx scripts/12-deposit-wallet.ts"
   },
   "dependencies": {
-    "@polymarket/builder-relayer-client": "^0.0.6",
+    "@polymarket/builder-relayer-client": "^0.0.10",
     "@polymarket/builder-signing-sdk": "^0.0.8",
-    "@polymarket/clob-client": "^4.22.8",
+    "@polymarket/clob-client": "^5.8.1",
+    "@polymarket/clob-client-v2": "^1.0.8",
     "dotenv": "^16.4.5",
     "ethers": "^5.8.0",
     "viem": "^2.39.2"

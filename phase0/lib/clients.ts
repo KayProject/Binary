@@ -1,9 +1,9 @@
 import { ethers } from "ethers";
-import { ClobClient, ApiKeyCreds } from "@polymarket/clob-client";
+import { ClobClient, ApiKeyCreds, SignatureTypeV2 } from "@polymarket/clob-client-v2";
 import { RelayClient } from "@polymarket/builder-relayer-client";
 import { deriveSafe } from "@polymarket/builder-relayer-client/dist/builder/derive";
 import { getContractConfig as relayerContractConfig } from "@polymarket/builder-relayer-client/dist/config";
-import { getContractConfig as clobContractConfig } from "@polymarket/clob-client";
+import { getContractConfig as clobContractConfig } from "@polymarket/clob-client-v2";
 import {
   CLOB_API_URL,
   RELAYER_URL,
@@ -37,25 +37,31 @@ export function makeRelayClient(signer?: ethers.Wallet): RelayClient {
 
 // Unauthenticated CLOB client — enough for deriving/creating user API creds.
 export function makeTempClobClient(signer?: ethers.Wallet): ClobClient {
-  return new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer ?? spikeSigner());
+  return new ClobClient({
+    host: CLOB_API_URL,
+    chain: POLYGON_CHAIN_ID,
+    signer: signer ?? spikeSigner(),
+  });
 }
 
-// Fully authenticated CLOB client: signature type 2 (EOA signs for its Safe),
-// funder = the Safe, orders attributed to our Builder account.
+// Fully authenticated CLOB client. Post-V2 the CLOB rejects new type-2 Safe
+// makers — new wallets must trade from an EIP-1271 deposit wallet (type 3,
+// run `npm run 12` first). Builder attribution is the bytes32 BUILDER_CODE
+// carried on each order — not HMAC builder headers.
 export function makeClobClient(): ClobClient {
   const signer = spikeSigner();
   const state = loadState();
   if (!state.apiCreds) throw new Error("No user API creds — run `npm run 04` first");
-  const safe = state.safe ?? derivedSafe(signer.address);
-  return new ClobClient(
-    CLOB_API_URL,
-    POLYGON_CHAIN_ID,
+  const funder = state.depositWallet ?? state.safe ?? derivedSafe(signer.address);
+  return new ClobClient({
+    host: CLOB_API_URL,
+    chain: POLYGON_CHAIN_ID,
     signer,
-    state.apiCreds as ApiKeyCreds,
-    2, // SignatureType.POLY_GNOSIS_SAFE
-    safe,
-    undefined,
-    false,
-    builderConfig()
-  );
+    creds: state.apiCreds as ApiKeyCreds,
+    signatureType: state.depositWallet
+      ? SignatureTypeV2.POLY_1271
+      : SignatureTypeV2.POLY_GNOSIS_SAFE,
+    funderAddress: funder,
+    ...(process.env.BUILDER_CODE ? { builderConfig: { builderCode: process.env.BUILDER_CODE } } : {}),
+  });
 }

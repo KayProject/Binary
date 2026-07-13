@@ -2,7 +2,7 @@
 //   Sell into the book:   npm run 06 -- <tokenID>
 //   Redeem (post-resolve): npm run 06 -- --redeem <conditionId> <outcomeIndex> [size] [--neg-risk]
 import { ethers } from "ethers";
-import { Side, OrderType } from "@polymarket/clob-client";
+import { Side, OrderType } from "@polymarket/clob-client-v2";
 import {
   OperationType,
   RelayerTransactionState,
@@ -21,16 +21,17 @@ async function sell(tokenID: string) {
     ["function balanceOf(address, uint256) view returns (uint256)"],
     polygonProvider
   );
-  const raw = await ctf.balanceOf(state.safe!, tokenID);
+  const raw = await ctf.balanceOf(state.depositWallet ?? state.safe!, tokenID);
   const shares = parseFloat(ethers.utils.formatUnits(raw, 6));
   if (shares <= 0) throw new Error("No shares to sell");
   console.log(`Selling ${shares} shares (FOK market)...`);
 
   const negRisk = await client.getNegRisk(tokenID);
+  const tickSize = await client.getTickSize(tokenID);
   const t0 = Date.now();
   const response = await client.createAndPostMarketOrder(
-    { tokenID, amount: shares, side: Side.SELL, feeRateBps: 0 },
-    { negRisk },
+    { tokenID, amount: shares, side: Side.SELL },
+    { tickSize, negRisk },
     OrderType.FOK
   );
   recordTiming("order_sell", Date.now() - t0);

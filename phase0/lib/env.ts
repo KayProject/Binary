@@ -46,6 +46,7 @@ export interface SpikeState {
   eoa?: string;
   safe?: string;
   safeDeployTxId?: string;
+  depositWallet?: string;
   apiCreds?: { key: string; secret: string; passphrase: string };
   timings?: Record<string, number>;
 }

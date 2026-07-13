@@ -25,13 +25,30 @@ async function main() {
   if (!state.safe) throw new Error("Run `npm run 01` first");
   const cfg = liveContractConfig();
 
+  // Post-V2 the config also carries exchangeV2/negRiskExchangeV2/exchangeV3 —
+  // approve every exchange generation present so orders settle regardless of
+  // which contract the CLOB routes through.
+  const v2 = cfg as typeof cfg & {
+    exchangeV2?: string;
+    negRiskExchangeV2?: string;
+    exchangeV3?: string;
+  };
+  const extraExchanges = [v2.exchangeV2, v2.negRiskExchangeV2, v2.exchangeV3].filter(
+    (a): a is string => !!a
+  );
   const collateralSpenders = [
     cfg.conditionalTokens,
     cfg.negRiskAdapter,
     cfg.exchange,
     cfg.negRiskExchange,
+    ...extraExchanges,
   ];
-  const outcomeOperators = [cfg.exchange, cfg.negRiskExchange, cfg.negRiskAdapter];
+  const outcomeOperators = [
+    cfg.exchange,
+    cfg.negRiskExchange,
+    cfg.negRiskAdapter,
+    ...extraExchanges,
+  ];
 
   // Skip anything already approved so re-runs are cheap no-ops.
   const collateral = new ethers.Contract(cfg.collateral, erc20, polygonProvider);

@@ -34,16 +34,24 @@ const HOPS = {
     oft: "0xf10E161027410128E63E75D0200Fb6d34b2db243",
     dstEid: 30110,
     srcProvider: () => celoProvider(),
-    dstProvider: () => new ethers.providers.JsonRpcProvider("https://arb1.arbitrum.io/rpc"),
+    dstProvider: () => new ethers.providers.JsonRpcProvider(process.env.ARBITRUM_RPC_URL || "https://arb1.arbitrum.io/rpc"),
     dstToken: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9", // Arbitrum USDT
   },
   hop2: {
     label: "Arbitrum → Polygon (USDT0, 0%)",
     oft: "0x14E4A1B13bf7F943c8ff7C51fb60FA964A298D92",
     dstEid: 30109,
-    srcProvider: () => new ethers.providers.JsonRpcProvider("https://arb1.arbitrum.io/rpc"),
+    srcProvider: () => new ethers.providers.JsonRpcProvider(process.env.ARBITRUM_RPC_URL || "https://arb1.arbitrum.io/rpc"),
     dstProvider: () => polygonProvider,
     dstToken: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F", // Polygon USDT
+    // ethers v5 defaults to a 1.5 gwei priority fee; on Arbitrum (base ~0.01–0.03
+    // gwei) that inflates the affordability check ~100x and makes estimateGas
+    // "revert" on a lightly funded EOA. Pin honest Arbitrum gas instead.
+    txOverrides: {
+      gasLimit: 600_000,
+      maxFeePerGas: ethers.utils.parseUnits("0.1", "gwei"),
+      maxPriorityFeePerGas: ethers.utils.parseUnits("0.01", "gwei"),
+    },
   },
 } as const;
 
@@ -80,18 +88,19 @@ async function main() {
       `LZ msg fee ${ethers.utils.formatEther(fee.nativeFee)} native`
   );
 
-  if (await oft.approvalRequired().catch(() => true)) {
-    const allowance: ethers.BigNumber = await srcToken.allowance(signer.address, hop.oft);
-    if (allowance.lt(amountLD)) {
-      console.log("Approving OFT adapter...");
-      await (await srcToken.approve(hop.oft, ethers.constants.MaxUint256)).wait();
-    }
+  // Don't trust approvalRequired() — the Arbitrum hub returns false yet still
+  // pulls via transferFrom (send reverts without allowance; verified 2026-07-13).
+  const allowance: ethers.BigNumber = await srcToken.allowance(signer.address, hop.oft);
+  if (allowance.lt(amountLD)) {
+    console.log("Approving OFT adapter...");
+    await (await srcToken.approve(hop.oft, ethers.constants.MaxUint256)).wait();
   }
 
   const dstBefore: ethers.BigNumber = await dstToken.balanceOf(signer.address);
   const t0 = Date.now();
   const tx = await oft.send(sendParam, { nativeFee: fee.nativeFee, lzTokenFee: 0 }, signer.address, {
     value: fee.nativeFee,
+    ...("txOverrides" in hop ? hop.txOverrides : {}),
   });
   console.log(`Sent: ${tx.hash}`);
   await tx.wait();
