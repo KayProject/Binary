@@ -59,20 +59,31 @@ That's the type-3-era auth bug class. Capture the exact error JSON, then: retry 
 different liquid market; if it persists, the fallback is patching the clob-client L1
 auth header or contacting the Builder Program — documented in PHASE0.md.
 
-## Results (fill in during the run)
+## Results (measured 2026-07-13, run at $1.50 scale)
 
 | Leg | Expected (quoted) | Measured | Date |
 |---|---|---|---|
-| Mento USDm→USDT | ~0% (−0.06%) | | |
-| Mesh hop1 Celo→Arb | 0.03% + ~$0.07, est 1–3 min | | |
-| Mesh hop2 Arb→Polygon | 0% + ~$0.08, est 1–2 min | | |
-| USDT→USDC.e swap | ~0.01–0.05% | | |
-| Safe deploy (gasless) | ~10–30 s | | |
-| Approvals (gasless) | ~10–30 s | | |
-| $1 order fill | < 3 s | | |
-| Sell exit | < 3 s | | |
-| Withdraw Polygon→Celo | ~0.28%, ~80 s | | |
-| **Total round-trip cost** | ~30–50¢ on $1.50 | | |
+| Mento USDm→USDT | ~0% (−0.06%) | −0.05% (gain), 8.3 s | 07-13 |
+| Mesh hop1 Celo→Arb | 0.03% + ~$0.07, est 1–3 min | **0.03% exactly, 23 s** | 07-13 |
+| Mesh hop2 Arb→Polygon | 0% + ~$0.08, est 1–2 min | **0%, 1,146 s (~19 min)** ⚠️ | 07-13 |
+| USDT→USDC.e swap | ~0.01–0.05% | 0.14% (LI.FI/Sushi) | 07-13 |
+| pUSD wrap (new, post-V2) | — | 4.6 s, gasless | 07-13 |
+| Safe deploy (gasless) | ~10–30 s | 5.0 s (Safe now unused — see below) | 07-13 |
+| Deposit wallet deploy + approvals | — | ~5 s each, gasless | 07-13 |
+| $1 order fill | < 3 s | **1.6 s, matched** | 07-13 |
+| Sell exit | < 3 s | 1.4 s; gross $0.99716, **net $0.9361 after 1000 bps CLOB fee (~$0.061)** | 07-13 |
+| pUSD unwrap → USDC.e | — | 4.8 s, gasless | 07-13 |
+| Withdraw Polygon→Celo (Squid → USDm direct) | ~0.28%, ~80 s | **0.23%, 66 s — lands as USDm directly** | 07-13 |
+
+Post-V2 reality (April 28, 2026 upgrade — discovered live during this run):
+- Collateral is **pUSD** (`0xC011a7E1…2DFB`); wrap via CollateralOnramp `0x93070a…B8ee`,
+  unwrap via CollateralOfframp `0x2957922E…5854` (`wrap/unwrap(asset, to, amount)`).
+- Old `@polymarket/clob-client` is dead → `@polymarket/clob-client-v2`; builder
+  attribution = bytes32 `BUILDER_CODE` on orders, no HMAC.
+- New wallets cannot trade as type-2 Safes ("maker address not allowed") → EIP-1271
+  **deposit wallets** (steps 12/13), signatureType 3, funder = deposit wallet.
+- The CLOB now charges trading fees (1000 bps rate on this market's fee schedule) —
+  the fee model must absorb/display this.
 
 ### Decisions unblocked by these numbers
 - **Deposit buffer (layer 3)**: if hop1+hop2 measure ≤ ~3 min, launch without it.

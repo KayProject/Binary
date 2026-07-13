@@ -15,7 +15,8 @@
     "08": "tsx scripts/08-bridge-execute.ts",
     "09": "tsx scripts/09-usdt0-transfer.ts",
     "11": "tsx scripts/11-wrap-pusd.ts",
-    "12": "tsx scripts/12-deposit-wallet.ts"
+    "12": "tsx scripts/12-deposit-wallet.ts",
+    "13": "tsx scripts/13-unwrap-pusd.ts"
   },
   "dependencies": {
     "@polymarket/builder-relayer-client": "^0.0.10",
