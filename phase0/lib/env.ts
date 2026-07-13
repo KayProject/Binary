@@ -1,8 +1,14 @@
 import * as fs from "fs";
 import * as path from "path";
+import tls from "tls";
 import * as dotenv from "dotenv";
 import { ethers } from "ethers";
 import { BuilderConfig } from "@polymarket/builder-signing-sdk";
+
+// Node 24's TLS 1.3 session resumption trips "decrypt error" alerts on several
+// public RPC endpoints when connections are reused (ethers v5 HTTP stack).
+// Capping at TLS 1.2 avoids it; native fetch is unaffected either way.
+tls.DEFAULT_MAX_VERSION = "TLSv1.2";
 
 dotenv.config({ path: path.join(__dirname, "..", ".env.local") });
 
