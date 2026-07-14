@@ -55,7 +55,22 @@ function tradeable(m: Market): boolean {
   );
 }
 
-export async function fetchFeed(limit = 20): Promise<Market[]> {
+// App category tabs → Gamma tag ids. Filtering happens via tag_id +
+// related_tags on the Gamma side; the curation floors above still gate every
+// market, so tabs widen the feed without loosening what a $2 bettor sees.
+// Ids verified live: sports/crypto/politics/pop-culture each return a healthy
+// list that clears the floors.
+export const CATEGORIES = ["all", "sports", "crypto", "politics", "culture"] as const;
+export type Category = (typeof CATEGORIES)[number];
+
+const TAG_IDS: Record<Exclude<Category, "all">, string> = {
+  sports: "1",
+  crypto: "21",
+  politics: "2",
+  culture: "596", // Gamma slug "pop-culture", labeled "Culture"
+};
+
+export async function fetchFeed(limit = 20, category: Category = "all"): Promise<Market[]> {
   // Over-fetch: curation drops a chunk of the raw list.
   const params = new URLSearchParams({
     closed: "false",
@@ -64,6 +79,10 @@ export async function fetchFeed(limit = 20): Promise<Market[]> {
     order: "volume24hr",
     ascending: "false",
   });
+  if (category !== "all") {
+    params.set("tag_id", TAG_IDS[category]);
+    params.set("related_tags", "true");
+  }
   const res = await fetch(`${GAMMA}/markets?${params}`, {
     next: { revalidate: 30 }, // odds refresh cadence for the feed
   });

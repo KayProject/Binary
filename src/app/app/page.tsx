@@ -23,6 +23,15 @@ import {
 type Pick = { outcome: 0 | 1; label: string; price: number; question: string; at: number };
 type Tab = "markets" | "portfolio" | "you";
 type Theme = "light" | "dark";
+type Category = "all" | "sports" | "crypto" | "politics" | "culture";
+
+const CATEGORIES: [Category, string][] = [
+  ["all", "All"],
+  ["sports", "Sports"],
+  ["crypto", "Crypto"],
+  ["politics", "Politics"],
+  ["culture", "Culture"],
+];
 
 const cents = (p: number) => `${(p * 100).toFixed(p < 0.1 || p > 0.9 ? 1 : 0)}¢`;
 const pct = (p: number) => `${Math.round(p * 100)}%`;
@@ -78,6 +87,8 @@ function useTheme(): [Theme, () => void] {
 export default function AppHome() {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [error, setError] = useState(false);
+  const [category, setCategory] = useState<Category>("all");
+  const [feedLoading, setFeedLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("markets");
   const [sheet, setSheet] = useState<{ market: Market; outcome: 0 | 1 } | null>(null);
   const [topUp, setTopUp] = useState(false);
@@ -316,17 +327,26 @@ export default function AppHome() {
   useEffect(() => {
     let live = true;
     const load = () =>
-      fetch("/api/markets?limit=20")
+      fetch(`/api/markets?limit=40&category=${category}`)
         .then((r) => r.json())
-        .then((d) => live && d.markets && setMarkets(d.markets))
-        .catch(() => live && setError(true));
+        .then((d) => {
+          if (!live) return;
+          if (d.markets) setMarkets(d.markets);
+          else setError(true);
+          setFeedLoading(false);
+        })
+        .catch(() => {
+          if (!live) return;
+          setError(true);
+          setFeedLoading(false);
+        });
     load();
     const t = setInterval(load, 30_000);
     return () => {
       live = false;
       clearInterval(t);
     };
-  }, []);
+  }, [category]);
 
   const sel = sheet && sheet.market.outcomes[sheet.outcome];
   const win = sel ? payoutIfWin(amount, sel.price) : 0;
@@ -387,6 +407,31 @@ export default function AppHome() {
       {/* ── Markets ───────────────────────────────────────────── */}
       {tab === "markets" && (
         <>
+          <div
+            className="flex gap-2 overflow-x-auto px-4 pt-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            role="tablist"
+            aria-label="Market categories"
+          >
+            {CATEGORIES.map(([id, label]) => (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={id === category}
+                onClick={() => {
+                  if (id === category) return;
+                  setCategory(id);
+                  setMarkets([]);
+                  setFeedLoading(true);
+                  setError(false);
+                }}
+                className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition active:scale-95 ${
+                  id === category ? "bg-(--s-act) text-white" : "bg-(--s-card) text-(--s-sub)"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {!address && (
             <div className="mx-4 mt-4 rounded-2xl border border-(--s-act) bg-(--s-act-tint) p-4">
               <p className="text-[15px] font-bold">Play free. Win real cash.</p>
@@ -414,6 +459,11 @@ export default function AppHome() {
           {error && (
             <p className="p-6 text-center text-sm text-(--s-sub)">
               Feed unavailable — pull to retry.
+            </p>
+          )}
+          {!error && !feedLoading && markets.length === 0 && (
+            <p className="p-6 text-center text-sm text-(--s-sub)">
+              Nothing liquid here right now — check back soon.
             </p>
           )}
           <ul className="divide-y divide-(--s-line)">
