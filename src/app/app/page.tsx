@@ -7,11 +7,16 @@ import { MomentScreen, type Moment } from "@/components/moments";
 import { payoutIfWin, sharesFor, takerFee } from "@/lib/polymarket/fees";
 import { useWallet } from "@/hooks/useWallet";
 import {
-  DEPOSIT_CONTRACT,
   PLAY_CONTRACT,
+  DEPOSIT_CONTRACT,
+  USDM,
+  approveUsdmData,
   checkInData,
-  pickData,
+  depositData,
   fetchPlayerState,
+  pickData,
+  usdToWei,
+  usdmAllowance,
   type PlayerState,
 } from "@/lib/chain";
 
@@ -92,13 +97,15 @@ export default function AppHome() {
   const [tab, setTab] = useState<Tab>("markets");
   const [sheet, setSheet] = useState<{ market: Market; outcome: 0 | 1 } | null>(null);
   const [topUp, setTopUp] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [depositUsd, setDepositUsd] = useState("");
+  // Set while a deposit is crossing the bridge; drives the header pill.
+  const [fundingUsd, setFundingUsd] = useState<number | null>(null);
   const [amount, setAmount] = useState(2);
   const { picks, addPick } = usePicks();
   const [theme, toggleTheme] = useTheme();
   const { address, isMiniPay, hasWallet, userLabel, connect, logout, sendTx } = useWallet();
   const [player, setPlayer] = useState<PlayerState | null>(null);
-  const [txBusy, setTxBusy] = useState<"pick" | "checkin" | "bet" | null>(null);
+  const [txBusy, setTxBusy] = useState<"pick" | "checkin" | "bet" | "topup" | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
   const [moment, setMoment] = useState<Moment | null>(null);
   const [graded, setGraded] = useState<Record<string, "won" | "lost">>({});
@@ -134,27 +141,39 @@ export default function AppHome() {
     }
   }, [player]);
 
-  // Funding tracker: advance when the deposit hits the Celo contract, hand
-  // over to the funded moment when the broker reports the pUSD credited.
+  // Deposit-in-flight watcher: runs whenever money is crossing, whether or
+  // not the tracker screen is open ("close it, we'll light it up"). Advances
+  // the tracker when the deposit confirms on Celo; fires MONEY'S IN when the
+  // broker reports the pUSD credited.
   useEffect(() => {
-    if (moment?.t !== "pending") return;
+    if (fundingUsd === null) return;
     const base = pendingBase.current;
     if (!base) return;
     const tick = async () => {
       refreshPlayer();
       const net = prevPlayer.current?.depositedUsd ?? 0;
-      if (net > base.net && moment.step < 3) setMoment({ t: "pending", step: 3 });
+      if (net > base.net) {
+        setMoment((m) =>
+          m?.t === "pending" && m.step < 3 ? { t: "pending", step: 3, usd: m.usd } : m
+        );
+      }
       try {
         const r = await fetch("/api/account").then((x) => x.json());
         if (r.configured && typeof r.creditedUsd === "number") {
           if (base.credited === null) base.credited = r.creditedUsd;
-          else if (r.creditedUsd > base.credited) setMoment({ t: "funded", balance: net });
+          else if (r.creditedUsd > base.credited) {
+            setFundingUsd(null);
+            // Take over the tracker or an idle screen; never stomp another moment.
+            setMoment((m) =>
+              m === null || m.t === "pending" ? { t: "funded", balance: net } : m
+            );
+          }
         }
       } catch {}
     };
     const iv = setInterval(tick, 8_000);
     return () => clearInterval(iv);
-  }, [moment, refreshPlayer]);
+  }, [fundingUsd, refreshPlayer]);
 
   // Grade past picks against resolved markets (client-side v1: a closed
   // market's outcome price collapses to ~0/1). One result moment per batch.
@@ -181,7 +200,7 @@ export default function AppHome() {
         checkedin: { t: "checkedin", streak: 7 },
         win: { t: "win", label: "YES", question: q, wouldHavePaid: 5.13 },
         loss: { t: "loss", label: "NO", question: q },
-        pending: { t: "pending", step: 3 },
+        pending: { t: "pending", step: 3, usd: 10 },
         funded: { t: "funded", balance: 25 },
         cashout: { t: "cashout", amount: 31.4 },
         recap: { t: "recap", picks: 9, wins: 4, losses: 2, streak: 7, longest: 11, checkIns: 23 },
@@ -283,6 +302,40 @@ export default function AppHome() {
     }
   };
 
+  // Deposits go through deposit() on the contract (approve first if needed) —
+  // a raw USDm transfer never emits Deposited, so it would never be credited.
+  const MIN_DEPOSIT = 2; // below this, bridge fees eat a real chunk of it
+  const doTopUp = async (usd: number) => {
+    setTxError(null);
+    const from = await ensureAddress();
+    if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
+    setTxBusy("topup");
+    try {
+      const wei = usdToWei(usd);
+      const allowance = await usdmAllowance(from).catch(() => 0n);
+      if (allowance < wei) {
+        await sendTx(USDM, approveUsdmData(wei));
+      }
+      const net = player?.depositedUsd ?? 0;
+      let credited: number | null = null;
+      try {
+        const r = await fetch("/api/account").then((x) => x.json());
+        if (r.configured && typeof r.creditedUsd === "number") credited = r.creditedUsd;
+      } catch {}
+      await sendTx(DEPOSIT_CONTRACT, depositData(wei));
+      pendingBase.current = { net, credited };
+      setFundingUsd(usd);
+      setTopUp(false);
+      setDepositUsd("");
+      setMoment({ t: "pending", step: 2, usd });
+      setTimeout(refreshPlayer, 3_000);
+    } catch {
+      setTxError("Deposit didn’t go through — try again.");
+    } finally {
+      setTxBusy(null);
+    }
+  };
+
   const doBet = async (market: Market, outcome: 0 | 1, usd: number) => {
     setTxError(null);
     const from = await ensureAddress();
@@ -359,13 +412,6 @@ export default function AppHome() {
     [picks]
   );
 
-  const copyAddress = () => {
-    navigator.clipboard?.writeText(DEPOSIT_CONTRACT).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  };
-
   return (
     <main
       className={`${theme === "dark" ? "app-dark" : "app-light"} mx-auto min-h-dvh max-w-md bg-(--s-bg) pb-24 text-(--s-text)`}
@@ -396,10 +442,16 @@ export default function AppHome() {
             🔥 {streak}
           </button>
           <button
-            onClick={() => setTopUp(true)}
+            onClick={() => (fundingUsd !== null ? setMoment({ t: "pending", step: 2, usd: fundingUsd }) : setTopUp(true))}
             className="rounded-full bg-(--s-card) px-3 py-1 font-mono text-sm font-semibold"
           >
-            ${balance.toFixed(2)}
+            {fundingUsd !== null ? (
+              <span className="moment-step-active text-(--s-act-soft)">
+                +${fundingUsd.toFixed(2)}…
+              </span>
+            ) : (
+              `$${balance.toFixed(2)}`
+            )}
           </button>
         </div>
       </header>
@@ -786,43 +838,67 @@ export default function AppHome() {
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-(--s-line)" />
             <h3 className="mb-1 text-xl font-bold">Top up with USDm</h3>
             <p className="mb-4 text-sm leading-relaxed text-(--s-sub)">
-              Send USDm from this MiniPay wallet to Binary&apos;s deposit contract on Celo. Your
-              balance goes live in about 2 minutes.
+              Your USDm becomes betting power in about 2 minutes. Any amount from ${MIN_DEPOSIT}.
             </p>
 
-            <div className="mb-4 rounded-2xl bg-(--s-bg) p-4">
-              <p className="mb-1 text-xs text-(--s-sub)">Deposit contract (Celo)</p>
-              <p className="break-all font-mono text-sm">{DEPOSIT_CONTRACT}</p>
-              <button
-                onClick={copyAddress}
-                className="mt-3 w-full rounded-xl border border-(--s-act) py-2.5 text-sm font-bold text-(--s-act-soft) active:scale-[0.98]"
-              >
-                {copied ? "Copied ✓" : "Copy address"}
-              </button>
+            <div className="mb-3 flex items-center gap-2 rounded-2xl bg-(--s-bg) p-4">
+              <span className="font-mono text-2xl font-bold text-(--s-sub)">$</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="10.00"
+                value={depositUsd}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (/^\d*\.?\d{0,2}$/.test(v)) setDepositUsd(v);
+                }}
+                className="w-full bg-transparent font-mono text-2xl font-bold tabular-nums outline-none placeholder:text-(--s-sub) placeholder:opacity-50"
+              />
+            </div>
+
+            <div className="mb-4 flex gap-2">
+              {[5, 10, 20].map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setDepositUsd(String(v))}
+                  className={`flex-1 rounded-xl border py-2 font-mono text-sm font-bold ${
+                    depositUsd === String(v)
+                      ? "border-(--s-act) bg-(--s-act-tint) text-(--s-act-soft)"
+                      : "border-(--s-line) text-(--s-sub)"
+                  }`}
+                >
+                  ${v}
+                </button>
+              ))}
             </div>
 
             <ol className="mb-4 space-y-1.5 text-sm text-(--s-sub)">
-              <li>1 · Minimum $1 USDm to start</li>
-              <li>2 · Funds show as “funding” while they travel</li>
+              <li>1 · You confirm in MiniPay — we never touch your wallet</li>
+              <li>2 · Your money crosses to Polymarket (~2 min, tracked live)</li>
               <li>3 · Withdrawals return to this wallet only — always</li>
             </ol>
 
-            <button
-              className="w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98]"
-              onClick={async () => {
-                setTopUp(false);
-                const net = player?.depositedUsd ?? 0;
-                let credited: number | null = null;
-                try {
-                  const r = await fetch("/api/account").then((x) => x.json());
-                  if (r.configured && typeof r.creditedUsd === "number") credited = r.creditedUsd;
-                } catch {}
-                pendingBase.current = { net, credited };
-                setMoment({ t: "pending", step: 2 });
-              }}
-            >
-              I&apos;ve sent it
-            </button>
+            {txError && <p className="mb-2 text-center text-xs text-(--s-lose)">{txError}</p>}
+            {(() => {
+              const usd = parseFloat(depositUsd);
+              const valid = Number.isFinite(usd) && usd >= MIN_DEPOSIT;
+              return (
+                <button
+                  className="w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98] disabled:opacity-60"
+                  disabled={!valid || txBusy === "topup"}
+                  onClick={() => doTopUp(usd)}
+                >
+                  {txBusy === "topup"
+                    ? "Confirm in your wallet…"
+                    : valid
+                      ? `Top up $${usd.toFixed(2)}`
+                      : depositUsd && Number.isFinite(usd)
+                        ? `Minimum $${MIN_DEPOSIT}`
+                        : "Enter an amount"}
+                </button>
+              );
+            })()}
           </div>
         </div>
       )}

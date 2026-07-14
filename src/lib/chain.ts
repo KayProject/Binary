@@ -9,6 +9,30 @@ import { celo } from "viem/chains";
 
 export const PLAY_CONTRACT = "0x1CfbEa228F37A139cD805f15291D19f7DBBF7426" as const;
 export const DEPOSIT_CONTRACT = "0xE75A70597501453Fb0DFBa9B34eA2b9495d67600" as const;
+export const USDM = "0x765DE816845861e75A25fCA122bb6898B8B1282a" as const; // 18 dec
+
+const erc20Abi = [
+  {
+    type: "function",
+    name: "approve",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "allowance",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+] as const;
 
 export const playAbi = [
   {
@@ -53,6 +77,13 @@ export const playAbi = [
 export const depositsAbi = [
   {
     type: "function",
+    name: "deposit",
+    inputs: [{ name: "amount", type: "uint256" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "totalDeposited",
     inputs: [{ name: "", type: "address" }],
     outputs: [{ name: "", type: "uint256" }],
@@ -83,6 +114,32 @@ export const pickData = (conditionId: string, outcome: 0 | 1) =>
     functionName: "pick",
     args: [marketIdFor(conditionId), outcome],
   });
+
+// ── Deposit flow: approve(exact) then deposit(amount). Deposits MUST go
+// through deposit() — a raw USDm transfer to the contract never emits
+// Deposited, so the funding pipeline would never credit it. ──────────────
+
+/** $ → USDm wei (18 dec), cent precision. */
+export const usdToWei = (usd: number) => BigInt(Math.round(usd * 100)) * 10n ** 16n;
+
+export const approveUsdmData = (amount: bigint) =>
+  encodeFunctionData({
+    abi: erc20Abi,
+    functionName: "approve",
+    args: [DEPOSIT_CONTRACT, amount],
+  });
+
+export const depositData = (amount: bigint) =>
+  encodeFunctionData({ abi: depositsAbi, functionName: "deposit", args: [amount] });
+
+export async function usdmAllowance(owner: `0x${string}`): Promise<bigint> {
+  return publicClient.readContract({
+    address: USDM,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: [owner, DEPOSIT_CONTRACT],
+  });
+}
 
 export interface PlayerState {
   streak: number;

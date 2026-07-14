@@ -13,7 +13,7 @@ export type Moment =
   | { t: "checkedin"; streak: number }
   | { t: "win"; label: string; question: string; wouldHavePaid: number }
   | { t: "loss"; label: string; question: string }
-  | { t: "pending"; step: 1 | 2 | 3 }
+  | { t: "pending"; step: 1 | 2 | 3; usd?: number }
   | { t: "funded"; balance: number }
   | { t: "cashout"; amount: number }
   | {
@@ -267,12 +267,17 @@ export function MomentScreen({
 
         {moment.t === "pending" && (
           <>
-            <p className="text-center text-2xl font-black italic">Funding your balance</p>
+            <p className="text-center text-2xl font-black italic">
+              Giving you your betting power…
+            </p>
+            {moment.usd !== undefined && (
+              <Chip>${moment.usd.toFixed(2)} on its way</Chip>
+            )}
             <ol className="mt-2 w-full space-y-3">
               {(
                 [
-                  ["Send USDm from your wallet", 1],
-                  ["Deposit seen on Celo", 2],
+                  ["USDm sent", 1],
+                  ["Confirming on Celo", 2],
                   ["Crossing to Polymarket (~2 min)", 3],
                 ] as const
               ).map(([label, step]) => {
@@ -292,8 +297,8 @@ export function MomentScreen({
               })}
             </ol>
             <p className="text-center text-xs text-(--m-sub)">
-              Safe to close — your balance updates on its own, and money only ever returns to
-              this wallet.
+              Usually about 2 minutes. Safe to close and keep browsing — we&apos;ll light it up
+              the moment it lands, and money only ever returns to this wallet.
             </p>
             <div className="mt-4 w-full">
               <button className={ghostBtn} onClick={onClose}>
