@@ -3,6 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Market } from "@/lib/polymarket/types";
 import { LogoChip } from "@/components/Logo";
+import {
+  AllIcon,
+  CryptoIcon,
+  CultureIcon,
+  MarketsIcon,
+  PoliticsIcon,
+  PortfolioIcon,
+  SportsIcon,
+  YouIcon,
+} from "@/components/icons";
 import { MomentScreen, type Moment } from "@/components/moments";
 import { payoutIfWin, sharesFor, takerFee } from "@/lib/polymarket/fees";
 import { useWallet } from "@/hooks/useWallet";
@@ -30,12 +40,12 @@ type Tab = "markets" | "portfolio" | "you";
 type Theme = "light" | "dark";
 type Category = "all" | "sports" | "crypto" | "politics" | "culture";
 
-const CATEGORIES: [Category, string][] = [
-  ["all", "All"],
-  ["sports", "Sports"],
-  ["crypto", "Crypto"],
-  ["politics", "Politics"],
-  ["culture", "Culture"],
+const CATEGORIES: [Category, string, (p: { className?: string }) => React.ReactElement][] = [
+  ["all", "All", AllIcon],
+  ["sports", "Sports", SportsIcon],
+  ["crypto", "Crypto", CryptoIcon],
+  ["politics", "Politics", PoliticsIcon],
+  ["culture", "Culture", CultureIcon],
 ];
 
 const cents = (p: number) => `${(p * 100).toFixed(p < 0.1 || p > 0.9 ? 1 : 0)}¢`;
@@ -414,7 +424,7 @@ export default function AppHome() {
 
   return (
     <main
-      className={`${theme === "dark" ? "app-dark" : "app-light"} mx-auto min-h-dvh max-w-md bg-(--s-bg) pb-24 text-(--s-text)`}
+      className={`${theme === "dark" ? "app-dark" : "app-light"} mx-auto w-full min-w-0 min-h-dvh max-w-md bg-(--s-bg) pb-24 text-(--s-text)`}
     >
       {/* Header */}
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-(--s-line) bg-(--s-bg-blur) px-4 py-3 backdrop-blur">
@@ -464,7 +474,7 @@ export default function AppHome() {
             role="tablist"
             aria-label="Market categories"
           >
-            {CATEGORIES.map(([id, label]) => (
+            {CATEGORIES.map(([id, label, Icon]) => (
               <button
                 key={id}
                 role="tab"
@@ -476,10 +486,11 @@ export default function AppHome() {
                   setFeedLoading(true);
                   setError(false);
                 }}
-                className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition active:scale-95 ${
+                className={`flex shrink-0 items-center gap-1.5 rounded-full py-1.5 pl-2.5 pr-3.5 text-sm font-semibold transition active:scale-95 ${
                   id === category ? "bg-(--s-act) text-white" : "bg-(--s-card) text-(--s-sub)"
                 }`}
               >
+                <Icon className="h-[18px] w-[18px]" />
                 {label}
               </button>
             ))}
@@ -706,19 +717,20 @@ export default function AppHome() {
       <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto flex max-w-md border-t border-(--s-line) bg-(--s-bg-blur) backdrop-blur">
         {(
           [
-            ["markets", "Markets", "◉"],
-            ["portfolio", "Portfolio", "▤"],
-            ["you", "You", "☺"],
+            ["markets", "Markets", MarketsIcon],
+            ["portfolio", "Portfolio", PortfolioIcon],
+            ["you", "You", YouIcon],
           ] as const
-        ).map(([id, label, glyph]) => (
+        ).map(([id, label, Icon]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-semibold transition ${
+            aria-current={tab === id ? "page" : undefined}
+            className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition ${
               tab === id ? "text-(--s-act-soft)" : "text-(--s-sub)"
             }`}
           >
-            <span className="text-lg leading-none">{glyph}</span>
+            <Icon className={`h-6 w-6 transition ${tab === id ? "scale-110" : ""}`} />
             {label}
           </button>
         ))}
