@@ -73,25 +73,30 @@ function InjectedBridge({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const eth = getEth();
-    if (!eth) {
-      setReady(true);
-      return;
-    }
-    setHasWallet(true);
-    setIsMiniPay(!!eth.isMiniPay);
-    eth.on?.("accountsChanged", (accounts) =>
-      setAddress((accounts[0] as `0x${string}`) ?? null)
-    );
-    const method = eth.isMiniPay ? "eth_requestAccounts" : "eth_accounts";
-    eth
-      .request({ method })
-      .then((accounts) => {
-        const a = (accounts as string[])[0];
-        if (a) setAddress(a as `0x${string}`);
-      })
-      .catch(() => {})
-      .finally(() => setReady(true));
+    // Deferred one frame: provider sniffing can't run during SSR/hydration,
+    // and setState in an effect body cascades renders.
+    const id = requestAnimationFrame(() => {
+      const eth = getEth();
+      if (!eth) {
+        setReady(true);
+        return;
+      }
+      setHasWallet(true);
+      setIsMiniPay(!!eth.isMiniPay);
+      eth.on?.("accountsChanged", (accounts) =>
+        setAddress((accounts[0] as `0x${string}`) ?? null)
+      );
+      const method = eth.isMiniPay ? "eth_requestAccounts" : "eth_accounts";
+      eth
+        .request({ method })
+        .then((accounts) => {
+          const a = (accounts as string[])[0];
+          if (a) setAddress(a as `0x${string}`);
+        })
+        .catch(() => {})
+        .finally(() => setReady(true));
+    });
+    return () => cancelAnimationFrame(id);
   }, []);
 
   const connect = useCallback(async () => {
@@ -182,9 +187,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [env, setEnv] = useState<"injected" | "privy" | null>(null);
 
   useEffect(() => {
-    const eth = getEth();
-    if (eth?.isMiniPay || !PRIVY_APP_ID) setEnv("injected");
-    else setEnv("privy");
+    const id = requestAnimationFrame(() => {
+      const eth = getEth();
+      if (eth?.isMiniPay || !PRIVY_APP_ID) setEnv("injected");
+      else setEnv("privy");
+    });
+    return () => cancelAnimationFrame(id);
   }, []);
 
   if (env === null) {

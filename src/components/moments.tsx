@@ -49,13 +49,11 @@ function useCountUp(target: number, ms = 900): number {
   const [value, setValue] = useState(0);
   const raf = useRef(0);
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setValue(target);
-      return;
-    }
+    // Reduced motion collapses the ramp to a single frame — same code path.
+    const dur = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : ms;
     const t0 = performance.now();
     const tick = (now: number) => {
-      const k = Math.min((now - t0) / ms, 1);
+      const k = dur === 0 ? 1 : Math.min((now - t0) / dur, 1);
       setValue(target * (1 - Math.pow(1 - k, 3))); // ease-out cubic
       if (k < 1) raf.current = requestAnimationFrame(tick);
     };

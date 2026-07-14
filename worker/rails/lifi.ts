@@ -9,14 +9,35 @@ import { providers, operator } from "../lib/env";
 
 const LIFI = "https://li.quest/v1";
 
-async function lifi(path: string, init?: RequestInit): Promise<any> {
+// The slices of LI.FI's advanced-route schema this rail actually touches.
+interface LifiStep {
+  tool: string;
+  action: {
+    fromChainId: number;
+    toChainId: number;
+    fromToken: { address: string };
+    fromAmount: string;
+  };
+  estimate: { approvalAddress: string };
+  transactionRequest?: {
+    to: string;
+    data: string;
+    value?: string;
+    gasLimit?: string;
+  };
+}
+interface LifiRoute {
+  steps: LifiStep[];
+}
+
+async function lifi<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${LIFI}${path}`, {
     headers: { "Content-Type": "application/json" },
     ...init,
   });
   const data = await res.json();
   if (!res.ok) throw new Error(`LI.FI ${path}: ${JSON.stringify(data).slice(0, 300)}`);
-  return data;
+  return data as T;
 }
 
 async function ensureAllowance(
@@ -38,11 +59,11 @@ async function ensureAllowance(
   await (await erc20.approve(spender, amount)).wait();
 }
 
-async function executeStep(step: any): Promise<string> {
-  const chainId: number = step.action.fromChainId;
+async function executeStep(step: LifiStep): Promise<string> {
+  const chainId = step.action.fromChainId;
   const signer = operator(providers[chainId]);
 
-  const withTx = await lifi("/advanced/stepTransaction", {
+  const withTx = await lifi<LifiStep>("/advanced/stepTransaction", {
     method: "POST",
     body: JSON.stringify(step),
   });
@@ -71,7 +92,7 @@ async function executeStep(step: any): Promise<string> {
     const t0 = Date.now();
     for (;;) {
       await new Promise((r) => setTimeout(r, 10_000));
-      const status = await lifi(
+      const status = await lifi<{ status: string }>(
         `/status?bridge=${step.tool}&fromChain=${step.action.fromChainId}` +
           `&toChain=${step.action.toChainId}&txHash=${tx.hash}`
       ).catch(() => ({ status: "PENDING" }));
@@ -96,7 +117,7 @@ export async function executeLifiLeg(
   leg: LifiLeg
 ): Promise<{ txHash: string; amountOut: bigint }> {
   const eoa = operator().address;
-  const { routes } = await lifi("/advanced/routes", {
+  const { routes } = await lifi<{ routes?: LifiRoute[] }>("/advanced/routes", {
     method: "POST",
     body: JSON.stringify({
       fromChainId: leg.fromChainId,

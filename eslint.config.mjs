@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Phase-0 spike scripts — measurement artifacts, not app code.
+    "phase0/**",
   ]),
 ]);
 

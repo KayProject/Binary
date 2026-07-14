@@ -27,13 +27,19 @@ type Theme = "light" | "dark";
 const cents = (p: number) => `${(p * 100).toFixed(p < 0.1 || p > 0.9 ? 1 : 0)}¢`;
 const pct = (p: number) => `${Math.round(p * 100)}%`;
 
+// localStorage hydration below is deferred one frame (rAF): the server frame
+// and first client frame must match, so the stored value can't be read during
+// render, and setState directly in an effect body cascades renders.
 function usePicks() {
   const [picks, setPicks] = useState<Record<string, Pick>>({});
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("binary.picks");
-      if (raw) setPicks(JSON.parse(raw));
-    } catch {}
+    const id = requestAnimationFrame(() => {
+      try {
+        const raw = localStorage.getItem("binary.picks");
+        if (raw) setPicks(JSON.parse(raw));
+      } catch {}
+    });
+    return () => cancelAnimationFrame(id);
   }, []);
   const addPick = (slug: string, p: Pick) =>
     setPicks((prev) => {
@@ -49,11 +55,14 @@ function usePicks() {
 function useTheme(): [Theme, () => void] {
   const [theme, setTheme] = useState<Theme>("light");
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("binary.theme") as Theme | null;
-      if (saved === "light" || saved === "dark") setTheme(saved);
-      else if (window.matchMedia("(prefers-color-scheme: dark)").matches) setTheme("dark");
-    } catch {}
+    const id = requestAnimationFrame(() => {
+      try {
+        const saved = localStorage.getItem("binary.theme") as Theme | null;
+        if (saved === "light" || saved === "dark") setTheme(saved);
+        else if (window.matchMedia("(prefers-color-scheme: dark)").matches) setTheme("dark");
+      } catch {}
+    });
+    return () => cancelAnimationFrame(id);
   }, []);
   const toggle = () =>
     setTheme((t) => {
@@ -139,37 +148,43 @@ export default function AppHome() {
   // Grade past picks against resolved markets (client-side v1: a closed
   // market's outcome price collapses to ~0/1). One result moment per batch.
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("binary.graded");
-      if (raw) setGraded(JSON.parse(raw));
-    } catch {}
+    const id = requestAnimationFrame(() => {
+      try {
+        const raw = localStorage.getItem("binary.graded");
+        if (raw) setGraded(JSON.parse(raw));
+      } catch {}
+    });
+    return () => cancelAnimationFrame(id);
   }, []);
 
   // Design review hatch: /app?moment=<type> renders any moment with sample
   // data — no on-chain event needed to see a screen on a real device.
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get("moment");
-    if (!t) return;
-    const q = "Will Nigeria win AFCON 2027?";
-    const samples: Record<string, Moment> = {
-      picked: { t: "picked", label: "YES", price: 0.39, question: q, streak: 5 },
-      bet: { t: "bet", label: "YES", price: 0.39, question: q, usd: 5, win: 12.82 },
-      checkedin: { t: "checkedin", streak: 7 },
-      win: { t: "win", label: "YES", question: q, wouldHavePaid: 5.13 },
-      loss: { t: "loss", label: "NO", question: q },
-      pending: { t: "pending", step: 3 },
-      funded: { t: "funded", balance: 25 },
-      cashout: { t: "cashout", amount: 31.4 },
-      recap: { t: "recap", picks: 9, wins: 4, losses: 2, streak: 7, longest: 11, checkIns: 23 },
-      rankup: { t: "rankup", rank: 8 },
-      share: {
-        t: "share",
-        heading: q,
-        line: "YES · 39¢",
-        text: `I'm calling YES on “${q}” — binary-io.vercel.app`,
-      },
-    };
-    if (samples[t]) setMoment(samples[t]);
+    const id = requestAnimationFrame(() => {
+      const t = new URLSearchParams(window.location.search).get("moment");
+      if (!t) return;
+      const q = "Will Nigeria win AFCON 2027?";
+      const samples: Record<string, Moment> = {
+        picked: { t: "picked", label: "YES", price: 0.39, question: q, streak: 5 },
+        bet: { t: "bet", label: "YES", price: 0.39, question: q, usd: 5, win: 12.82 },
+        checkedin: { t: "checkedin", streak: 7 },
+        win: { t: "win", label: "YES", question: q, wouldHavePaid: 5.13 },
+        loss: { t: "loss", label: "NO", question: q },
+        pending: { t: "pending", step: 3 },
+        funded: { t: "funded", balance: 25 },
+        cashout: { t: "cashout", amount: 31.4 },
+        recap: { t: "recap", picks: 9, wins: 4, losses: 2, streak: 7, longest: 11, checkIns: 23 },
+        rankup: { t: "rankup", rank: 8 },
+        share: {
+          t: "share",
+          heading: q,
+          line: "YES · 39¢",
+          text: `I'm calling YES on “${q}” — binary-io.vercel.app`,
+        },
+      };
+      if (samples[t]) setMoment(samples[t]);
+    });
+    return () => cancelAnimationFrame(id);
   }, []);
   useEffect(() => {
     const ungraded = Object.entries(picks).filter(([slug]) => !graded[slug]);
