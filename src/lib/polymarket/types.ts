@@ -13,6 +13,7 @@ export interface Market {
   conditionId: string;
   outcomes: [MarketOutcome, MarketOutcome];
   negRisk: boolean;
+  closed: boolean; // resolved — outcome prices have collapsed to 0/1
   volume24h: number;
   liquidity: number;
   endDate: string; // ISO

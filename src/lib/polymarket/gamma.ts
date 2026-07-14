@@ -28,6 +28,7 @@ function normalize(raw: GammaMarket): Market | null {
       { label: labels[1], price: parseFloat(prices[1]), clobTokenId: tokens[1] },
     ],
     negRisk: raw.negRisk ?? false,
+    closed: raw.closed ?? false,
     volume24h: raw.volume24hr ?? 0,
     liquidity: typeof raw.liquidity === "string" ? parseFloat(raw.liquidity) : raw.liquidity ?? 0,
     endDate: raw.endDate ?? "",

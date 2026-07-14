@@ -91,6 +91,7 @@ export interface PlayerState {
   pickCount: number;
   checkedInToday: boolean;
   depositedUsd: number; // net USDm through the deposit contract
+  paidOutUsd: number; // cumulative payouts — a rise means a withdrawal landed
 }
 
 export async function fetchPlayerState(address: `0x${string}`): Promise<PlayerState> {
@@ -130,5 +131,6 @@ export async function fetchPlayerState(address: `0x${string}`): Promise<PlayerSt
     pickCount: Number(pickCount),
     checkedInToday: Number(checkIns) > 0 && Number(lastDay) === today,
     depositedUsd: net > 0n ? Number(net) / 1e18 : 0,
+    paidOutUsd: Number(paidOut) / 1e18,
   };
 }

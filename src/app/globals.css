@@ -72,6 +72,12 @@ body::before {
   --s-win: #16a34a;
   --s-lose: #c2410c;
   --s-lose-tint: #fdf0f0;
+  /* Gold-burst takeover (celebration moments only) */
+  --s-burst-a: #fde68a;
+  --s-burst-b: #f59e0b;
+  --s-burst-text: #451a03;
+  --s-burst-sub: rgba(69, 26, 3, 0.7);
+  --s-burst-chip: rgba(255, 255, 255, 0.55);
 }
 .app-dark {
   --s-bg: #0b0f1a;
@@ -91,4 +97,87 @@ body::before {
   --s-win: #31d3a2;
   --s-lose: #ff6b5e;
   --s-lose-tint: rgba(255, 107, 94, 0.1);
+  /* Gold-burst takeover — Midnight keeps its ground, gold takes the light */
+  --s-burst-a: #1a1608;
+  --s-burst-b: #3a2e12;
+  --s-burst-text: #e4c87e;
+  --s-burst-sub: rgba(228, 200, 126, 0.65);
+  --s-burst-chip: rgba(228, 200, 126, 0.12);
+}
+
+/* ── Moment screens (full-screen takeovers) ─────────────────────────── */
+.moment-rise {
+  animation: moment-rise 0.35s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.moment-pop {
+  animation: moment-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) 0.15s both;
+}
+.moment-burst-bg {
+  background: linear-gradient(170deg, var(--s-burst-a) 0%, var(--s-burst-b) 100%);
+}
+.moment-particle {
+  position: absolute;
+  animation: moment-float 2.6s ease-in-out infinite;
+  opacity: 0;
+}
+@keyframes moment-rise {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes moment-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes moment-float {
+  0% {
+    transform: translateY(12px) scale(0.7);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-48px) scale(1.1);
+    opacity: 0;
+  }
+}
+@keyframes moment-step-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.moment-step-active {
+  animation: moment-step-pulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .moment-rise,
+  .moment-pop,
+  .moment-particle,
+  .moment-step-active {
+    animation: none;
+  }
+  .moment-rise,
+  .moment-pop {
+    opacity: 1;
+    transform: none;
+  }
+  .moment-particle {
+    display: none;
+  }
 }

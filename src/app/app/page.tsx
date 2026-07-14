@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Market } from "@/lib/polymarket/types";
 import { LogoChip } from "@/components/Logo";
+import { MomentScreen, type Moment } from "@/components/moments";
 import { payoutIfWin, sharesFor, takerFee } from "@/lib/polymarket/fees";
 import { useWallet } from "@/hooks/useWallet";
 import {
@@ -79,6 +80,11 @@ export default function AppHome() {
   const [player, setPlayer] = useState<PlayerState | null>(null);
   const [txBusy, setTxBusy] = useState<"pick" | "checkin" | "bet" | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
+  const [moment, setMoment] = useState<Moment | null>(null);
+  const [graded, setGraded] = useState<Record<string, "won" | "lost">>({});
+  const prevPlayer = useRef<PlayerState | null>(null);
+  // Funding-tracker baseline: net deposits + credited pUSD when it opened.
+  const pendingBase = useRef<{ net: number; credited: number | null } | null>(null);
 
   // Funded = money has entered the pipeline via the deposits contract. The
   // bets API double-checks the credited pUSD balance before every order.
@@ -97,6 +103,110 @@ export default function AppHome() {
     return () => clearInterval(t);
   }, [refreshPlayer]);
 
+  // Withdrawal-landed detector: cumulative payouts only ever rise, and a rise
+  // means USDm just arrived back in the user's wallet.
+  useEffect(() => {
+    const prev = prevPlayer.current;
+    prevPlayer.current = player;
+    if (!prev || !player) return;
+    if (player.paidOutUsd > prev.paidOutUsd) {
+      setMoment({ t: "cashout", amount: player.paidOutUsd - prev.paidOutUsd });
+    }
+  }, [player]);
+
+  // Funding tracker: advance when the deposit hits the Celo contract, hand
+  // over to the funded moment when the broker reports the pUSD credited.
+  useEffect(() => {
+    if (moment?.t !== "pending") return;
+    const base = pendingBase.current;
+    if (!base) return;
+    const tick = async () => {
+      refreshPlayer();
+      const net = prevPlayer.current?.depositedUsd ?? 0;
+      if (net > base.net && moment.step < 3) setMoment({ t: "pending", step: 3 });
+      try {
+        const r = await fetch("/api/account").then((x) => x.json());
+        if (r.configured && typeof r.creditedUsd === "number") {
+          if (base.credited === null) base.credited = r.creditedUsd;
+          else if (r.creditedUsd > base.credited) setMoment({ t: "funded", balance: net });
+        }
+      } catch {}
+    };
+    const iv = setInterval(tick, 8_000);
+    return () => clearInterval(iv);
+  }, [moment, refreshPlayer]);
+
+  // Grade past picks against resolved markets (client-side v1: a closed
+  // market's outcome price collapses to ~0/1). One result moment per batch.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("binary.graded");
+      if (raw) setGraded(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  // Design review hatch: /app?moment=<type> renders any moment with sample
+  // data — no on-chain event needed to see a screen on a real device.
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("moment");
+    if (!t) return;
+    const q = "Will Nigeria win AFCON 2027?";
+    const samples: Record<string, Moment> = {
+      picked: { t: "picked", label: "YES", price: 0.39, question: q, streak: 5 },
+      bet: { t: "bet", label: "YES", price: 0.39, question: q, usd: 5, win: 12.82 },
+      checkedin: { t: "checkedin", streak: 7 },
+      win: { t: "win", label: "YES", question: q, wouldHavePaid: 5.13 },
+      loss: { t: "loss", label: "NO", question: q },
+      pending: { t: "pending", step: 3 },
+      funded: { t: "funded", balance: 25 },
+      cashout: { t: "cashout", amount: 31.4 },
+      recap: { t: "recap", picks: 9, wins: 4, losses: 2, streak: 7, longest: 11, checkIns: 23 },
+      rankup: { t: "rankup", rank: 8 },
+      share: {
+        t: "share",
+        heading: q,
+        line: "YES · 39¢",
+        text: `I'm calling YES on “${q}” — binary-io.vercel.app`,
+      },
+    };
+    if (samples[t]) setMoment(samples[t]);
+  }, []);
+  useEffect(() => {
+    const ungraded = Object.entries(picks).filter(([slug]) => !graded[slug]);
+    if (ungraded.length === 0) return;
+    let live = true;
+    (async () => {
+      const results: Record<string, "won" | "lost"> = {};
+      for (const [slug, p] of ungraded.slice(0, 4)) {
+        try {
+          const d = await fetch(`/api/markets/${slug}`).then((r) => r.json());
+          if (d.market?.closed) {
+            results[slug] = d.market.outcomes[p.outcome].price > 0.5 ? "won" : "lost";
+          }
+        } catch {}
+      }
+      if (!live || Object.keys(results).length === 0) return;
+      setGraded((g) => {
+        const merged = { ...g, ...results };
+        try {
+          localStorage.setItem("binary.graded", JSON.stringify(merged));
+        } catch {}
+        return merged;
+      });
+      const [slug, result] = Object.entries(results)[0];
+      const p = picks[slug];
+      setMoment((m) =>
+        m ??
+        (result === "won"
+          ? { t: "win", label: p.label, question: p.question, wouldHavePaid: payoutIfWin(2, p.price) }
+          : { t: "loss", label: p.label, question: p.question })
+      );
+    })();
+    return () => {
+      live = false;
+    };
+  }, [picks, graded]);
+
   const ensureAddress = async () => address ?? (await connect());
 
   const doCheckIn = async () => {
@@ -106,6 +216,7 @@ export default function AppHome() {
     setTxBusy("checkin");
     try {
       await sendTx(PLAY_CONTRACT, checkInData());
+      setMoment({ t: "checkedin", streak: (player?.checkedInToday ? streak : streak + 1) || 1 });
       setTimeout(refreshPlayer, 3_000);
       setTimeout(refreshPlayer, 8_000);
     } catch {
@@ -130,6 +241,13 @@ export default function AppHome() {
         at: Date.now(),
       });
       setSheet(null);
+      setMoment({
+        t: "picked",
+        label: market.outcomes[outcome].label,
+        price: market.outcomes[outcome].price,
+        question: market.question,
+        streak,
+      });
       setTimeout(refreshPlayer, 3_000);
       setTimeout(refreshPlayer, 8_000);
     } catch {
@@ -164,6 +282,14 @@ export default function AppHome() {
         return;
       }
       setSheet(null);
+      setMoment({
+        t: "bet",
+        label: market.outcomes[outcome].label,
+        price: market.outcomes[outcome].price,
+        question: market.question,
+        usd,
+        win: payoutIfWin(usd, market.outcomes[outcome].price),
+      });
       setTimeout(refreshPlayer, 3_000);
     } catch {
       setTxError("Bet didn’t go through — try again.");
@@ -431,6 +557,24 @@ export default function AppHome() {
             </button>
           )}
 
+          <button
+            className="mb-4 w-full rounded-2xl border border-(--s-gold-line) bg-(--s-gold-tint) py-3 text-sm font-bold text-(--s-gold) active:scale-[0.98]"
+            onClick={() => {
+              const results = Object.values(graded);
+              setMoment({
+                t: "recap",
+                picks: pickList.length,
+                wins: results.filter((r) => r === "won").length,
+                losses: results.filter((r) => r === "lost").length,
+                streak,
+                longest: player?.longestStreak ?? 0,
+                checkIns: player?.checkInCount ?? 0,
+              });
+            }}
+          >
+            Your week on Binary →
+          </button>
+
           <div className="rounded-2xl bg-(--s-card) p-4 text-sm">
             <p className="font-semibold">How Binary works</p>
             <p className="mt-1 leading-relaxed text-(--s-sub)">
@@ -600,12 +744,38 @@ export default function AppHome() {
 
             <button
               className="w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98]"
-              onClick={() => setTopUp(false)} // TODO: MiniPay deep link / in-app transfer
+              onClick={async () => {
+                setTopUp(false);
+                const net = player?.depositedUsd ?? 0;
+                let credited: number | null = null;
+                try {
+                  const r = await fetch("/api/account").then((x) => x.json());
+                  if (r.configured && typeof r.creditedUsd === "number") credited = r.creditedUsd;
+                } catch {}
+                pendingBase.current = { net, credited };
+                setMoment({ t: "pending", step: 2 });
+              }}
             >
-              Done
+              I&apos;ve sent it
             </button>
           </div>
         </div>
+      )}
+
+      {/* ── Moment screens (full-screen takeovers) ────────────── */}
+      {moment && (
+        <MomentScreen
+          moment={moment}
+          themeClass={theme === "dark" ? "app-dark" : "app-light"}
+          handlers={{
+            onClose: () => setMoment(null),
+            onShare: (heading, line, text) => setMoment({ t: "share", heading, line, text }),
+            onGoBet: () => {
+              setMoment(null);
+              setTab("markets");
+            },
+          }}
+        />
       )}
     </main>
   );
