@@ -288,6 +288,15 @@ export default function AppHome() {
     setTxBusy("pick");
     try {
       await sendTx(PLAY_CONTRACT, pickData(market.conditionId, outcome));
+      // The chain only records keccak(conditionId), which can't be reversed —
+      // without this row the pick is ungradeable for good. Deliberately not
+      // awaited into the happy path: the pick is already on-chain, so a
+      // registry hiccup must never surface as a failed pick.
+      fetch("/api/registry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conditionId: market.conditionId, slug: market.slug }),
+      }).catch(() => {});
       addPick(market.slug, {
         outcome,
         label: market.outcomes[outcome].label,
