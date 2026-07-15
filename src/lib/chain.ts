@@ -4,8 +4,19 @@
 // eth_sendTransaction — MiniPay is legacy-tx-only and handles fee currency
 // itself, so we never set gas/fee fields.
 
-import { createPublicClient, encodeFunctionData, http, keccak256 } from "viem";
+import { toDataSuffix } from "@celo/attribution-tags";
+import { concat, createPublicClient, encodeFunctionData, http, keccak256 } from "viem";
 import { celo } from "viem/chains";
+
+// ERC-8021 attribution. The suffix rides after the calldata; the EVM discards
+// trailing bytes, so contracts decode their real arguments unchanged. Only the
+// tag assigned at registration is credited on the hackathon leaderboard — a
+// self-derived code (codeFromHostname) is a different value and counts as
+// untagged, so this constant must stay exactly as issued.
+const ATTRIBUTION_TAG = toDataSuffix("celo_22480bd47654");
+
+/** Append the attribution suffix to encoded calldata. */
+const tagged = (data: `0x${string}`) => concat([data, ATTRIBUTION_TAG]);
 
 export const PLAY_CONTRACT = "0x1CfbEa228F37A139cD805f15291D19f7DBBF7426" as const;
 export const DEPOSIT_CONTRACT = "0xE75A70597501453Fb0DFBa9B34eA2b9495d67600" as const;
@@ -106,14 +117,17 @@ export const publicClient = createPublicClient({
 /** On-chain market id: keccak of the Polymarket condition id bytes. */
 export const marketIdFor = (conditionId: string) => keccak256(conditionId as `0x${string}`);
 
-export const checkInData = () => encodeFunctionData({ abi: playAbi, functionName: "checkIn" });
+export const checkInData = () =>
+  tagged(encodeFunctionData({ abi: playAbi, functionName: "checkIn" }));
 
 export const pickData = (conditionId: string, outcome: 0 | 1) =>
-  encodeFunctionData({
-    abi: playAbi,
-    functionName: "pick",
-    args: [marketIdFor(conditionId), outcome],
-  });
+  tagged(
+    encodeFunctionData({
+      abi: playAbi,
+      functionName: "pick",
+      args: [marketIdFor(conditionId), outcome],
+    })
+  );
 
 // ── Deposit flow: approve(exact) then deposit(amount). Deposits MUST go
 // through deposit() — a raw USDm transfer to the contract never emits
@@ -123,14 +137,16 @@ export const pickData = (conditionId: string, outcome: 0 | 1) =>
 export const usdToWei = (usd: number) => BigInt(Math.round(usd * 100)) * 10n ** 16n;
 
 export const approveUsdmData = (amount: bigint) =>
-  encodeFunctionData({
-    abi: erc20Abi,
-    functionName: "approve",
-    args: [DEPOSIT_CONTRACT, amount],
-  });
+  tagged(
+    encodeFunctionData({
+      abi: erc20Abi,
+      functionName: "approve",
+      args: [DEPOSIT_CONTRACT, amount],
+    })
+  );
 
 export const depositData = (amount: bigint) =>
-  encodeFunctionData({ abi: depositsAbi, functionName: "deposit", args: [amount] });
+  tagged(encodeFunctionData({ abi: depositsAbi, functionName: "deposit", args: [amount] }));
 
 export async function usdmAllowance(owner: `0x${string}`): Promise<bigint> {
   return publicClient.readContract({
