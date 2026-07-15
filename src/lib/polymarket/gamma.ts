@@ -95,11 +95,22 @@ export async function fetchFeed(limit = 20, category: Category = "all"): Promise
     .slice(0, limit);
 }
 
-export async function fetchMarket(slug: string): Promise<Market | null> {
-  const res = await fetch(`${GAMMA}/markets?slug=${encodeURIComponent(slug)}`, {
-    next: { revalidate: 10 }, // tighter on the detail view
-  });
+async function bySlug(slug: string, closed: boolean): Promise<Market | null> {
+  const res = await fetch(
+    `${GAMMA}/markets?slug=${encodeURIComponent(slug)}&closed=${closed}`,
+    { next: { revalidate: 10 } } // tighter on the detail view
+  );
   if (!res.ok) throw new Error(`Gamma ${res.status}`);
   const raw: GammaMarket[] = await res.json();
   return raw.length ? normalize(raw[0]) : null;
+}
+
+// Gamma's `closed` is a strict filter, not a hint, and it defaults to false —
+// so a bare slug lookup reports resolved markets as if they don't exist. That
+// is precisely backwards for grading, which only ever asks about markets that
+// have finished. There's no value of `closed` that matches both sides and
+// repeating the param doesn't OR, so try live first (the common case) and fall
+// back to the resolved side before concluding the market is gone.
+export async function fetchMarket(slug: string): Promise<Market | null> {
+  return (await bySlug(slug, false)) ?? (await bySlug(slug, true));
 }
