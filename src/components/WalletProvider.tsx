@@ -20,7 +20,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { PrivyProvider, usePrivy } from "@privy-io/react-auth";
+import { PrivyProvider, usePrivy, useWallets } from "@privy-io/react-auth";
 import { SmartWalletsProvider, useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { celo } from "viem/chains";
 
@@ -139,8 +139,17 @@ function InjectedBridge({ children }: { children: ReactNode }) {
 function PrivyBridge({ children }: { children: ReactNode }) {
   const { ready, authenticated, user, login, logout } = usePrivy();
   const { client } = useSmartWallets();
+  const { wallets } = useWallets();
 
-  const address = (client?.account.address as `0x${string}`) ?? null;
+  // Prefer the smart wallet: it's the only path with sponsored gas. But
+  // useSmartWallets() yields nothing whenever smart wallets are disabled in
+  // the Privy dashboard, and reading the address from it alone meant one
+  // dashboard toggle blanked the entire app — logged in, wallet created, no
+  // address anywhere. Fall back to the signer Privy did give us. Covers
+  // external wallets too, which arrive here via the "wallet" login method.
+  const fallback = wallets.find((w) => w.walletClientType === "privy") ?? wallets[0];
+  const address =
+    ((client?.account.address ?? fallback?.address) as `0x${string}` | undefined) ?? null;
   const userLabel =
     user?.google?.email ??
     user?.twitter?.username ??
@@ -155,12 +164,23 @@ function PrivyBridge({ children }: { children: ReactNode }) {
 
   const sendTx = useCallback(
     async (to: `0x${string}`, data: `0x${string}`) => {
-      if (!client) throw new Error("No wallet");
-      // Chain comes from the provider config (defaultChain: celo); passing it
-      // here trips a type skew between Privy's pinned viem and ours.
-      return await client.sendTransaction({ to, data });
+      if (client) {
+        // Chain comes from the provider config (defaultChain: celo); passing it
+        // here trips a type skew between Privy's pinned viem and ours.
+        return await client.sendTransaction({ to, data });
+      }
+      // No smart wallet — sign from the EOA directly. It pays its own gas, so
+      // this only works with a funded wallet; sponsored play needs the smart
+      // wallet enabled in the dashboard.
+      if (!fallback) throw new Error("No wallet");
+      await fallback.switchChain(celo.id);
+      const provider = await fallback.getEthereumProvider();
+      return (await provider.request({
+        method: "eth_sendTransaction",
+        params: [{ from: fallback.address, to, data }],
+      })) as string;
     },
-    [client]
+    [client, fallback]
   );
 
   return (
