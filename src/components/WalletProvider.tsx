@@ -5,8 +5,9 @@
 //      with no gas fields; MiniPay applies its own stablecoin fee currency.
 //   2. Privy (social logins) — embedded EOA + ERC-4337 smart wallet; gas is
 //      sponsored via the Pimlico paymaster configured in the Privy dashboard,
-//      so social users play with zero balance.
-//   3. Any other injected wallet — classic connect-on-demand.
+//      so social users play with zero balance. External wallets come through
+//      here too, via Privy's "wallet" login method.
+//   3. InjectedBridge — only reachable when no Privy app ID is configured.
 //
 // Components consume only the WalletCtx shape; they never know which door
 // the user came through.
@@ -221,7 +222,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       <PrivyProvider
         appId={PRIVY_APP_ID!}
         config={{
-          loginMethods: ["google", "twitter", "email"],
+          loginMethods: ["google", "twitter", "email", "wallet"],
           appearance: { theme: "dark", accentColor: "#3d74ff" },
           embeddedWallets: { ethereum: { createOnLogin: "users-without-wallets" } },
           defaultChain: celo,
