@@ -135,268 +135,273 @@ export function MomentScreen({
   );
 
   return (
-    <div
-      className={`${themeClass} moment-rise fixed inset-0 z-30 mx-auto flex max-w-md flex-col ${ground} text-(--m-text)`}
-    >
-      {burst && <Particles />}
-      <div className="flex justify-end p-4">
-        <button
-          aria-label="Close"
-          onClick={onClose}
-          className="rounded-full bg-(--m-chip) px-3 py-1 text-lg leading-none"
-        >
-          ✕
-        </button>
-      </div>
+    // Full-bleed on a phone, where a takeover IS the screen. At lg it becomes
+    // a centred card on a dimmed backdrop — a burst gradient stretched across
+    // a 1440px desktop reads as a broken page, not a celebration.
+    <div className="fixed inset-0 z-30 flex flex-col lg:items-center lg:justify-center lg:bg-black/60 lg:p-6">
+      <div
+        className={`${themeClass} moment-rise relative mx-auto flex w-full max-w-md flex-1 flex-col ${ground} text-(--m-text) lg:h-[640px] lg:max-h-full lg:flex-none lg:overflow-hidden lg:rounded-3xl lg:shadow-2xl`}
+      >
+        {burst && <Particles />}
+        <div className="flex justify-end p-4">
+          <button
+            aria-label="Close"
+            onClick={onClose}
+            className="rounded-full bg-(--m-chip) px-3 py-1 text-lg leading-none"
+          >
+            ✕
+          </button>
+        </div>
 
-      <div className="relative flex flex-1 flex-col items-center justify-center gap-4 px-6 pb-8">
-        {moment.t === "picked" && (
-          <>
-            <Headline>LOCKED ⚡</Headline>
-            <p className="text-center text-sm text-(--m-sub)">{moment.question}</p>
-            <Chip>
-              {moment.label} · {cents(moment.price)}
-            </Chip>
-            {moment.streak > 0 && <p className="font-mono text-sm">🔥 Streak: {moment.streak}</p>}
-            <div className="mt-6 w-full space-y-1">
-              {shareBtn(
-                "My pick",
-                `${moment.label} on “${moment.question}”`,
-                `I'm calling ${moment.label} at ${cents(moment.price)} on “${moment.question}” — binary-io.vercel.app`,
-                "Share my pick"
-              )}
-              <button className={ghostBtn} onClick={onClose}>
-                Back to markets
-              </button>
-            </div>
-          </>
-        )}
+        <div className="relative flex flex-1 flex-col items-center justify-center gap-4 px-6 pb-8">
+          {moment.t === "picked" && (
+            <>
+              <Headline>LOCKED ⚡</Headline>
+              <p className="text-center text-sm text-(--m-sub)">{moment.question}</p>
+              <Chip>
+                {moment.label} · {cents(moment.price)}
+              </Chip>
+              {moment.streak > 0 && <p className="font-mono text-sm">🔥 Streak: {moment.streak}</p>}
+              <div className="mt-6 w-full space-y-1">
+                {shareBtn(
+                  "My pick",
+                  `${moment.label} on “${moment.question}”`,
+                  `I'm calling ${moment.label} at ${cents(moment.price)} on “${moment.question}” — binary-io.vercel.app`,
+                  "Share my pick"
+                )}
+                <button className={ghostBtn} onClick={onClose}>
+                  Back to markets
+                </button>
+              </div>
+            </>
+          )}
 
-        {moment.t === "bet" && (
-          <>
-            <Headline>BET PLACED</Headline>
-            <p className="text-center text-sm text-(--m-sub)">{moment.question}</p>
-            <Chip>
-              ${moment.usd} on {moment.label} · {cents(moment.price)}
-            </Chip>
-            <p className="font-mono text-lg font-bold">
-              Pays ${moment.win.toFixed(2)} if you&apos;re right
-            </p>
-            <div className="mt-6 w-full space-y-1">
-              {shareBtn(
-                "My bet",
-                `$${moment.usd} on ${moment.label}`,
-                `Real money on ${moment.label} at ${cents(moment.price)} — “${moment.question}”. binary-io.vercel.app`,
-                "Share my bet"
-              )}
-              <button className={ghostBtn} onClick={onClose}>
-                Done
-              </button>
-            </div>
-          </>
-        )}
-
-        {moment.t === "checkedin" && (
-          <>
-            <p className="moment-pop text-7xl">🔥</p>
-            <Headline>DAY {moment.streak}</Headline>
-            <p className="text-center text-sm text-(--m-sub)">
-              {moment.streak >= 30
-                ? "A full month. You don't miss."
-                : moment.streak >= 7
-                  ? "One week straight — you're on fire."
-                  : moment.streak >= 3
-                    ? "Three days running. Keep it alive."
-                    : "Streak started. Come back tomorrow."}
-            </p>
-            <div className="mt-6 w-full space-y-1">
-              {shareBtn(
-                "My streak",
-                `${moment.streak}-day streak`,
-                `🔥 ${moment.streak}-day streak calling markets on Binary — binary-io.vercel.app`,
-                "Share my streak"
-              )}
-              <button className={ghostBtn} onClick={onClose}>
-                Back
-              </button>
-            </div>
-          </>
-        )}
-
-        {moment.t === "win" && (
-          <>
-            <Headline>YOU CALLED IT</Headline>
-            <p className="text-center text-sm text-(--m-sub)">{moment.question}</p>
-            <Chip>{moment.label} ✓</Chip>
-            <p className="text-center font-mono text-sm text-(--m-sub)">
-              A $2 bet would&apos;ve paid{" "}
-              <span className="font-bold text-(--m-text)">${moment.wouldHavePaid.toFixed(2)}</span>
-            </p>
-            <div className="mt-6 w-full space-y-1">
-              {shareBtn(
-                "Called it",
-                `${moment.label} on “${moment.question}”`,
-                `Called it: ${moment.label} on “${moment.question}” ✓ — binary-io.vercel.app`,
-                "Share the call"
-              )}
-              <button className={ghostBtn} onClick={onGoBet}>
-                Bet real money on the next one
-              </button>
-            </div>
-          </>
-        )}
-
-        {moment.t === "loss" && (
-          <>
-            <p className="text-center text-2xl font-black italic">Not this one.</p>
-            <p className="text-center text-sm text-(--m-sub)">{moment.question}</p>
-            <Chip>{moment.label} ✕</Chip>
-            <p className="text-center text-sm text-(--m-sub)">
-              The market went the other way. Your streak doesn&apos;t care — it counts showing up.
-            </p>
-            <div className="mt-6 w-full space-y-1">
-              <button className={primaryBtn} onClick={onGoBet}>
-                Next market →
-              </button>
-              <button className={ghostBtn} onClick={onClose}>
-                Close
-              </button>
-            </div>
-          </>
-        )}
-
-        {moment.t === "pending" && (
-          <>
-            <p className="text-center text-2xl font-black italic">
-              Giving you your betting power…
-            </p>
-            {moment.usd !== undefined && (
-              <Chip>${moment.usd.toFixed(2)} on its way</Chip>
-            )}
-            <ol className="mt-2 w-full space-y-3">
-              {(
-                [
-                  ["USDm sent", 1],
-                  ["Confirming on Celo", 2],
-                  ["Crossing to Polymarket (~2 min)", 3],
-                ] as const
-              ).map(([label, step]) => {
-                const done = moment.step > step;
-                const active = moment.step === step;
-                return (
-                  <li
-                    key={step}
-                    className={`flex items-center gap-3 rounded-2xl bg-(--m-chip) p-4 text-sm font-semibold ${
-                      active ? "moment-step-active" : done ? "" : "opacity-40"
-                    }`}
-                  >
-                    <span className="font-mono text-base">{done ? "✓" : active ? "●" : "○"}</span>
-                    {label}
-                  </li>
-                );
-              })}
-            </ol>
-            <p className="text-center text-xs text-(--m-sub)">
-              Usually about 2 minutes. Safe to close and keep browsing — we&apos;ll light it up
-              the moment it lands, and money only ever returns to this wallet.
-            </p>
-            <div className="mt-4 w-full">
-              <button className={ghostBtn} onClick={onClose}>
-                Close
-              </button>
-            </div>
-          </>
-        )}
-
-        {moment.t === "funded" && <FundedBody balance={moment.balance} goBet={onGoBet} close={onClose} primaryBtn={primaryBtn} ghostBtn={ghostBtn} />}
-
-        {moment.t === "cashout" && (
-          <CashoutBody amount={moment.amount} close={onClose} primaryBtn={primaryBtn} ghostBtn={ghostBtn} />
-        )}
-
-        {moment.t === "recap" && (
-          <>
-            <p className="text-center text-2xl font-black italic">Your week on Binary</p>
-            <div className="grid w-full grid-cols-2 gap-2">
-              {(
-                [
-                  [`${moment.wins}–${moment.losses}`, "record on graded picks"],
-                  [String(moment.picks), "picks locked"],
-                  [`🔥 ${moment.streak}`, "current streak"],
-                  [String(moment.longest), "longest streak"],
-                ] as const
-              ).map(([big, small]) => (
-                <div key={small} className="rounded-2xl bg-(--m-chip) p-4">
-                  <p className="font-mono text-2xl font-bold tabular-nums text-(--s-gold)">{big}</p>
-                  <p className="text-xs text-(--m-sub)">{small}</p>
-                </div>
-              ))}
-            </div>
-            <p className="text-center text-xs text-(--m-sub)">{moment.checkIns} check-ins all-time</p>
-            <div className="mt-4 w-full space-y-1">
-              {shareBtn(
-                "My week",
-                `${moment.wins}–${moment.losses} this week`,
-                `My week on Binary: ${moment.wins}–${moment.losses} on graded picks, 🔥 ${moment.streak}-day streak — binary-io.vercel.app`,
-                "Share my week"
-              )}
-              <button className={ghostBtn} onClick={onClose}>
-                Close
-              </button>
-            </div>
-          </>
-        )}
-
-        {moment.t === "rankup" && (
-          <>
-            <Headline>#{moment.rank}</Headline>
-            <p className="text-center text-sm text-(--m-sub)">
-              You broke into the top {moment.rank <= 10 ? 10 : 100} on the leaderboard.
-            </p>
-            <div className="mt-6 w-full space-y-1">
-              {shareBtn(
-                "Rank up",
-                `#${moment.rank} on Binary`,
-                `Just hit #${moment.rank} on the Binary leaderboard — binary-io.vercel.app`,
-                "Share it"
-              )}
-              <button className={ghostBtn} onClick={onClose}>
-                Back
-              </button>
-            </div>
-          </>
-        )}
-
-        {moment.t === "share" && (
-          <>
-            <div className="w-full rounded-3xl border border-(--s-gold-line) bg-(--s-card) p-6 text-(--s-text)">
-              <p className="text-xl font-black italic tracking-tight">
-                BI<span className="text-(--s-act-soft)">NARY</span>
+          {moment.t === "bet" && (
+            <>
+              <Headline>BET PLACED</Headline>
+              <p className="text-center text-sm text-(--m-sub)">{moment.question}</p>
+              <Chip>
+                ${moment.usd} on {moment.label} · {cents(moment.price)}
+              </Chip>
+              <p className="font-mono text-lg font-bold">
+                Pays ${moment.win.toFixed(2)} if you&apos;re right
               </p>
-              <p className="mt-4 text-lg font-bold leading-snug">{moment.heading}</p>
-              <p className="mt-1 font-mono text-sm text-(--s-gold)">{moment.line}</p>
-              <p className="mt-4 text-xs text-(--s-sub)">binary-io.vercel.app</p>
-            </div>
-            <div className="mt-4 w-full space-y-1">
-              <button
-                className={primaryBtn}
-                onClick={() =>
-                  shareOrCopy(moment.text).then((r) => {
-                    if (r === "copied") {
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 1500);
-                    }
-                  })
-                }
-              >
-                {copied ? "Copied ✓" : "Share"}
-              </button>
-              <button className={ghostBtn} onClick={onClose}>
-                Close
-              </button>
-            </div>
-          </>
-        )}
+              <div className="mt-6 w-full space-y-1">
+                {shareBtn(
+                  "My bet",
+                  `$${moment.usd} on ${moment.label}`,
+                  `Real money on ${moment.label} at ${cents(moment.price)} — “${moment.question}”. binary-io.vercel.app`,
+                  "Share my bet"
+                )}
+                <button className={ghostBtn} onClick={onClose}>
+                  Done
+                </button>
+              </div>
+            </>
+          )}
+
+          {moment.t === "checkedin" && (
+            <>
+              <p className="moment-pop text-7xl">🔥</p>
+              <Headline>DAY {moment.streak}</Headline>
+              <p className="text-center text-sm text-(--m-sub)">
+                {moment.streak >= 30
+                  ? "A full month. You don't miss."
+                  : moment.streak >= 7
+                    ? "One week straight — you're on fire."
+                    : moment.streak >= 3
+                      ? "Three days running. Keep it alive."
+                      : "Streak started. Come back tomorrow."}
+              </p>
+              <div className="mt-6 w-full space-y-1">
+                {shareBtn(
+                  "My streak",
+                  `${moment.streak}-day streak`,
+                  `🔥 ${moment.streak}-day streak calling markets on Binary — binary-io.vercel.app`,
+                  "Share my streak"
+                )}
+                <button className={ghostBtn} onClick={onClose}>
+                  Back
+                </button>
+              </div>
+            </>
+          )}
+
+          {moment.t === "win" && (
+            <>
+              <Headline>YOU CALLED IT</Headline>
+              <p className="text-center text-sm text-(--m-sub)">{moment.question}</p>
+              <Chip>{moment.label} ✓</Chip>
+              <p className="text-center font-mono text-sm text-(--m-sub)">
+                A $2 bet would&apos;ve paid{" "}
+                <span className="font-bold text-(--m-text)">${moment.wouldHavePaid.toFixed(2)}</span>
+              </p>
+              <div className="mt-6 w-full space-y-1">
+                {shareBtn(
+                  "Called it",
+                  `${moment.label} on “${moment.question}”`,
+                  `Called it: ${moment.label} on “${moment.question}” ✓ — binary-io.vercel.app`,
+                  "Share the call"
+                )}
+                <button className={ghostBtn} onClick={onGoBet}>
+                  Bet real money on the next one
+                </button>
+              </div>
+            </>
+          )}
+
+          {moment.t === "loss" && (
+            <>
+              <p className="text-center text-2xl font-black italic">Not this one.</p>
+              <p className="text-center text-sm text-(--m-sub)">{moment.question}</p>
+              <Chip>{moment.label} ✕</Chip>
+              <p className="text-center text-sm text-(--m-sub)">
+                The market went the other way. Your streak doesn&apos;t care — it counts showing up.
+              </p>
+              <div className="mt-6 w-full space-y-1">
+                <button className={primaryBtn} onClick={onGoBet}>
+                  Next market →
+                </button>
+                <button className={ghostBtn} onClick={onClose}>
+                  Close
+                </button>
+              </div>
+            </>
+          )}
+
+          {moment.t === "pending" && (
+            <>
+              <p className="text-center text-2xl font-black italic">
+                Giving you your betting power…
+              </p>
+              {moment.usd !== undefined && (
+                <Chip>${moment.usd.toFixed(2)} on its way</Chip>
+              )}
+              <ol className="mt-2 w-full space-y-3">
+                {(
+                  [
+                    ["USDm sent", 1],
+                    ["Confirming on Celo", 2],
+                    ["Crossing to Polymarket (~2 min)", 3],
+                  ] as const
+                ).map(([label, step]) => {
+                  const done = moment.step > step;
+                  const active = moment.step === step;
+                  return (
+                    <li
+                      key={step}
+                      className={`flex items-center gap-3 rounded-2xl bg-(--m-chip) p-4 text-sm font-semibold ${
+                        active ? "moment-step-active" : done ? "" : "opacity-40"
+                      }`}
+                    >
+                      <span className="font-mono text-base">{done ? "✓" : active ? "●" : "○"}</span>
+                      {label}
+                    </li>
+                  );
+                })}
+              </ol>
+              <p className="text-center text-xs text-(--m-sub)">
+                Usually about 2 minutes. Safe to close and keep browsing — we&apos;ll light it up
+                the moment it lands, and money only ever returns to this wallet.
+              </p>
+              <div className="mt-4 w-full">
+                <button className={ghostBtn} onClick={onClose}>
+                  Close
+                </button>
+              </div>
+            </>
+          )}
+
+          {moment.t === "funded" && <FundedBody balance={moment.balance} goBet={onGoBet} close={onClose} primaryBtn={primaryBtn} ghostBtn={ghostBtn} />}
+
+          {moment.t === "cashout" && (
+            <CashoutBody amount={moment.amount} close={onClose} primaryBtn={primaryBtn} ghostBtn={ghostBtn} />
+          )}
+
+          {moment.t === "recap" && (
+            <>
+              <p className="text-center text-2xl font-black italic">Your week on Binary</p>
+              <div className="grid w-full grid-cols-2 gap-2">
+                {(
+                  [
+                    [`${moment.wins}–${moment.losses}`, "record on graded picks"],
+                    [String(moment.picks), "picks locked"],
+                    [`🔥 ${moment.streak}`, "current streak"],
+                    [String(moment.longest), "longest streak"],
+                  ] as const
+                ).map(([big, small]) => (
+                  <div key={small} className="rounded-2xl bg-(--m-chip) p-4">
+                    <p className="font-mono text-2xl font-bold tabular-nums text-(--s-gold)">{big}</p>
+                    <p className="text-xs text-(--m-sub)">{small}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-center text-xs text-(--m-sub)">{moment.checkIns} check-ins all-time</p>
+              <div className="mt-4 w-full space-y-1">
+                {shareBtn(
+                  "My week",
+                  `${moment.wins}–${moment.losses} this week`,
+                  `My week on Binary: ${moment.wins}–${moment.losses} on graded picks, 🔥 ${moment.streak}-day streak — binary-io.vercel.app`,
+                  "Share my week"
+                )}
+                <button className={ghostBtn} onClick={onClose}>
+                  Close
+                </button>
+              </div>
+            </>
+          )}
+
+          {moment.t === "rankup" && (
+            <>
+              <Headline>#{moment.rank}</Headline>
+              <p className="text-center text-sm text-(--m-sub)">
+                You broke into the top {moment.rank <= 10 ? 10 : 100} on the leaderboard.
+              </p>
+              <div className="mt-6 w-full space-y-1">
+                {shareBtn(
+                  "Rank up",
+                  `#${moment.rank} on Binary`,
+                  `Just hit #${moment.rank} on the Binary leaderboard — binary-io.vercel.app`,
+                  "Share it"
+                )}
+                <button className={ghostBtn} onClick={onClose}>
+                  Back
+                </button>
+              </div>
+            </>
+          )}
+
+          {moment.t === "share" && (
+            <>
+              <div className="w-full rounded-3xl border border-(--s-gold-line) bg-(--s-card) p-6 text-(--s-text)">
+                <p className="text-xl font-black italic tracking-tight">
+                  BI<span className="text-(--s-act-soft)">NARY</span>
+                </p>
+                <p className="mt-4 text-lg font-bold leading-snug">{moment.heading}</p>
+                <p className="mt-1 font-mono text-sm text-(--s-gold)">{moment.line}</p>
+                <p className="mt-4 text-xs text-(--s-sub)">binary-io.vercel.app</p>
+              </div>
+              <div className="mt-4 w-full space-y-1">
+                <button
+                  className={primaryBtn}
+                  onClick={() =>
+                    shareOrCopy(moment.text).then((r) => {
+                      if (r === "copied") {
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1500);
+                      }
+                    })
+                  }
+                >
+                  {copied ? "Copied ✓" : "Share"}
+                </button>
+                <button className={ghostBtn} onClick={onClose}>
+                  Close
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

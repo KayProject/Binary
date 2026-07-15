@@ -13,6 +13,7 @@ import {
   SportsIcon,
   YouIcon,
 } from "@/components/icons";
+import { Leaderboard } from "@/components/Leaderboard";
 import { MomentScreen, type Moment } from "@/components/moments";
 import { payoutIfWin, sharesFor, takerFee } from "@/lib/polymarket/fees";
 import { useWallet } from "@/hooks/useWallet";
@@ -119,6 +120,11 @@ export default function AppHome() {
   const [txError, setTxError] = useState<string | null>(null);
   const [moment, setMoment] = useState<Moment | null>(null);
   const [graded, setGraded] = useState<Record<string, "won" | "lost">>({});
+  // Distinct days checked in. The contract's checkInCount counts same-day
+  // repeats too ("never reverts on repeats"), which ran ~32x hot on live data
+  // — a one-day user was being shown "47 check-ins". Take the deduped figure
+  // from the scorer instead, so the tile and the board can't disagree.
+  const [checkInDays, setCheckInDays] = useState<number | null>(null);
   const prevPlayer = useRef<PlayerState | null>(null);
   // Funding-tracker baseline: net deposits + credited pUSD when it opened.
   const pendingBase = useRef<{ net: number; credited: number | null } | null>(null);
@@ -139,6 +145,24 @@ export default function AppHome() {
     const t = setInterval(refreshPlayer, 30_000);
     return () => clearInterval(t);
   }, [refreshPlayer]);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Deferred a frame: setState straight from an effect body cascades renders
+    // (react-hooks/set-state-in-effect), the same reason the hydration reads
+    // above go through rAF.
+    const id = requestAnimationFrame(() => {
+      if (!address) return setCheckInDays(null);
+      fetch(`/api/leaderboard?window=all&address=${address}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => !cancelled && setCheckInDays(d?.me?.checkInDays ?? 0))
+        .catch(() => {});
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+    };
+  }, [address]);
 
   // Withdrawal-landed detector: cumulative payouts only ever rise, and a rise
   // means USDm just arrived back in the user's wallet.
@@ -433,10 +457,11 @@ export default function AppHome() {
 
   return (
     <main
-      className={`${theme === "dark" ? "app-dark" : "app-light"} mx-auto w-full min-w-0 min-h-dvh max-w-md bg-(--s-bg) pb-24 text-(--s-text)`}
+      className={`${theme === "dark" ? "app-dark" : "app-light"} mx-auto w-full min-w-0 min-h-dvh max-w-md bg-(--s-bg) pb-24 text-(--s-text) lg:max-w-none lg:pb-0`}
     >
-      {/* Header */}
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-(--s-line) bg-(--s-bg-blur) px-4 py-3 backdrop-blur">
+      {/* Header — the only chrome that spans the full width at lg. Its 4rem
+          height at lg is what the sticky rails offset against (lg:top-16). */}
+      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-(--s-line) bg-(--s-bg-blur) px-4 py-3 backdrop-blur lg:h-16 lg:px-6 lg:py-0">
         <LogoChip />
         <div className="flex items-center gap-2">
           {!address && !isMiniPay && (
@@ -475,9 +500,18 @@ export default function AppHome() {
         </div>
       </header>
 
-      {/* ── Markets ───────────────────────────────────────────── */}
-      {tab === "markets" && (
-        <>
+      {/* ── Shell ─────────────────────────────────────────────────
+          Below lg the tab bar shows one region at a time, exactly as before.
+          At lg the tabs dissolve: every region is mounted and placed as a
+          column — You left, Markets centre, Portfolio right — so balance and
+          open picks stay visible while browsing. The centre column is the
+          only one that grows; the rails are fixed so the feed never gets
+          narrower than it is on a phone. */}
+      <div className="lg:mx-auto lg:grid lg:w-full lg:max-w-[1440px] lg:grid-cols-[220px_minmax(0,1fr)_240px] lg:gap-4 lg:px-4 xl:grid-cols-[280px_minmax(0,1fr)_320px] xl:gap-6 xl:px-6">
+        {/* ── Markets ───────────────────────────────────────────── */}
+        <section
+          className={`${tab === "markets" ? "block" : "hidden"} lg:col-start-2 lg:row-start-1 lg:block`}
+        >
           <div
             className="flex gap-2 overflow-x-auto px-4 pt-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             role="tablist"
@@ -580,12 +614,12 @@ export default function AppHome() {
               </li>
             ))}
           </ul>
-        </>
-      )}
+        </section>
 
-      {/* ── Portfolio ─────────────────────────────────────────── */}
-      {tab === "portfolio" && (
-        <div className="px-4 py-5">
+        {/* ── Portfolio ─────────────────────────────────────────── */}
+        <section
+          className={`${tab === "portfolio" ? "block" : "hidden"} px-4 py-5 lg:sticky lg:top-16 lg:col-start-3 lg:row-start-1 lg:block lg:max-h-[calc(100dvh-4rem)] lg:self-start lg:overflow-y-auto`}
+        >
           <h2 className="mb-4 text-xl font-bold">Portfolio</h2>
 
           <div className="mb-5 rounded-2xl bg-(--s-card) p-4">
@@ -620,12 +654,12 @@ export default function AppHome() {
               ))}
             </ul>
           )}
-        </div>
-      )}
+        </section>
 
-      {/* ── You ───────────────────────────────────────────────── */}
-      {tab === "you" && (
-        <div className="px-4 py-5">
+        {/* ── You ───────────────────────────────────────────────── */}
+        <section
+          className={`${tab === "you" ? "block" : "hidden"} px-4 py-5 lg:sticky lg:top-16 lg:col-start-1 lg:row-start-1 lg:block lg:max-h-[calc(100dvh-4rem)] lg:self-start lg:overflow-y-auto`}
+        >
           <h2 className="mb-4 text-xl font-bold">You</h2>
 
           <div className="mb-4 rounded-2xl border border-(--s-gold-line) bg-(--s-gold-tint) p-5 text-center">
@@ -648,26 +682,30 @@ export default function AppHome() {
             {txError && <p className="mt-2 text-xs text-(--s-lose)">{txError}</p>}
           </div>
 
-          <div className="mb-4 grid grid-cols-3 gap-2">
-            <div className="rounded-2xl bg-(--s-card) p-4">
+          {/* Three across on a phone; in the 220px rail they stack into
+              number-and-label rows rather than squeezing to ~57px columns. */}
+          <div className="mb-4 grid grid-cols-3 gap-2 lg:grid-cols-1">
+            <div className="rounded-2xl bg-(--s-card) p-4 lg:flex lg:items-baseline lg:justify-between lg:gap-2 lg:p-3">
               <p className="font-mono text-2xl font-bold tabular-nums">
                 {player?.pickCount ?? pickList.length}
               </p>
               <p className="text-xs text-(--s-sub)">picks on-chain</p>
             </div>
-            <div className="rounded-2xl bg-(--s-card) p-4">
+            <div className="rounded-2xl bg-(--s-card) p-4 lg:flex lg:items-baseline lg:justify-between lg:gap-2 lg:p-3">
               <p className="font-mono text-2xl font-bold tabular-nums">
                 {player?.longestStreak ?? 0}
               </p>
               <p className="text-xs text-(--s-sub)">longest streak</p>
             </div>
-            <div className="rounded-2xl bg-(--s-card) p-4">
+            <div className="rounded-2xl bg-(--s-card) p-4 lg:flex lg:items-baseline lg:justify-between lg:gap-2 lg:p-3">
               <p className="font-mono text-2xl font-bold tabular-nums">
-                {player?.checkInCount ?? 0}
+                {checkInDays ?? "—"}
               </p>
-              <p className="text-xs text-(--s-sub)">check-ins</p>
+              <p className="text-xs text-(--s-sub)">days checked in</p>
             </div>
           </div>
+
+          <Leaderboard address={address} />
 
           {address ? (
             <div className="mb-4 rounded-2xl bg-(--s-card) p-4">
@@ -719,11 +757,12 @@ export default function AppHome() {
               Binary never takes the other side — you win at true market odds.
             </p>
           </div>
-        </div>
-      )}
+        </section>
+      </div>
 
-      {/* ── Bottom nav ────────────────────────────────────────── */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto flex max-w-md border-t border-(--s-line) bg-(--s-bg-blur) backdrop-blur">
+      {/* ── Bottom nav — a mobile affordance only; at lg the tabs it drives
+          are all on screen at once, so it goes away. ─────────────── */}
+      <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto flex max-w-md border-t border-(--s-line) bg-(--s-bg-blur) backdrop-blur lg:hidden">
         {(
           [
             ["markets", "Markets", MarketsIcon],
@@ -748,14 +787,15 @@ export default function AppHome() {
       {/* ── Bet sheet ─────────────────────────────────────────── */}
       {sheet && sel && (
         <div
-          className="fixed inset-0 z-20 flex items-end bg-black/50"
+          className="fixed inset-0 z-20 flex items-end bg-black/50 lg:items-center lg:justify-center lg:p-6"
           onClick={() => setSheet(null)}
         >
           <div
-            className={`${theme === "dark" ? "app-dark" : "app-light"} w-full rounded-t-3xl border-t border-(--s-line) bg-(--s-card) p-5 pb-8 text-(--s-text)`}
+            className={`${theme === "dark" ? "app-dark" : "app-light"} w-full rounded-t-3xl border-t border-(--s-line) bg-(--s-card) p-5 pb-8 text-(--s-text) lg:max-w-md lg:rounded-3xl lg:border lg:pb-5 lg:shadow-2xl`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-(--s-line)" />
+            {/* Drag handle — a sheet affordance; the lg modal isn't draggable. */}
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-(--s-line) lg:hidden" />
             <p className="mb-1 text-sm text-(--s-sub)">{sheet.market.question}</p>
             <p className="mb-4 text-xl font-bold">
               {sel.label} · <span className="font-mono">{cents(sel.price)}</span>
@@ -849,14 +889,15 @@ export default function AppHome() {
       {/* ── Top-up sheet ──────────────────────────────────────── */}
       {topUp && (
         <div
-          className="fixed inset-0 z-20 flex items-end bg-black/50"
+          className="fixed inset-0 z-20 flex items-end bg-black/50 lg:items-center lg:justify-center lg:p-6"
           onClick={() => setTopUp(false)}
         >
           <div
-            className={`${theme === "dark" ? "app-dark" : "app-light"} w-full rounded-t-3xl border-t border-(--s-line) bg-(--s-card) p-5 pb-8 text-(--s-text)`}
+            className={`${theme === "dark" ? "app-dark" : "app-light"} w-full rounded-t-3xl border-t border-(--s-line) bg-(--s-card) p-5 pb-8 text-(--s-text) lg:max-w-md lg:rounded-3xl lg:border lg:pb-5 lg:shadow-2xl`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-(--s-line)" />
+            {/* Drag handle — a sheet affordance; the lg modal isn't draggable. */}
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-(--s-line) lg:hidden" />
             <h3 className="mb-1 text-xl font-bold">Top up with USDm</h3>
             <p className="mb-4 text-sm leading-relaxed text-(--s-sub)">
               Your USDm becomes betting power in about 2 minutes. Any amount from ${MIN_DEPOSIT}.

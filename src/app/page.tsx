@@ -27,7 +27,7 @@ const steps = [
 
 export default function Home() {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 sm:max-w-2xl">
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 sm:max-w-2xl lg:max-w-6xl lg:px-10">
       {/* Nav */}
       <header className="flex items-center justify-between py-6">
         <Logo />
@@ -40,18 +40,18 @@ export default function Home() {
       </header>
 
       {/* Hero */}
-      <section className="relative flex flex-col items-center pt-6 text-center">
-        <Globe className="pointer-events-none absolute -top-4 left-1/2 max-w-sm -translate-x-1/2 opacity-40" />
+      <section className="relative flex flex-col items-center pt-6 text-center lg:pt-16">
+        <Globe className="pointer-events-none absolute -top-4 left-1/2 max-w-sm -translate-x-1/2 opacity-40 lg:max-w-lg" />
         <h1 className="relative mt-10 text-6xl font-extrabold leading-none tracking-tight sm:text-8xl">
           Every question
           <br />
           has two sides.
         </h1>
-        <p className="relative mt-6 max-w-sm text-lg text-white/85">
+        <p className="relative mt-6 max-w-sm text-lg text-white/85 lg:max-w-xl lg:text-xl">
           The mobile prediction market for the Mento Dollar. Back your view
           with USDm — powered by Polymarket liquidity, built on Celo.
         </p>
-        <div className="relative mt-8 flex w-full max-w-xs gap-3">
+        <div className="relative mt-8 flex w-full max-w-xs gap-3 lg:max-w-sm">
           <a
             href="/app"
             className="flex-1 rounded-2xl bg-yes py-4 text-center text-lg font-bold text-ink active:scale-95"
@@ -71,11 +71,11 @@ export default function Home() {
       </section>
 
       {/* Demo markets */}
-      <section className="mt-20">
+      <section className="mt-20 lg:mt-32">
         <h2 className="font-mono text-xs tracking-[0.25em] text-white/60">
           LIVE ON DAY ONE
         </h2>
-        <div className="mt-4 flex flex-col gap-3">
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
           {demoMarkets.map((m) => (
             <div
               key={m.q}
@@ -101,11 +101,11 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section className="mt-20">
+      <section className="mt-20 lg:mt-32">
         <h2 className="font-mono text-xs tracking-[0.25em] text-white/60">
           HOW IT WORKS
         </h2>
-        <div className="mt-4 flex flex-col gap-8">
+        <div className="mt-4 grid gap-8 lg:grid-cols-3 lg:gap-6">
           {steps.map((s) => (
             <div key={s.n} className="flex gap-5">
               <span className="font-mono text-2xl font-bold text-white/40">
@@ -121,8 +121,8 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section className="mt-20 rounded-3xl bg-ink/40 p-8 text-center backdrop-blur-sm">
-        <h2 className="text-3xl font-extrabold">Pick your first market.</h2>
+      <section className="mt-20 rounded-3xl bg-ink/40 p-8 text-center backdrop-blur-sm lg:mt-32 lg:p-14">
+        <h2 className="text-3xl font-extrabold lg:text-5xl">Pick your first market.</h2>
         <p className="mt-2 text-white/80">
           Free picks are live on Celo mainnet — build a streak, then back your
           view with real USDm.
