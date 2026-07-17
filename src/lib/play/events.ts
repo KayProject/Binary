@@ -14,6 +14,13 @@ export const DEPLOY_BLOCK = 72_047_029n;
 // has to be chunked, so this ceiling drives the whole cursor design.
 const MAX_RANGE = 5_000n;
 
+// Chunks are latency-bound, not rate-limited: one getLogs to forno measures
+// ~915ms regardless of how little it returns, so walking the chunks one at a
+// time spends the whole scan waiting. Measured over 12 chunks: serial 22.2s,
+// 4-wide 1.9s, 8-wide 2.5s — all with zero failures. 4 takes the win and
+// leaves headroom rather than leaning on a public RPC as hard as it allows.
+const CONCURRENCY = 4;
+
 // Celo produces one block per second with no measured drift, so a block number
 // converts to a wall-clock time by arithmetic. This matters: pricing a pick at
 // the minute it happened otherwise needs a getBlock per pick.
@@ -52,9 +59,9 @@ export function blockTime(block: bigint, anchor: { block: bigint; ts: bigint }):
 }
 
 /**
- * Read CheckedIn/Picked between two blocks. Chunked to MAX_RANGE, so the cost
- * is proportional to the range asked for — callers should pass a cursor rather
- * than rescanning history every time.
+ * Read CheckedIn/Picked between two blocks. Chunked to MAX_RANGE and walked
+ * CONCURRENCY waves at a time, so the cost is proportional to the range asked
+ * for — callers should pass a cursor rather than rescanning history every time.
  */
 export async function scan(fromBlock: bigint, toBlock?: bigint): Promise<Scan> {
   const tip = toBlock ?? (await publicClient.getBlockNumber());
@@ -64,30 +71,40 @@ export async function scan(fromBlock: bigint, toBlock?: bigint): Promise<Scan> {
   const checkIns: CheckIn[] = [];
   const picks: PickEvent[] = [];
 
+  const ranges: Array<[bigint, bigint]> = [];
   for (let start = fromBlock; start <= tip; start += MAX_RANGE) {
-    const end = start + MAX_RANGE - 1n > tip ? tip : start + MAX_RANGE - 1n;
-    const [cLogs, pLogs] = await Promise.all([
-      publicClient.getLogs({ address: PLAY_CONTRACT, event: checkedIn, fromBlock: start, toBlock: end }),
-      publicClient.getLogs({ address: PLAY_CONTRACT, event: picked, fromBlock: start, toBlock: end }),
-    ]);
+    ranges.push([start, start + MAX_RANGE - 1n > tip ? tip : start + MAX_RANGE - 1n]);
+  }
 
-    for (const l of cLogs) {
-      if (!l.args.user || l.args.day === undefined) continue;
-      checkIns.push({
-        user: l.args.user.toLowerCase() as `0x${string}`,
-        day: Number(l.args.day),
-        block: Number(l.blockNumber),
-      });
-    }
-    for (const l of pLogs) {
-      if (!l.args.user || !l.args.marketId || l.args.outcome === undefined) continue;
-      picks.push({
-        user: l.args.user.toLowerCase() as `0x${string}`,
-        marketId: l.args.marketId.toLowerCase() as `0x${string}`,
-        outcome: (l.args.outcome === 1 ? 1 : 0) as 0 | 1,
-        block: Number(l.blockNumber),
-        at: blockTime(l.blockNumber!, anchor),
-      });
+  for (let i = 0; i < ranges.length; i += CONCURRENCY) {
+    const wave = await Promise.all(
+      ranges.slice(i, i + CONCURRENCY).map(([start, end]) =>
+        Promise.all([
+          publicClient.getLogs({ address: PLAY_CONTRACT, event: checkedIn, fromBlock: start, toBlock: end }),
+          publicClient.getLogs({ address: PLAY_CONTRACT, event: picked, fromBlock: start, toBlock: end }),
+        ])
+      )
+    );
+
+    for (const [cLogs, pLogs] of wave) {
+      for (const l of cLogs) {
+        if (!l.args.user || l.args.day === undefined) continue;
+        checkIns.push({
+          user: l.args.user.toLowerCase() as `0x${string}`,
+          day: Number(l.args.day),
+          block: Number(l.blockNumber),
+        });
+      }
+      for (const l of pLogs) {
+        if (!l.args.user || !l.args.marketId || l.args.outcome === undefined) continue;
+        picks.push({
+          user: l.args.user.toLowerCase() as `0x${string}`,
+          marketId: l.args.marketId.toLowerCase() as `0x${string}`,
+          outcome: (l.args.outcome === 1 ? 1 : 0) as 0 | 1,
+          block: Number(l.blockNumber),
+          at: blockTime(l.blockNumber!, anchor),
+        });
+      }
     }
   }
 
