@@ -7,30 +7,21 @@
 // Scanning on read is honest but not free: cost grows with history, not with
 // activity, because a full scan re-reads every block since deploy (~17 getLogs
 // per day of history, ~10s at present). That's comfortable now and won't be
-// forever; the cache below is what keeps it viable, and a cursor + stored
-// snapshot is the next step when the scan outgrows a request. Deliberately not
-// built yet: a stored snapshot is a second source of truth, and it isn't worth
-// maintaining until the numbers demand it.
+// forever; the cache in lib/play/board.ts is what keeps it viable, and a cursor
+// + stored snapshot is the next step when the scan outgrows a request.
+// Deliberately not built yet: a stored snapshot is a second source of truth,
+// and it isn't worth maintaining until the numbers demand it.
+//
+// The scan is shared with /api/plays so the board and a player's own history
+// can never disagree — see lib/play/board.ts.
 import { NextResponse } from "next/server";
-import { DEPLOY_BLOCK, scan, type CheckIn, type PickEvent } from "@/lib/play/events";
-import { grade } from "@/lib/play/grade";
-import { score, weekStart, type Graded, type Row } from "@/lib/play/xp";
+import { board } from "@/lib/play/board";
+import { score, weekStart, type Row } from "@/lib/play/xp";
 
 export const runtime = "nodejs";
 export const revalidate = 60;
 
 const TOP_N = 20;
-
-let cache: { at: number; checkIns: CheckIn[]; graded: Graded[] } | null = null;
-const CACHE_MS = 60_000;
-
-async function board(): Promise<{ checkIns: CheckIn[]; graded: Graded[] }> {
-  if (cache && Date.now() - cache.at < CACHE_MS) return cache;
-  const { checkIns, picks } = await scan(DEPLOY_BLOCK);
-  const graded = await grade(picks as PickEvent[]);
-  cache = { at: Date.now(), checkIns, graded };
-  return cache;
-}
 
 const shape = (r: Row) => ({
   address: r.user,

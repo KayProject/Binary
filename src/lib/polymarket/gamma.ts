@@ -114,3 +114,37 @@ async function bySlug(slug: string, closed: boolean): Promise<Market | null> {
 export async function fetchMarket(slug: string): Promise<Market | null> {
   return (await bySlug(slug, false)) ?? (await bySlug(slug, true));
 }
+
+// Batch counterpart of fetchMarket, for turning a set of picks back into
+// readable markets in two calls instead of one per pick.
+//
+// Deliberately unfiltered by `tradeable`: that floor decides what we *offer*,
+// but a market someone already picked has to render whatever it looks like now
+// — liquidity dries up as a market resolves, and dropping those rows would
+// erase exactly the picks that have an answer.
+const ID_BATCH = 50;
+
+export async function fetchByConditionIds(ids: string[]): Promise<Map<string, Market>> {
+  const out = new Map<string, Market>();
+  const unique = [...new Set(ids.map((i) => i.toLowerCase()))];
+
+  for (let i = 0; i < unique.length; i += ID_BATCH) {
+    const qs = unique
+      .slice(i, i + ID_BATCH)
+      .map((c) => `condition_ids=${encodeURIComponent(c)}`)
+      .join("&");
+    // `closed` is strict and doesn't OR (see fetchMarket), so both sides get
+    // asked: live markets and resolved ones are both part of a history.
+    for (const closed of [false, true]) {
+      const res = await fetch(`${GAMMA}/markets?${qs}&closed=${closed}`, {
+        next: { revalidate: 60 },
+      });
+      if (!res.ok) continue;
+      for (const raw of (await res.json()) as GammaMarket[]) {
+        const m = normalize(raw);
+        if (m) out.set(m.conditionId.toLowerCase(), m);
+      }
+    }
+  }
+  return out;
+}

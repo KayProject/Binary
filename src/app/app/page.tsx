@@ -15,6 +15,7 @@ import {
 } from "@/components/icons";
 import { Leaderboard } from "@/components/Leaderboard";
 import { MomentScreen, type Moment } from "@/components/moments";
+import type { History, Play } from "@/lib/play/history";
 import { payoutIfWin, sharesFor, takerFee } from "@/lib/polymarket/fees";
 import { useWallet } from "@/hooks/useWallet";
 import {
@@ -77,6 +78,85 @@ function usePicks() {
   return { picks, addPick };
 }
 
+// A player's history, from the chain rather than this device. Null address =
+// nothing to ask about; the caller shows a connect prompt instead.
+//
+// The result is tagged with the address it belongs to, so switching wallets
+// derives back to null rather than setState-ing in the effect body (which
+// cascades renders — same reason the localStorage hooks above defer by rAF).
+// A nonce bump refetches without clearing, so a refresh doesn't flash the list
+// back to a loading line.
+function usePlays(address: string | null, nonce: number) {
+  const [data, setData] = useState<{ address: string; result: History | "error" } | null>(null);
+
+  useEffect(() => {
+    if (!address) return;
+    let live = true;
+    fetch(`/api/plays?address=${address}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d: History) => live && setData({ address, result: d }))
+      .catch(() => live && setData({ address, result: "error" }));
+    return () => {
+      live = false;
+    };
+  }, [address, nonce]);
+
+  const result = address && data?.address === address ? data.result : null;
+  return {
+    history: result && result !== "error" ? result : null,
+    state: !address ? "idle" : result === "error" ? "error" : result ? "idle" : "loading",
+  } as const;
+}
+
+function Chip({ tone, children }: { tone: "win" | "lose" | "sub" | "gold"; children: React.ReactNode }) {
+  const tones = {
+    win: "bg-(--s-card) text-(--s-win)",
+    lose: "bg-(--s-card) text-(--s-lose)",
+    sub: "bg-(--s-card) text-(--s-sub)",
+    gold: "bg-(--s-gold-tint) text-(--s-gold)",
+  };
+  return (
+    <span className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold ${tones[tone]}`}>
+      {children}
+    </span>
+  );
+}
+
+// A pick's outcome, said plainly. "unknown" is ours to own, not the player's:
+// their conditionId was never recorded, so the pick can never be graded — and
+// calling that a loss would be a lie.
+const VERDICT: Record<Play["resolution"], { label: string; tone: "win" | "lose" | "sub" }> = {
+  won: { label: "WON", tone: "win" },
+  lost: { label: "LOST", tone: "lose" },
+  open: { label: "LIVE", tone: "sub" },
+  void: { label: "NO RESULT", tone: "sub" },
+  unknown: { label: "UNTRACKED", tone: "sub" },
+};
+
+function PlayRow({ play }: { play: Play }) {
+  const v = VERDICT[play.resolution];
+  return (
+    <li className="rounded-2xl bg-(--s-card) p-4">
+      <div className="flex items-start gap-2">
+        {play.image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={play.image} alt="" className="h-8 w-8 shrink-0 rounded-lg object-cover" />
+        )}
+        <p className="flex-1 text-sm font-semibold leading-snug">
+          {play.question ?? "This market couldn’t be traced back"}
+        </p>
+        <Chip tone={v.tone}>{v.label}</Chip>
+      </div>
+      <p className="mt-1 font-mono text-xs text-(--s-sub)">
+        {play.label && <span className="font-bold text-(--s-gold)">⚡ {play.label}</span>}
+        {play.priceAtPick !== null && ` at ${cents(play.priceAtPick)}`}
+        {play.currentPrice !== null && ` · now ${cents(play.currentPrice)}`}
+        {play.xp > 0 && <span className="ml-2 font-bold text-(--s-gold)">+{play.xp} XP</span>}
+      </p>
+    </li>
+  );
+}
+
 function useTheme(): [Theme, () => void] {
   const [theme, setTheme] = useState<Theme>("light");
   useEffect(() => {
@@ -119,6 +199,10 @@ export default function AppHome() {
   const [txBusy, setTxBusy] = useState<"pick" | "checkin" | "bet" | "topup" | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
   const [moment, setMoment] = useState<Moment | null>(null);
+  // Bumped after a pick lands, so the history refetches instead of waiting out
+  // the 60s scan cache.
+  const [playsNonce, setPlaysNonce] = useState(0);
+  const { history, state: playsState } = usePlays(address ?? null, playsNonce);
   const [graded, setGraded] = useState<Record<string, "won" | "lost">>({});
   // Distinct days checked in. The contract's checkInCount counts same-day
   // repeats too ("never reverts on repeats"), which ran ~32x hot on live data
@@ -338,6 +422,8 @@ export default function AppHome() {
       });
       setTimeout(refreshPlayer, 3_000);
       setTimeout(refreshPlayer, 8_000);
+      // Past the scan cache, so the pick swaps from CONFIRMING to a real row.
+      setTimeout(() => setPlaysNonce((n) => n + 1), 65_000);
     } catch {
       setTxError("Pick didn’t go through — try again.");
     } finally {
@@ -454,6 +540,17 @@ export default function AppHome() {
     () => Object.entries(picks).sort((a, b) => b[1].at - a[1].at),
     [picks]
   );
+
+  // The chain is the record. A pick made seconds ago hasn't been scanned yet
+  // (60s cache + block time), so it's shown as CONFIRMING from the local cache
+  // — otherwise the tab looks empty right after the moment that celebrates it.
+  const confirming = useMemo(() => {
+    if (!address || !history) return [];
+    const onChain = new Set(history.plays.map((p) => p.slug).filter(Boolean));
+    return pickList.filter(([slug]) => !onChain.has(slug));
+  }, [address, history, pickList]);
+
+  const playCount = (history?.plays.length ?? 0) + confirming.length;
 
   return (
     <main
@@ -634,23 +731,60 @@ export default function AppHome() {
           </div>
 
           <h3 className="mb-2 text-sm font-semibold text-(--s-sub)">
-            Free picks {pickList.length > 0 && `· ${pickList.length}`}
+            Your plays {playCount > 0 && `· ${playCount}`}
           </h3>
-          {pickList.length === 0 ? (
+
+          {history && (history.totals.wins > 0 || history.totals.losses > 0 || history.totals.pending > 0) && (
+            <div className="mb-2 flex gap-2 font-mono text-xs">
+              <span className="rounded-full bg-(--s-gold-tint) px-2.5 py-1 font-bold text-(--s-gold)">
+                {history.totals.xp} XP
+              </span>
+              <span className="rounded-full bg-(--s-card) px-2.5 py-1">
+                <span className="font-bold text-(--s-win)">{history.totals.wins}W</span>
+                {" · "}
+                <span className="font-bold text-(--s-lose)">{history.totals.losses}L</span>
+              </span>
+              {history.totals.pending > 0 && (
+                <span className="rounded-full bg-(--s-card) px-2.5 py-1 text-(--s-sub)">
+                  {history.totals.pending} live
+                </span>
+              )}
+            </div>
+          )}
+
+          {!address ? (
+            <p className="rounded-2xl bg-(--s-card) p-4 text-sm text-(--s-sub)">
+              Sign in to see every pick you&apos;ve made — your history lives on Celo, not on
+              this device.
+            </p>
+          ) : playsState === "loading" && !history ? (
+            <p className="rounded-2xl bg-(--s-card) p-4 text-sm text-(--s-sub)">
+              Reading your picks off the chain…
+            </p>
+          ) : playsState === "error" && !history ? (
+            <p className="rounded-2xl bg-(--s-card) p-4 text-sm text-(--s-sub)">
+              Couldn&apos;t load your history — it&apos;s safe on-chain, try again shortly.
+            </p>
+          ) : playCount === 0 ? (
             <p className="rounded-2xl bg-(--s-card) p-4 text-sm text-(--s-sub)">
               No picks yet. Tap any market to lock in a free pick and start your streak.
             </p>
           ) : (
             <ul className="space-y-2">
-              {pickList.map(([slug, p]) => (
-                <li key={slug} className="rounded-2xl bg-(--s-card) p-4">
-                  <p className="text-sm font-semibold leading-snug">{p.question}</p>
+              {confirming.map(([slug, p]) => (
+                <li key={`pending-${slug}`} className="rounded-2xl bg-(--s-card) p-4 opacity-70">
+                  <div className="flex items-start gap-2">
+                    <p className="flex-1 text-sm font-semibold leading-snug">{p.question}</p>
+                    <Chip tone="sub">CONFIRMING</Chip>
+                  </div>
                   <p className="mt-1 font-mono text-xs text-(--s-sub)">
                     <span className="font-bold text-(--s-gold)">⚡ {p.label}</span> at{" "}
                     {cents(p.price)}
-                    <span className="ml-2">would pay ${payoutIfWin(2, p.price).toFixed(2)} on $2</span>
                   </p>
                 </li>
+              ))}
+              {(history?.plays ?? []).map((p) => (
+                <PlayRow key={p.marketId} play={p} />
               ))}
             </ul>
           )}
@@ -735,15 +869,17 @@ export default function AppHome() {
           <button
             className="mb-4 w-full rounded-2xl border border-(--s-gold-line) bg-(--s-gold-tint) py-3 text-sm font-bold text-(--s-gold) active:scale-[0.98]"
             onClick={() => {
+              // Chain-scored, same as the Portfolio and the board. The local
+              // cache is only the fallback for a player who isn't signed in.
               const results = Object.values(graded);
               setMoment({
                 t: "recap",
-                picks: pickList.length,
-                wins: results.filter((r) => r === "won").length,
-                losses: results.filter((r) => r === "lost").length,
+                picks: history?.plays.length ?? pickList.length,
+                wins: history?.totals.wins ?? results.filter((r) => r === "won").length,
+                losses: history?.totals.losses ?? results.filter((r) => r === "lost").length,
                 streak,
                 longest: player?.longestStreak ?? 0,
-                checkIns: player?.checkInCount ?? 0,
+                checkIns: checkInDays ?? player?.checkInCount ?? 0,
               });
             }}
           >
