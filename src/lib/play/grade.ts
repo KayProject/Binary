@@ -93,17 +93,20 @@ export async function grade(picks: PickEvent[]): Promise<Graded[]> {
   const settled = conditionIds.length ? await fetchSettled(conditionIds) : new Map<string, Settled>();
 
   return Promise.all(
-    picks.map(async (p) => {
+    picks.map(async (p): Promise<Graded> => {
       const entry = registry.get(p.marketId.toLowerCase());
-      if (!entry) return { ...p, resolution: "unknown" as Resolution, priceAtPick: null };
+      if (!entry) {
+        return { ...p, resolution: "unknown", priceAtPick: null, conditionId: null, slug: null };
+      }
+      const found = { conditionId: entry.conditionId, slug: entry.slug };
 
       const s = settled.get(entry.conditionId.toLowerCase());
-      if (!s) return { ...p, resolution: "open" as Resolution, priceAtPick: null };
+      if (!s) return { ...p, resolution: "open", priceAtPick: null, ...found };
 
       const resolution = readOutcome(s.prices, p.outcome);
       // Only winners need a price — it's what their XP is weighted by.
       const price = resolution === "won" ? await priceAtPick(s.clobTokenIds[p.outcome], p.at) : null;
-      return { ...p, resolution, priceAtPick: price };
+      return { ...p, resolution, priceAtPick: price, ...found };
     })
   );
 }

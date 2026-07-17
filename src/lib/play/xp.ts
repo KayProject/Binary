@@ -62,6 +62,12 @@ export interface Row {
 export interface Graded extends PickEvent {
   resolution: Resolution;
   priceAtPick: number | null;
+  // The registry entry grading actually used. Carried rather than looked up
+  // again by callers: resolution is *derived* from this lookup, so a second,
+  // independent lookup can disagree with it — and "unknown" (no entry) next to
+  // a question title (entry found) is a contradiction a reader can see.
+  conditionId: string | null;
+  slug: string | null;
 }
 
 /**
