@@ -1071,11 +1071,15 @@ export default function AppHome() {
               ))}
             </div>
 
-            <ol className="mb-4 space-y-1.5 text-sm text-(--s-sub)">
+            <ol className="mb-2 space-y-1.5 text-sm text-(--s-sub)">
               <li>1 · You confirm in MiniPay — we never touch your wallet</li>
               <li>2 · Your money crosses to Polymarket (~2 min, tracked live)</li>
               <li>3 · Withdrawals return to this wallet only — always</li>
             </ol>
+            <p className="mb-4 text-xs leading-relaxed text-(--s-sub)">
+              Only top up here in the app — never send USDm directly to the
+              contract address. A direct transfer can&apos;t be credited to you.
+            </p>
 
             {txError && <p className="mb-2 text-center text-xs text-(--s-lose)">{txError}</p>}
             {(() => {
