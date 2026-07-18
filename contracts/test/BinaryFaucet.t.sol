@@ -35,10 +35,41 @@ contract BinaryFaucetTest is Test {
         usdm = new MockUSDm();
         vm.prank(ops);
         faucet = new BinaryFaucet(address(usdm), DRIP);
+        // Default fixture: alice and bob are on the waitlist.
+        address[] memory list = new address[](2);
+        list[0] = alice;
+        list[1] = bob;
+        vm.prank(ops);
+        faucet.setWhitelisted(list, true);
     }
 
     function fund(uint256 amount) internal {
         usdm.mint(address(faucet), amount);
+    }
+
+    function test_claim_revertsWhenNotWhitelisted() public {
+        fund(10e18);
+        address mallory = makeAddr("mallory");
+        vm.prank(mallory);
+        vm.expectRevert(BinaryFaucet.NotWhitelisted.selector);
+        faucet.claim();
+        assertFalse(faucet.claimable(mallory));
+    }
+
+    function test_whitelist_onlyOwnerAndRevocable() public {
+        fund(10e18);
+        address[] memory list = new address[](1);
+        list[0] = alice;
+
+        vm.prank(alice);
+        vm.expectRevert(BinaryFaucet.NotOwner.selector);
+        faucet.setWhitelisted(list, true);
+
+        vm.prank(ops);
+        faucet.setWhitelisted(list, false); // revoke
+        vm.prank(alice);
+        vm.expectRevert(BinaryFaucet.NotWhitelisted.selector);
+        faucet.claim();
     }
 
     function test_claim() public {
@@ -111,11 +142,17 @@ contract BinaryFaucetTest is Test {
 
     function test_potOutlastsExactly() public {
         fund(2e18); // exactly two drips
+        address carol = makeAddr("carol");
+        address[] memory list = new address[](1);
+        list[0] = carol;
+        vm.prank(ops);
+        faucet.setWhitelisted(list, true);
+
         vm.prank(alice);
         faucet.claim();
         vm.prank(bob);
         faucet.claim();
-        vm.prank(makeAddr("carol"));
+        vm.prank(carol);
         vm.expectRevert(BinaryFaucet.FaucetDry.selector);
         faucet.claim();
     }

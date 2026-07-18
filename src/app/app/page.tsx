@@ -760,7 +760,7 @@ export default function AppHome() {
               <p className="mt-1 text-sm text-(--s-sub)">
                 {faucet.claimable
                   ? "Real USDm, once per wallet, straight to your wallet. No strings."
-                  : "One free claim per wallet, straight to your wallet — we’ll light this up when the pot is filled."}
+                  : "One free claim per waitlisted wallet — we’ll light this up when your wallet is approved and the pot is filled."}
               </p>
               {faucet.claimable && (
                 <button

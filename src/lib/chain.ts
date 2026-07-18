@@ -20,7 +20,9 @@ const tagged = (data: `0x${string}`) => concat([data, ATTRIBUTION_TAG]);
 
 export const PLAY_CONTRACT = "0x1CfbEa228F37A139cD805f15291D19f7DBBF7426" as const;
 export const DEPOSIT_CONTRACT = "0xE75A70597501453Fb0DFBa9B34eA2b9495d67600" as const;
-export const FAUCET_CONTRACT = "0x344c51d2a46bc98821d75e25de84a7f520ef9296" as const;
+// Whitelist faucet (v2, 2026-07-19) — claims gated to waitlist wallets the
+// owner whitelists. v1 0x344c…9296 (open claims) was abandoned unfunded.
+export const FAUCET_CONTRACT = "0x857bd8d1f94dde5bb38d1acf47fe39df6a058fb5" as const;
 export const USDM = "0x765DE816845861e75A25fCA122bb6898B8B1282a" as const; // 18 dec
 
 const erc20Abi = [

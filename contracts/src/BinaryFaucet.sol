@@ -7,10 +7,12 @@ interface IERC20 {
 }
 
 /// @title BinaryFaucet
-/// @notice The entry promo: new users claim a fixed drip of USDm, once per
-///         wallet, funded entirely by the owner topping the contract up.
-///         An unfunded faucet is a safe stub — claims revert until USDm
-///         arrives, so the frontend can ship wired before any money does.
+/// @notice The entry promo: waitlisted users claim a fixed drip of USDm, once
+///         per wallet, funded entirely by the owner topping the contract up.
+///         Claims are allowlist-gated — the owner whitelists wallets from the
+///         waitlist; everyone else's claim reverts NotWhitelisted. An unfunded
+///         faucet is a safe stub — claims revert until USDm arrives, so the
+///         frontend can ship wired before any money does.
 contract BinaryFaucet {
     IERC20 public immutable usdm;
 
@@ -21,10 +23,13 @@ contract BinaryFaucet {
     /// without redeploying.
     uint256 public dripAmount;
 
+    /// Waitlist gate: only whitelisted wallets can claim.
+    mapping(address => bool) public whitelisted;
     mapping(address => bool) public claimed;
     uint256 public totalClaims;
 
     event Claimed(address indexed user, uint256 amount);
+    event Whitelisted(address indexed user, bool allowed);
     event DripAmountSet(uint256 amount);
     event PausedSet(bool paused);
     event Defunded(address indexed to, uint256 amount);
@@ -32,6 +37,7 @@ contract BinaryFaucet {
 
     error NotOwner();
     error Paused();
+    error NotWhitelisted();
     error AlreadyClaimed();
     error FaucetDry();
     error ZeroAddress();
@@ -53,9 +59,10 @@ contract BinaryFaucet {
         emit DripAmountSet(dripAmount_);
     }
 
-    /// @notice One free drip per wallet, while the pot lasts.
+    /// @notice One free drip per whitelisted wallet, while the pot lasts.
     function claim() external {
         if (paused) revert Paused();
+        if (!whitelisted[msg.sender]) revert NotWhitelisted();
         if (claimed[msg.sender]) revert AlreadyClaimed();
         if (usdm.balanceOf(address(this)) < dripAmount) revert FaucetDry();
         claimed[msg.sender] = true;
@@ -68,7 +75,19 @@ contract BinaryFaucet {
 
     /// @notice Whether `user` can claim right now (frontend gate).
     function claimable(address user) external view returns (bool) {
-        return !paused && !claimed[user] && usdm.balanceOf(address(this)) >= dripAmount;
+        return
+            !paused &&
+            whitelisted[user] &&
+            !claimed[user] &&
+            usdm.balanceOf(address(this)) >= dripAmount;
+    }
+
+    /// @notice Batch-whitelist waitlist wallets (or revoke with allowed=false).
+    function setWhitelisted(address[] calldata users, bool allowed) external onlyOwner {
+        for (uint256 i = 0; i < users.length; i++) {
+            whitelisted[users[i]] = allowed;
+            emit Whitelisted(users[i], allowed);
+        }
     }
 
     function setDripAmount(uint256 amount) external onlyOwner {
