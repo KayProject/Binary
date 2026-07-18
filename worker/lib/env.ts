@@ -11,9 +11,11 @@ import { BuilderConfig } from "@polymarket/builder-signing-sdk";
 tls.DEFAULT_MAX_VERSION = "TLSv1.2";
 
 // Layered env: repo root .env first (operator key, contract addresses), then
+// root .env.local (BLOB_READ_WRITE_TOKEN for the bet ledger), then
 // phase0/.env.local for anything not overridden (RPCs, builder creds).
 const ROOT = path.join(__dirname, "..", "..");
 dotenv.config({ path: path.join(ROOT, ".env") });
+dotenv.config({ path: path.join(ROOT, ".env.local") });
 dotenv.config({ path: path.join(ROOT, "phase0", ".env.local") });
 
 export const POLYGON_CHAIN_ID = 137;

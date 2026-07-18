@@ -1,7 +1,8 @@
-// GET /api/settle — the settlement half of the out-leg: resolve open ledger
-// bets against Polymarket and pay winners on Celo. Cron-driven (vercel.json),
-// authorized by CRON_SECRET; safe to run any number of times — each bet is
-// keyed by orderID and only "open" bets are ever touched.
+// GET /api/settle — MANUAL fallback settlement: resolve open ledger bets and
+// pay winners directly from the contract's Celo float. The AUTOMATED payer is
+// the worker (worker/settle.ts), which bridges winnings back from Polygon —
+// never schedule this route on a cron while that runs, or two payers race the
+// same open bets. Authorized by CRON_SECRET; only "open" bets are touched.
 //
 // Payout state machine per winning bet: open → paying → settled. A bet stuck
 // in "paying" means the payout tx's fate is unknown (crash or RPC timeout

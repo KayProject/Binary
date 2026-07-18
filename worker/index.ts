@@ -9,6 +9,7 @@ import { drive, isTerminal } from "../src/lib/funding/machine";
 import { net } from "../src/lib/funding/netting";
 import type { DepositJob, Job, WithdrawalJob } from "../src/lib/funding/types";
 import { depositExecutors, withdrawalExecutors } from "./executors";
+import { settlePass } from "./settle";
 import { loadJobs, saveJob, journal } from "./store";
 import { scanDeposits } from "./watch";
 
@@ -18,6 +19,15 @@ async function cycle(): Promise<void> {
   const fresh = await scanDeposits();
   for (const job of fresh) {
     console.log(`new deposit ${job.id}: ${job.user} $${Number(job.amountUsdm / 10n ** 12n) / 1e6}`);
+  }
+
+  // Settlement first, so a fresh winner's withdrawal job is driven (and can be
+  // netted against a pending deposit) within the same cycle. Its own guard:
+  // a Gamma/Blob hiccup must not stall the funding pipeline.
+  try {
+    await settlePass();
+  } catch (e) {
+    console.error("settle error:", e instanceof Error ? e.message : e);
   }
 
   const jobs = loadJobs();
