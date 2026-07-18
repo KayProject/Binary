@@ -15,6 +15,7 @@ export type Moment =
   | { t: "loss"; label: string; question: string }
   | { t: "pending"; step: 1 | 2 | 3; usd?: number }
   | { t: "funded"; balance: number }
+  | { t: "claimed"; amount: number }
   | { t: "cashout"; amount: number }
   | {
       t: "recap";
@@ -314,6 +315,10 @@ export function MomentScreen({
 
           {moment.t === "funded" && <FundedBody balance={moment.balance} goBet={onGoBet} close={onClose} primaryBtn={primaryBtn} ghostBtn={ghostBtn} />}
 
+          {moment.t === "claimed" && (
+            <ClaimedBody amount={moment.amount} goBet={onGoBet} close={onClose} primaryBtn={primaryBtn} ghostBtn={ghostBtn} />
+          )}
+
           {moment.t === "cashout" && (
             <CashoutBody amount={moment.amount} close={onClose} primaryBtn={primaryBtn} ghostBtn={ghostBtn} />
           )}
@@ -431,6 +436,40 @@ function FundedBody({
       <div className="mt-6 w-full space-y-1">
         <button className={primaryBtn} onClick={goBet}>
           Place your first bet
+        </button>
+        <button className={ghostBtn} onClick={close}>
+          Later
+        </button>
+      </div>
+    </>
+  );
+}
+
+function ClaimedBody({
+  amount,
+  goBet,
+  close,
+  primaryBtn,
+  ghostBtn,
+}: {
+  amount: number;
+  goBet: () => void;
+  close: () => void;
+  primaryBtn: string;
+  ghostBtn: string;
+}) {
+  const shown = useCountUp(amount);
+  return (
+    <>
+      <Headline>YOURS, FREE</Headline>
+      <p className="font-mono text-5xl font-black tabular-nums">${shown.toFixed(2)}</p>
+      <p className="text-center text-sm text-(--m-sub)">
+        Real USDm, straight to your wallet. Top it up into Binary and put it on
+        a market — or keep it. It&apos;s yours either way.
+      </p>
+      <div className="mt-6 w-full space-y-1">
+        <button className={primaryBtn} onClick={goBet}>
+          See the markets
         </button>
         <button className={ghostBtn} onClick={close}>
           Later

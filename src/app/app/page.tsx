@@ -21,14 +21,18 @@ import { useWallet } from "@/hooks/useWallet";
 import {
   PLAY_CONTRACT,
   DEPOSIT_CONTRACT,
+  FAUCET_CONTRACT,
   USDM,
   approveUsdmData,
   checkInData,
+  claimData,
   depositData,
+  fetchFaucetState,
   fetchPlayerState,
   pickData,
   usdToWei,
   usdmAllowance,
+  type FaucetState,
   type PlayerState,
 } from "@/lib/chain";
 
@@ -198,7 +202,7 @@ export default function AppHome() {
   const [theme, toggleTheme] = useTheme();
   const { address, isMiniPay, hasWallet, userLabel, connect, logout, sendTx } = useWallet();
   const [player, setPlayer] = useState<PlayerState | null>(null);
-  const [txBusy, setTxBusy] = useState<"pick" | "checkin" | "bet" | "topup" | "withdraw" | null>(null);
+  const [txBusy, setTxBusy] = useState<"pick" | "checkin" | "bet" | "topup" | "withdraw" | "claim" | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
   const [moment, setMoment] = useState<Moment | null>(null);
   // Bumped after a pick lands, so the history refetches instead of waiting out
@@ -211,6 +215,7 @@ export default function AppHome() {
   // — a one-day user was being shown "47 check-ins". Take the deduped figure
   // from the scorer instead, so the tile and the board can't disagree.
   const [checkInDays, setCheckInDays] = useState<number | null>(null);
+  const [faucet, setFaucet] = useState<FaucetState | null>(null);
   const prevPlayer = useRef<PlayerState | null>(null);
   // Funding-tracker baseline: net deposits + credited pUSD when it opened.
   const pendingBase = useRef<{ net: number; credited: number | null } | null>(null);
@@ -224,6 +229,7 @@ export default function AppHome() {
   const refreshPlayer = useCallback(() => {
     if (!address) return;
     fetchPlayerState(address).then(setPlayer).catch(() => {});
+    fetchFaucetState(address).then(setFaucet).catch(() => {});
   }, [address]);
 
   useEffect(() => {
@@ -494,10 +500,30 @@ export default function AppHome() {
       }
       setWithdraw(false);
       setWithdrawUsd("");
-      setMoment({ t: "cashout", amount: usd });
+      // No moment here: the paidOutUsd-rise detector fires PAID OUT when the
+      // refresh sees it on-chain — firing both would show it twice.
       setTimeout(refreshPlayer, 3_000);
     } catch {
       setTxError("Withdrawal didn’t go through — try again.");
+    } finally {
+      setTxBusy(null);
+    }
+  };
+
+  // Faucet promo: one free USDm drip per wallet, paid straight to the wallet.
+  // While the pot is unfunded the card renders as a teaser and never offers
+  // the transaction — claim() would only revert FaucetDry.
+  const doClaim = async () => {
+    setTxError(null);
+    const from = await ensureAddress();
+    if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
+    setTxBusy("claim");
+    try {
+      await sendTx(FAUCET_CONTRACT, claimData());
+      setMoment({ t: "claimed", amount: faucet?.dripUsd ?? 1 });
+      setTimeout(refreshPlayer, 3_000);
+    } catch {
+      setTxError("Claim didn’t go through — try again.");
     } finally {
       setTxBusy(null);
     }
@@ -695,6 +721,30 @@ export default function AppHome() {
                 >
                   Get MiniPay to start
                 </a>
+              )}
+            </div>
+          )}
+          {/* Faucet promo — hidden once claimed; a teaser while the pot is dry. */}
+          {address && faucet && !faucet.claimed && (
+            <div className="mx-4 mt-4 rounded-2xl border border-(--s-gold) bg-(--s-card) p-4">
+              <p className="text-[15px] font-bold">
+                {faucet.claimable
+                  ? `Claim your free $${faucet.dripUsd.toFixed(2)}`
+                  : "Free USDm drops are coming"}
+              </p>
+              <p className="mt-1 text-sm text-(--s-sub)">
+                {faucet.claimable
+                  ? "Real USDm, once per wallet, straight to your wallet. No strings."
+                  : "One free claim per wallet, straight to your wallet — we’ll light this up when the pot is filled."}
+              </p>
+              {faucet.claimable && (
+                <button
+                  onClick={doClaim}
+                  disabled={txBusy === "claim"}
+                  className="mt-3 w-full rounded-xl bg-(--s-act) py-3 text-sm font-bold text-white active:scale-[0.98] disabled:opacity-60"
+                >
+                  {txBusy === "claim" ? "Confirm in your wallet…" : "Claim it"}
+                </button>
               )}
             </div>
           )}

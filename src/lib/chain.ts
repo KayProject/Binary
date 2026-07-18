@@ -20,6 +20,7 @@ const tagged = (data: `0x${string}`) => concat([data, ATTRIBUTION_TAG]);
 
 export const PLAY_CONTRACT = "0x1CfbEa228F37A139cD805f15291D19f7DBBF7426" as const;
 export const DEPOSIT_CONTRACT = "0xE75A70597501453Fb0DFBa9B34eA2b9495d67600" as const;
+export const FAUCET_CONTRACT = "0x344c51d2a46bc98821d75e25de84a7f520ef9296" as const;
 export const USDM = "0x765DE816845861e75A25fCA122bb6898B8B1282a" as const; // 18 dec
 
 const erc20Abi = [
@@ -147,6 +148,54 @@ export const approveUsdmData = (amount: bigint) =>
 
 export const depositData = (amount: bigint) =>
   tagged(encodeFunctionData({ abi: depositsAbi, functionName: "deposit", args: [amount] }));
+
+// ── Faucet promo: one free USDm drip per wallet, straight to the wallet.
+// The pot is owner-funded; while it's empty claimable() is false for everyone
+// and the UI shows the promo as "coming soon" instead of offering a dead tx. ──
+
+const faucetAbi = [
+  { type: "function", name: "claim", inputs: [], outputs: [], stateMutability: "nonpayable" },
+  {
+    type: "function",
+    name: "claimable",
+    inputs: [{ name: "user", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "claimed",
+    inputs: [{ name: "user", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "dripAmount",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+] as const;
+
+export const claimData = () =>
+  tagged(encodeFunctionData({ abi: faucetAbi, functionName: "claim" }));
+
+export interface FaucetState {
+  claimable: boolean;
+  claimed: boolean;
+  dripUsd: number;
+}
+
+export async function fetchFaucetState(user: `0x${string}`): Promise<FaucetState> {
+  const faucet = { address: FAUCET_CONTRACT, abi: faucetAbi } as const;
+  const [claimable, claimed, drip] = await Promise.all([
+    publicClient.readContract({ ...faucet, functionName: "claimable", args: [user] }),
+    publicClient.readContract({ ...faucet, functionName: "claimed", args: [user] }),
+    publicClient.readContract({ ...faucet, functionName: "dripAmount" }),
+  ]);
+  return { claimable, claimed, dripUsd: Number(drip) / 1e18 };
+}
 
 export async function usdmAllowance(owner: `0x${string}`): Promise<bigint> {
   return publicClient.readContract({
