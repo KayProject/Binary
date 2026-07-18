@@ -189,6 +189,8 @@ export default function AppHome() {
   const [sheet, setSheet] = useState<{ market: Market; outcome: 0 | 1 } | null>(null);
   const [topUp, setTopUp] = useState(false);
   const [depositUsd, setDepositUsd] = useState("");
+  const [withdraw, setWithdraw] = useState(false);
+  const [withdrawUsd, setWithdrawUsd] = useState("");
   // Set while a deposit is crossing the bridge; drives the header pill.
   const [fundingUsd, setFundingUsd] = useState<number | null>(null);
   const [amount, setAmount] = useState(2);
@@ -196,7 +198,7 @@ export default function AppHome() {
   const [theme, toggleTheme] = useTheme();
   const { address, isMiniPay, hasWallet, userLabel, connect, logout, sendTx } = useWallet();
   const [player, setPlayer] = useState<PlayerState | null>(null);
-  const [txBusy, setTxBusy] = useState<"pick" | "checkin" | "bet" | "topup" | null>(null);
+  const [txBusy, setTxBusy] = useState<"pick" | "checkin" | "bet" | "topup" | "withdraw" | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
   const [moment, setMoment] = useState<Moment | null>(null);
   // Bumped after a pick lands, so the history refetches instead of waiting out
@@ -465,6 +467,42 @@ export default function AppHome() {
     }
   };
 
+  // The out-leg: the server signs payout() as owner; the contract pins the
+  // destination to this wallet, so the user signs nothing and can lose nothing.
+  const MIN_WITHDRAW = 0.5;
+  const doWithdraw = async (usd: number) => {
+    setTxError(null);
+    const from = await ensureAddress();
+    if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
+    setTxBusy("withdraw");
+    try {
+      const res = await fetch("/api/withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user: from, usd }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTxError(
+          res.status === 402
+            ? `You can withdraw up to $${(data.availableUsd ?? 0).toFixed(2)}.`
+            : res.status === 503
+              ? "Withdrawals are briefly paused — try again shortly."
+              : data.error ?? "Withdrawal didn’t go through — try again."
+        );
+        return;
+      }
+      setWithdraw(false);
+      setWithdrawUsd("");
+      setMoment({ t: "cashout", amount: usd });
+      setTimeout(refreshPlayer, 3_000);
+    } catch {
+      setTxError("Withdrawal didn’t go through — try again.");
+    } finally {
+      setTxBusy(null);
+    }
+  };
+
   const doBet = async (market: Market, outcome: 0 | 1, usd: number) => {
     setTxError(null);
     const from = await ensureAddress();
@@ -478,6 +516,7 @@ export default function AppHome() {
           user: from,
           tokenID: market.outcomes[outcome].clobTokenId,
           usd,
+          conditionId: market.conditionId,
         }),
       });
       const data = await res.json();
@@ -728,6 +767,14 @@ export default function AppHome() {
             >
               Top up with USDm
             </button>
+            {balance >= MIN_WITHDRAW && (
+              <button
+                onClick={() => setWithdraw(true)}
+                className="mt-2 w-full rounded-xl border border-(--s-line) py-3 text-sm font-bold text-(--s-sub) active:scale-[0.98]"
+              >
+                Withdraw
+              </button>
+            )}
           </div>
 
           <h3 className="mb-2 text-sm font-semibold text-(--s-sub)">
@@ -1097,6 +1144,79 @@ export default function AppHome() {
                       ? `Top up $${usd.toFixed(2)}`
                       : depositUsd && Number.isFinite(usd)
                         ? `Minimum $${MIN_DEPOSIT}`
+                        : "Enter an amount"}
+                </button>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* ── Withdraw sheet ────────────────────────────────────── */}
+      {withdraw && (
+        <div
+          className="fixed inset-0 z-20 flex items-end bg-black/50 lg:items-center lg:justify-center lg:p-6"
+          onClick={() => setWithdraw(false)}
+        >
+          <div
+            className={`${theme === "dark" ? "app-dark" : "app-light"} w-full rounded-t-3xl border-t border-(--s-line) bg-(--s-card) p-5 pb-8 text-(--s-text) lg:max-w-md lg:rounded-3xl lg:border lg:pb-5 lg:shadow-2xl`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drag handle — a sheet affordance; the lg modal isn't draggable. */}
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-(--s-line) lg:hidden" />
+            <h3 className="mb-1 text-xl font-bold">Withdraw USDm</h3>
+            <p className="mb-4 text-sm leading-relaxed text-(--s-sub)">
+              Straight back to this wallet — the same one it came from. Any
+              amount from ${MIN_WITHDRAW}, up to ${balance.toFixed(2)}.
+            </p>
+
+            <div className="mb-3 flex items-center gap-2 rounded-2xl bg-(--s-bg) p-4">
+              <span className="font-mono text-2xl font-bold text-(--s-sub)">$</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder={balance.toFixed(2)}
+                value={withdrawUsd}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (/^\d*\.?\d{0,2}$/.test(v)) setWithdrawUsd(v);
+                }}
+                className="w-full bg-transparent font-mono text-2xl font-bold tabular-nums outline-none placeholder:text-(--s-sub) placeholder:opacity-50"
+              />
+            </div>
+
+            <div className="mb-4 flex gap-2">
+              <button
+                onClick={() => setWithdrawUsd(balance.toFixed(2))}
+                className={`flex-1 rounded-xl border py-2 font-mono text-sm font-bold ${
+                  withdrawUsd === balance.toFixed(2)
+                    ? "border-(--s-act) bg-(--s-act-tint) text-(--s-act-soft)"
+                    : "border-(--s-line) text-(--s-sub)"
+                }`}
+              >
+                Everything · ${balance.toFixed(2)}
+              </button>
+            </div>
+
+            {txError && <p className="mb-2 text-center text-xs text-(--s-lose)">{txError}</p>}
+            {(() => {
+              const usd = parseFloat(withdrawUsd);
+              const valid = Number.isFinite(usd) && usd >= MIN_WITHDRAW && usd <= balance;
+              return (
+                <button
+                  className="w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98] disabled:opacity-60"
+                  disabled={!valid || txBusy === "withdraw"}
+                  onClick={() => doWithdraw(usd)}
+                >
+                  {txBusy === "withdraw"
+                    ? "Sending to your wallet…"
+                    : valid
+                      ? `Withdraw $${usd.toFixed(2)}`
+                      : withdrawUsd && Number.isFinite(usd)
+                        ? usd > balance
+                          ? `Up to $${balance.toFixed(2)}`
+                          : `Minimum $${MIN_WITHDRAW}`
                         : "Enter an amount"}
                 </button>
               );

@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { fetchPlayerState } from "@/lib/chain";
 import { brokerReady, collateralBalance, placeMarketBuy } from "@/lib/broker";
+import { ledgerReady, writeBet } from "@/lib/bets/ledger";
 
 export const runtime = "nodejs";
 
@@ -18,14 +19,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "broker not configured" }, { status: 503 });
   }
 
-  let body: { user?: string; tokenID?: string; usd?: number };
+  let body: { user?: string; tokenID?: string; usd?: number; conditionId?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
   }
 
-  const { user, tokenID, usd } = body;
+  const { user, tokenID, usd, conditionId } = body;
   if (!/^0x[0-9a-fA-F]{40}$/.test(user ?? "")) {
     return NextResponse.json({ error: "invalid user address" }, { status: 400 });
   }
@@ -58,7 +59,30 @@ export async function POST(request: Request) {
     }
 
     const fill = await placeMarketBuy(tokenID!, usd);
-    return NextResponse.json({ ok: true, fill });
+
+    // Attribution exists only if written at fill time (shared broker wallet) —
+    // but the order is already live, so a ledger failure must not fail the bet.
+    let recorded = false;
+    if (ledgerReady()) {
+      try {
+        await writeBet({
+          orderID: fill.orderID,
+          user: user as `0x${string}`,
+          tokenID: tokenID!,
+          conditionId: /^0x[0-9a-fA-F]{64}$/.test(conditionId ?? "") ? conditionId! : null,
+          usd,
+          price: fill.askPrice,
+          shares: usd / fill.askPrice,
+          at: Math.floor(Date.now() / 1000),
+          status: "open",
+        });
+        recorded = true;
+      } catch (e) {
+        console.error("bet ledger write failed (order stands):", e);
+      }
+    }
+
+    return NextResponse.json({ ok: true, fill, recorded });
   } catch (e) {
     console.error("bet error:", e);
     const message = e instanceof Error ? e.message : "order failed";
