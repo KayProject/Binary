@@ -35,6 +35,7 @@ import {
   type FaucetState,
   type PlayerState,
 } from "@/lib/chain";
+import { askDelta, type DeltaInsight } from "@/lib/insight";
 
 // MiniPay app shell. Two themes — light (original) and Midnight Settlement
 // (dark) — behind a toggle; components read only the --s-* semantic tokens.
@@ -191,6 +192,10 @@ export default function AppHome() {
   const [feedLoading, setFeedLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("markets");
   const [sheet, setSheet] = useState<{ market: Market; outcome: 0 | 1 } | null>(null);
+  // Paid Delta readout for the market open in the sheet; cleared on open.
+  const [insight, setInsight] = useState<DeltaInsight | null>(null);
+  const [insightBusy, setInsightBusy] = useState(false);
+  const [insightError, setInsightError] = useState<string | null>(null);
   const [topUp, setTopUp] = useState(false);
   const [depositUsd, setDepositUsd] = useState("");
   const [withdraw, setWithdraw] = useState(false);
@@ -529,6 +534,24 @@ export default function AppHome() {
     }
   };
 
+  // "Ask Delta (1¢)": pays the x402 fee from the user's own wallet and shows
+  // Delta's live read on the market. Real payment, real measurements.
+  const doAskDelta = async (market: Market) => {
+    setInsightError(null);
+    setInsightBusy(true);
+    try {
+      const result = await askDelta(
+        market.outcomes[0].clobTokenId,
+        market.outcomes[1].clobTokenId,
+      );
+      setInsight(result);
+    } catch {
+      setInsightError("Couldn’t get Delta’s read — payment declined or network hiccup.");
+    } finally {
+      setInsightBusy(false);
+    }
+  };
+
   const doBet = async (market: Market, outcome: 0 | 1, usd: number) => {
     setTxError(null);
     const from = await ensureAddress();
@@ -543,6 +566,8 @@ export default function AppHome() {
           tokenID: market.outcomes[outcome].clobTokenId,
           usd,
           conditionId: market.conditionId,
+          // Arms the SLA when a paid Delta read preceded this bet.
+          quoteId: insight?.sla?.quoteId,
         }),
       });
       const data = await res.json();
@@ -785,6 +810,8 @@ export default function AppHome() {
                       key={i}
                       onClick={() => {
                         setAmount(2);
+                        setInsight(null);
+                        setInsightError(null);
                         setSheet({ market: m, outcome: i });
                       }}
                       className={`flex-1 rounded-2xl px-3 py-2.5 font-mono text-sm font-bold transition active:scale-95 ${
@@ -1068,6 +1095,58 @@ export default function AppHome() {
                     out early pays a ~${exitFee.toFixed(2)} market fee
                   </p>
                 </div>
+
+                {/* Ask Delta — paid meta-intelligence, straight off the live book. */}
+                {insight ? (
+                  <div className="mb-4 rounded-2xl border border-(--s-line) bg-(--s-bg) p-4 text-sm">
+                    <p className="mb-2 font-bold">Δ Delta’s read</p>
+                    {(() => {
+                      const side = sheet.outcome === 0 ? insight.up : insight.down;
+                      return (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-(--s-sub)">Spread on {sel.label}</span>
+                            <span className="font-mono tabular-nums">
+                              {side.spread !== null ? `${(side.spread * 100).toFixed(1)}¢` : "—"}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex justify-between">
+                            <span className="text-(--s-sub)">Depth at the touch</span>
+                            <span className="font-mono tabular-nums">${side.depth.askUsd.toFixed(0)}</span>
+                          </div>
+                          <div className="mt-1 flex justify-between">
+                            <span className="text-(--s-sub)">Market’s vig (both asks − $1)</span>
+                            <span className="font-mono tabular-nums">
+                              {insight.noArb ? `${(-insight.noArb.edge * 100).toFixed(1)}¢` : "—"}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex justify-between">
+                            <span className="text-(--s-sub)">Implied probability</span>
+                            <span className="font-mono tabular-nums">
+                              {insight.impliedProb !== null ? pct(insight.impliedProb) : "—"}
+                            </span>
+                          </div>
+                          {insight.sla && (
+                            <p className="mt-2 text-xs text-(--s-sub) opacity-80">
+                              ⓘ price-protected: bet now and fill worse than quoted → your 1¢ back
+                            </p>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <button
+                    className="mb-4 w-full rounded-xl border border-(--s-line) py-2.5 text-sm font-bold text-(--s-sub) active:scale-[0.98] disabled:opacity-60"
+                    disabled={insightBusy}
+                    onClick={() => doAskDelta(sheet.market)}
+                  >
+                    {insightBusy ? "Asking Delta…" : "Ask Delta · 1¢"}
+                  </button>
+                )}
+                {insightError && (
+                  <p className="mb-2 text-center text-xs text-(--s-lose)">{insightError}</p>
+                )}
 
                 {txError && <p className="mb-2 text-center text-xs text-(--s-lose)">{txError}</p>}
                 <button

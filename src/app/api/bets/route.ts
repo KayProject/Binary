@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { fetchPlayerState } from "@/lib/chain";
 import { brokerReady, collateralBalance, placeMarketBuy } from "@/lib/broker";
 import { ledgerReady, writeBet } from "@/lib/bets/ledger";
+import { checkSla, type SlaCheckResult } from "@/lib/delta/refund";
 
 export const runtime = "nodejs";
 
@@ -19,14 +20,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "broker not configured" }, { status: 503 });
   }
 
-  let body: { user?: string; tokenID?: string; usd?: number; conditionId?: string };
+  let body: {
+    user?: string;
+    tokenID?: string;
+    usd?: number;
+    conditionId?: string;
+    quoteId?: string; // from a paid /api/delta/insight response — arms the SLA
+  };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
   }
 
-  const { user, tokenID, usd, conditionId } = body;
+  const { user, tokenID, usd, conditionId, quoteId } = body;
   if (!/^0x[0-9a-fA-F]{40}$/.test(user ?? "")) {
     return NextResponse.json({ error: "invalid user address" }, { status: 400 });
   }
@@ -58,7 +65,22 @@ export async function POST(request: Request) {
       );
     }
 
+    const betAt = Date.now(); // SLA clock: when we accepted the order
     const fill = await placeMarketBuy(tokenID!, usd);
+
+    // SLA leg: if this bet references a paid insight quote and filled worse
+    // than quoted inside the window, the insight fee auto-refunds. Both legs
+    // are server-side facts; checkSla never throws into the bet path.
+    let sla: SlaCheckResult | null = null;
+    if (typeof quoteId === "string") {
+      sla = await checkSla({
+        quoteId,
+        tokenID: tokenID!,
+        fillPrice: fill.askPrice,
+        betAt,
+        user: user as `0x${string}`,
+      });
+    }
 
     // Attribution exists only if written at fill time (shared broker wallet) —
     // but the order is already live, so a ledger failure must not fail the bet.
@@ -82,7 +104,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, fill, recorded });
+    return NextResponse.json({ ok: true, fill, recorded, ...(sla ? { sla } : {}) });
   } catch (e) {
     console.error("bet error:", e);
     const message = e instanceof Error ? e.message : "order failed";
