@@ -62,7 +62,7 @@ async function fetchSettledByToken(tokenIDs: string[]): Promise<Map<string, Sett
 
 /** Close the loop for bets whose withdrawal job has finished. */
 async function reconcile(bets: BetRecord[]): Promise<void> {
-  const jobs = new Map(loadJobs().map((j) => [j.id, j]));
+  const jobs = new Map((await loadJobs()).map((j) => [j.id, j]));
   for (const bet of bets.filter((b) => b.status === "paying")) {
     const job = jobs.get(jobIdFor(bet.orderID));
     if (!job) {
@@ -118,10 +118,10 @@ export async function settlePass(): Promise<void> {
 
     const winnings = Math.floor(bet.shares * 100) / 100; // $1/share, cent precision
     const jobId = jobIdFor(bet.orderID);
-    if (hasJob(jobId)) continue; // queued in a prior pass that died before writeBet
+    if (await hasJob(jobId)) continue; // queued in a prior pass that died before writeBet
 
     await writeBet({ ...bet, status: "paying", resolution, payoutUsd: winnings });
-    journal(jobId, "settle_won", `${bet.user} $${winnings}`);
+    await journal(jobId, "settle_won", `${bet.user} $${winnings}`);
     const job: WithdrawalJob = {
       kind: "withdrawal",
       id: jobId,

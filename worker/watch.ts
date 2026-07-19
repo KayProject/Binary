@@ -14,7 +14,7 @@ export async function scanDeposits(): Promise<DepositJob[]> {
   const latest = await celoProvider.getBlockNumber();
   // First run starts at the current tip — historical deposits predating the
   // worker are an operator decision (set the cursor manually to backfill).
-  let from = loadCursor() ?? latest;
+  let from = (await loadCursor()) ?? latest;
   const created: DepositJob[] = [];
 
   while (from <= latest) {
@@ -28,7 +28,7 @@ export async function scanDeposits(): Promise<DepositJob[]> {
 
     for (const log of logs) {
       const id = `${CELO_CHAIN_ID}:${log.transactionHash}:${log.logIndex}`;
-      if (hasJob(id)) continue;
+      if (await hasJob(id)) continue;
       const { user, amount } = depositsInterface.parseLog(log).args;
       const now = Date.now();
       const job: DepositJob = {
@@ -46,7 +46,7 @@ export async function scanDeposits(): Promise<DepositJob[]> {
       created.push(job);
     }
 
-    saveCursor(to + 1);
+    await saveCursor(to + 1);
     from = to + 1;
   }
 

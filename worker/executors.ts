@@ -24,14 +24,14 @@ function carried(job: DepositJob | WithdrawalJob, fallback: bigint): bigint {
 
 export const depositExecutors: Partial<Record<string, Executor<string, DepositJob>>> = {
   RECEIVED: async (job) => {
-    journal(job.id, "sweep", job.amountUsdm.toString());
+    await journal(job.id, "sweep", job.amountUsdm.toString());
     await sweepIfNeeded(job.amountUsdm);
     if (process.env.FUNDING_RAIL === "mesh") {
-      journal(job.id, "mento_swap");
+      await journal(job.id, "mento_swap");
       const leg = await swapUsdmToUsdt(job.amountUsdm);
       return { next: "SWAPPED", leg };
     }
-    journal(job.id, "fast_bridge");
+    await journal(job.id, "fast_bridge");
     const leg = await executeLifiLeg({
       fromChainId: CELO_CHAIN_ID,
       toChainId: POLYGON_CHAIN_ID,
@@ -44,24 +44,24 @@ export const depositExecutors: Partial<Record<string, Executor<string, DepositJo
 
   BRIDGED_FAST: async (job) => {
     const amount = carried(job, usdmTo6(job.amountUsdm));
-    journal(job.id, "wrap_pusd", amount.toString());
+    await journal(job.id, "wrap_pusd", amount.toString());
     const leg = await wrapToDepositWallet(amount);
     return { next: "CREDITED", leg: { ...leg, amountOut: amount } };
   },
 
   // Cheap rail: SWAPPED → hop1 → hop2 → convert → wrap.
   SWAPPED: async (job) => {
-    journal(job.id, "usdt0_hop1");
+    await journal(job.id, "usdt0_hop1");
     const leg = await usdt0Hop("hop1", carried(job, usdmTo6(job.amountUsdm)));
     return { next: "BRIDGED_HOP1", leg };
   },
   BRIDGED_HOP1: async (job) => {
-    journal(job.id, "usdt0_hop2");
+    await journal(job.id, "usdt0_hop2");
     const leg = await usdt0Hop("hop2", carried(job, usdmTo6(job.amountUsdm)));
     return { next: "BRIDGED_HOP2", leg };
   },
   BRIDGED_HOP2: async (job) => {
-    journal(job.id, "convert_usdt_usdce");
+    await journal(job.id, "convert_usdt_usdce");
     const leg = await executeLifiLeg({
       fromChainId: POLYGON_CHAIN_ID,
       toChainId: POLYGON_CHAIN_ID,
@@ -73,7 +73,7 @@ export const depositExecutors: Partial<Record<string, Executor<string, DepositJo
   },
   CONVERTED: async (job) => {
     const amount = carried(job, usdmTo6(job.amountUsdm));
-    journal(job.id, "wrap_pusd", amount.toString());
+    await journal(job.id, "wrap_pusd", amount.toString());
     const leg = await wrapToDepositWallet(amount);
     return { next: "CREDITED", leg: { ...leg, amountOut: amount } };
   },
@@ -82,20 +82,20 @@ export const depositExecutors: Partial<Record<string, Executor<string, DepositJo
   // in the (v1: shared) deposit wallet, so crediting is ledger-only — the
   // deposit's USDm stays on Celo to pay the matched withdrawal.
   NETTED: async (job) => {
-    journal(job.id, "netted_credit", job.amountUsdm.toString());
+    await journal(job.id, "netted_credit", job.amountUsdm.toString());
     return { next: "CREDITED", leg: { amountOut: usdmTo6(job.amountUsdm) } };
   },
 };
 
 export const withdrawalExecutors: Partial<Record<string, Executor<string, WithdrawalJob>>> = {
   REQUESTED: async (job) => {
-    journal(job.id, "unwrap_pusd", job.amountUsdc.toString());
+    await journal(job.id, "unwrap_pusd", job.amountUsdc.toString());
     const leg = await unwrapToOperator(job.amountUsdc);
     return { next: "UNWRAPPED", leg: { ...leg, amountOut: job.amountUsdc } };
   },
 
   UNWRAPPED: async (job) => {
-    journal(job.id, "withdraw_bridge");
+    await journal(job.id, "withdraw_bridge");
     const leg = await executeLifiLeg({
       fromChainId: POLYGON_CHAIN_ID,
       toChainId: CELO_CHAIN_ID,
@@ -108,7 +108,7 @@ export const withdrawalExecutors: Partial<Record<string, Executor<string, Withdr
 
   BRIDGED: async (job) => {
     const amount = carried(job, job.amountUsdc * 10n ** 12n); // USDm, 18 dec
-    journal(job.id, "payout", amount.toString());
+    await journal(job.id, "payout", amount.toString());
     const txHash = await payoutUsdm(job.user, amount);
     return { next: "PAID", leg: { txHash, amountOut: amount } };
   },
@@ -117,7 +117,7 @@ export const withdrawalExecutors: Partial<Record<string, Executor<string, Withdr
   // USDm (payoutUsdm tops the contract up from the operator EOA if needed).
   NETTED: async (job) => {
     const amount = job.amountUsdc * 10n ** 12n;
-    journal(job.id, "netted_payout", amount.toString());
+    await journal(job.id, "netted_payout", amount.toString());
     const txHash = await payoutUsdm(job.user, amount);
     return { next: "PAID", leg: { txHash, amountOut: amount } };
   },

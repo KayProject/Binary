@@ -30,7 +30,7 @@ async function main() {
   }
 
   if (cmd === "jobs") {
-    for (const j of loadJobs().sort((a, b) => a.createdAt - b.createdAt)) {
+    for (const j of (await loadJobs()).sort((a, b) => a.createdAt - b.createdAt)) {
       const amount =
         j.kind === "deposit"
           ? Number(j.amountUsdm / 10n ** 12n) / 1e6

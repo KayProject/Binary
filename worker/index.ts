@@ -10,10 +10,13 @@ import { net } from "../src/lib/funding/netting";
 import type { DepositJob, Job, WithdrawalJob } from "../src/lib/funding/types";
 import { depositExecutors, withdrawalExecutors } from "./executors";
 import { settlePass } from "./settle";
-import { loadJobs, saveJob, journal } from "./store";
+import { acquireRunLock, releaseRunLock, loadJobs, saveJob, journal } from "./store";
 import { scanDeposits } from "./watch";
+import { hostname } from "os";
 
 const POLL_MS = parseInt(process.env.FUNDING_POLL_MS ?? "15000");
+// Distinguishes this runner in the shared-store lock (laptop vs CI).
+const RUNNER = process.env.WORKER_RUNNER ?? hostname();
 
 async function cycle(): Promise<void> {
   const fresh = await scanDeposits();
@@ -30,7 +33,7 @@ async function cycle(): Promise<void> {
     console.error("settle error:", e instanceof Error ? e.message : e);
   }
 
-  const jobs = loadJobs();
+  const jobs = await loadJobs();
   const deposits = jobs.filter((j): j is DepositJob => j.kind === "deposit");
   const withdrawals = jobs.filter((j): j is WithdrawalJob => j.kind === "withdrawal");
 
@@ -39,7 +42,7 @@ async function cycle(): Promise<void> {
   for (const m of matches) {
     const dep = deposits.find((d) => d.id === m.depositId)!;
     const wd = withdrawals.find((w) => w.id === m.withdrawalId)!;
-    journal(dep.id, "netted_with", wd.id);
+    await journal(dep.id, "netted_with", wd.id);
     await saveJob({ ...dep, state: "NETTED", updatedAt: Date.now() });
     await saveJob({ ...wd, state: "NETTED", updatedAt: Date.now() });
     console.log(`netted ${dep.id} ↔ ${wd.id}`);
@@ -47,7 +50,7 @@ async function cycle(): Promise<void> {
 
   // Sequential on purpose: legs share the operator EOA's balances, and the
   // destination-balance-delta accounting assumes one leg in flight at a time.
-  for (const job of loadJobs()) {
+  for (const job of await loadJobs()) {
     if (isTerminal(job)) continue;
     const before = job.state;
     const after: Job =
@@ -68,10 +71,20 @@ async function cycle(): Promise<void> {
 
 async function main() {
   const once = process.argv.includes("--once");
-  console.log(`Binary funding worker — rail: ${process.env.FUNDING_RAIL ?? "fast"}`);
+  console.log(`Binary funding worker — rail: ${process.env.FUNDING_RAIL ?? "fast"} — runner: ${RUNNER}`);
   for (;;) {
     try {
-      await cycle();
+      // One runner at a time: laptop and CI share the blob job store, and two
+      // cycles driving the same leg is how money moves twice.
+      if (await acquireRunLock(RUNNER)) {
+        try {
+          await cycle();
+        } finally {
+          await releaseRunLock(RUNNER).catch(() => {});
+        }
+      } else {
+        console.log("another runner holds the lock — skipping cycle");
+      }
     } catch (e) {
       console.error("cycle error:", e instanceof Error ? e.message : e);
     }
