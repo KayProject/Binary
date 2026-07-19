@@ -50,3 +50,6 @@ phase0/node_modules/
 # funding worker state (job files, cursor, journal)
 worker/.jobs/
 worker/node_modules/
+
+# internal docs — never push
+HOW-BINARY-DELTA-WORKS.md
