@@ -1,0 +1,42 @@
+# Funding worker on a schedule: one cycle every 15 minutes — deposit scan,
+# netting, job legs, settlement. State (jobs/cursor/journal/lock) lives in
+# Vercel Blob, so these runs and any laptop run share one store; the blob run
+# lock plus this workflow's concurrency group keep it single-runner.
+name: funding-worker
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: funding-worker
+  cancel-in-progress: false
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: worker
+      - run: npm run once
+        working-directory: worker
+        env:
+          WORKER_RUNNER: github-actions
+          BINARY_KEY: ${{ secrets.BINARY_KEY }}
+          POLYGON_RPC_URL: ${{ secrets.POLYGON_RPC_URL }}
+          DEPOSITS_CONTRACT_ADDRESS: ${{ secrets.DEPOSITS_CONTRACT_ADDRESS }}
+          DEPOSIT_WALLET_ADDRESS: ${{ secrets.DEPOSIT_WALLET_ADDRESS }}
+          CLOB_API_KEY: ${{ secrets.CLOB_API_KEY }}
+          CLOB_API_SECRET: ${{ secrets.CLOB_API_SECRET }}
+          CLOB_API_PASSPHRASE: ${{ secrets.CLOB_API_PASSPHRASE }}
+          POLYMARKET_BUILDER_API_KEY: ${{ secrets.POLYMARKET_BUILDER_API_KEY }}
+          POLYMARKET_BUILDER_SECRET: ${{ secrets.POLYMARKET_BUILDER_SECRET }}
+          POLYMARKET_BUILDER_PASSPHRASE: ${{ secrets.POLYMARKET_BUILDER_PASSPHRASE }}
+          BUILDER_CODE: ${{ secrets.BUILDER_CODE }}
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
