@@ -18,15 +18,8 @@ function spherePoints(n: number) {
   return pts;
 }
 
-    const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const size = canvas.clientWidth;
-      canvas.width = size * dpr;
-      canvas.height = size * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    resize();
-    window.addEventListener("resize", resize);
+export default function Globe({ className = "" }: { className?: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -37,6 +30,16 @@ function spherePoints(n: number) {
     const pts = spherePoints(POINTS);
     let raf = 0;
 
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const size = canvas.clientWidth;
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
     const draw = (t: number) => {
       const size = canvas.clientWidth;
       const cx = size / 2;
@@ -45,9 +48,6 @@ function spherePoints(n: number) {
       const angle = t * SPIN;
       const cos = Math.cos(angle);
       const sin = Math.sin(angle);
-
-export default function Globe({ className = "" }: { className?: string }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
       ctx.clearRect(0, 0, size, size);
 

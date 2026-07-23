@@ -72,6 +72,7 @@ async function priceAtPick(tokenId: string, at: number): Promise<number | null> 
   if (!res.ok) return null;
   const history = ((await res.json()) as { history?: Array<{ t: number; p: number }> }).history;
   if (!history?.length) return null;
+  // TODO: optimize for large datasets
   // Closest sample to the pick, rather than assuming an ordering.
   return history.reduce((best, h) =>
     Math.abs(h.t - at) < Math.abs(best.t - at) ? h : best
