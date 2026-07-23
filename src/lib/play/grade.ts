@@ -23,7 +23,7 @@ export type Resolution =
 interface Settled {
   conditionId: string;
   prices: [number, number];
-  clobTokenIds: [string, string];,
+  clobTokenIds: [string, string];
 }
 
 async function fetchSettled(conditionIds: string[]): Promise<Map<string, Settled>> {
