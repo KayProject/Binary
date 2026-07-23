@@ -1,4 +1,4 @@
-use client";
+"use client";
 
 import { useEffect, useRef } from "react";
 
@@ -18,34 +18,68 @@ function spherePoints(n: number) {
   return pts;
 }
 
-function calculatePointPosition(
-  x: number,
-  y: number,
-  z: number,
-  t: number,
-  size: number,
-  R: number,
-  cx: number,
-  cy: number
-) {
-  const angle = t * SPIN;
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  // rotate around Y axis
-  const rx = x * cos - z * sin;
-  const rz = x * sin + z * cos;
-  // depth: rz in [-1, 1]; back hemisphere dimmed
-  const depth = (rz + 1) / 2;
-  const px = cx + rx * R;
-  const py = cy + y * R;
-  const dotR = 0.9 + depth * 1.5;
-  return { px, py, depth, dotR };
-}
-
 export default function Globe({ className = "" }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d\
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const pts = spherePoints(POINTS);
+    let raf = 0;
+
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const size = canvas.clientWidth;
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const draw = (t: number) => {
+      const size = canvas.clientWidth;
+      const cx = size / 2;
+      const cy = size / 2;
+      const R = size * 0.42;
+      const angle = t * SPIN;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+
+      ctx.clearRect(0, 0, size, size);
+
+      for (const [x, y, z] of pts) {
+        // rotate around Y axis
+        const rx = x * cos - z * sin;
+        const rz = x * sin + z * cos;
+        // depth: rz in [-1, 1]; back hemisphere dimmed
+        const depth = (rz + 1) / 2;
+        const px = cx + rx * R;
+        const py = cy + y * R;
+        const dotR = 0.9 + depth * 1.5;
+        ctx.beginPath();
+        ctx.arc(px, py, dotR, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.08 + depth * 0.85})`;
+        ctx.fill();
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className={`aspect-square w-full ${className}`}
+      aria-hidden
+    />
+  );
+}

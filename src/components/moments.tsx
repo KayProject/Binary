@@ -237,7 +237,7 @@ export function MomentScreen({
                 A $2 bet would&apos;ve paid{" "}
                 <span className="font-bold text-(--m-text)">${moment.wouldHavePaid.toFixed(2)}</span>
               </p>
-              <div className='mt-6 w-full space-y-1'>
+              <div className="mt-6 w-full space-y-1">
                 {shareBtn(
                   "Called it",
                   `${moment.label} on “${moment.question}”`,
