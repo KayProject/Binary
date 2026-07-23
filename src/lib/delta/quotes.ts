@@ -55,7 +55,7 @@ export async function writeQuote(quote: SlaQuote): Promise<void> {
     headers: {
       ...auth(),
       "x-content-type": "application/json",
-      "x-add-random-suffix": "0",
+      'x-add-random-suffix': '0',
       "x-cache-control-max-age": "0",
     },
     body: JSON.stringify(quote),
