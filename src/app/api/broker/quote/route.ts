@@ -4,7 +4,7 @@
 // third-party agent can too.
 import { requirePayment } from "@/lib/x402";
 
-const CLOB = "https://clob.polymarket.com";
+const CLOB: string = "https://clob.polymarket.com";
 
 interface RawBook {
   bids?: { price: string; size: string }[];
