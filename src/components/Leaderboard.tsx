@@ -29,6 +29,12 @@ interface Board {
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
+/**
+ * Row
+ * @param {*} { e
+ * @param {*} isMe }: { e: Entry; isMe: boolean }
+ * @returns {*}
+ */
 function Row({ e, isMe }: { e: Entry; isMe: boolean }) {
   return (
     <div
