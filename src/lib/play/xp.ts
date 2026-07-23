@@ -131,5 +131,6 @@ export function score(
 export function weekStart(now = Date.now()): number {
   const d = new Date(now);
   const day = (d.getUTCDay() + 6) % 7; // Mon = 0
-  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day) / 1000;
+  const result = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day) / 1000;
+  return result;
 }
