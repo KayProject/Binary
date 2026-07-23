@@ -40,7 +40,7 @@ test("deposit walks the full bridge path", async () => {
     CONVERTED: async () => ({ next: "CREDITED" }),
   };
   const final = await drive(dep(), executors as never, async (j) => {
-    order.push(j.state);,
+    order.push(j.state);
   });
   assert.equal(final.state, "CREDITED");
   assert.deepEqual(order, ["SWAPPED", "BRIDGED_HOP1", "BRIDGED_HOP2", "CONVERTED", "CREDITED"]);

@@ -128,7 +128,7 @@ export const pickData = (conditionId: string, outcome: 0 | 1) =>
     encodeFunctionData({
       abi: playAbi,
       functionName: "pick",
-      params: [marketIdFor(conditionId), outcome],
+      args: [marketIdFor(conditionId), outcome],
     })
   );
 
@@ -144,12 +144,12 @@ export const approveUsdmData = (amount: bigint) =>
     encodeFunctionData({
       abi: erc20Abi,
       functionName: "approve",
-      params: [DEPOSIT_CONTRACT, amount],
+      args: [DEPOSIT_CONTRACT, amount],
     })
   );
 
 export const depositData = (amount: bigint) =>
-  tagged(encodeFunctionData({ abi: depositsAbi, functionName: "deposit", params: [amount] }));
+  tagged(encodeFunctionData({ abi: depositsAbi, functionName: "deposit", args: [amount] }));
 
 // ── Faucet promo: one free USDm drip per wallet, straight to the wallet.
 // The pot is owner-funded; while it's empty claimable() is false for everyone
@@ -192,8 +192,8 @@ export interface FaucetState {
 export async function fetchFaucetState(user: `0x${string}`): Promise<FaucetState> {
   const faucet = { address: FAUCET_CONTRACT, abi: faucetAbi } as const;
   const [claimable, claimed, drip] = await Promise.all([
-    publicClient.readContract({ ...faucet, functionName: "claimable", params: [user] }),
-    publicClient.readContract({ ...faucet, functionName: "claimed", params: [user] }),
+    publicClient.readContract({ ...faucet, functionName: "claimable", args: [user] }),
+    publicClient.readContract({ ...faucet, functionName: "claimed", args: [user] }),
     publicClient.readContract({ ...faucet, functionName: "dripAmount" }),
   ]);
   return { claimable, claimed, dripUsd: Number(drip) / 1e18 };
@@ -204,7 +204,7 @@ export async function usdmAllowance(owner: `0x${string}`): Promise<bigint> {
     address: USDM,
     abi: erc20Abi,
     functionName: "allowance",
-    params: [owner, DEPOSIT_CONTRACT],
+    args: [owner, DEPOSIT_CONTRACT],
   });
 }
 
@@ -224,25 +224,25 @@ export async function fetchPlayerState(address: `0x${string}`): Promise<PlayerSt
       address: PLAY_CONTRACT,
       abi: playAbi,
       functionName: "players",
-      params: [address],
+      args: [address],
     }),
     publicClient.readContract({
       address: PLAY_CONTRACT,
       abi: playAbi,
       functionName: "currentStreak",
-      params: [address],
+      args: [address],
     }),
     publicClient.readContract({
       address: DEPOSIT_CONTRACT,
       abi: depositsAbi,
       functionName: "totalDeposited",
-      params: [address],
+      args: [address],
     }),
     publicClient.readContract({
       address: DEPOSIT_CONTRACT,
       abi: depositsAbi,
       functionName: "totalPaidOut",
-      params: [address],
+      args: [address],
     }),
   ]);
   const [lastDay, , longest, checkIns, pickCount] = player;

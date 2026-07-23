@@ -1,9 +1,3 @@
-// One player's history, rebuilt from their on-chain picks.
-//
-// Sits next to xp.ts on purpose: xp.ts answers "how does everyone rank", this
-// answers "what did I do", and both read the same graded scan (board.ts) and
-// score with the same score(). A player's XP here and their XP on the board are
-// therefore the same number by construction.
 import { fetchByConditionIds } from "@/lib/polymarket/gamma";
 import type { Board } from "./board";
 import type { Resolution } from "./grade";
@@ -33,6 +27,26 @@ export interface History {
 
 const EMPTY: Totals = { xp: 0, checkInDays: 0, wins: 0, losses: 0, pending: 0, ungraded: 0 };
 
+const createPlay = (graded: Graded, markets: Map<string, any>) => {
+  const market = graded.conditionId ? markets.get(graded.conditionId.toLowerCase()) ?? null : null;
+  const side = market?.outcomes[graded.outcome] ?? null;
+
+  return {
+    marketId: graded.marketId,
+    conditionId: graded.conditionId,
+    slug: graded.slug,
+    question: market?.question ?? null,
+    image: market?.image ?? null,
+    outcome: graded.outcome,
+    label: side?.label ?? null,
+    resolution: graded.resolution,
+    priceAtPick: graded.priceAtPick,
+    currentPrice: graded.resolution === "open" && side ? side.price : null,
+    xp: graded.resolution === "won" && graded.priceAtPick !== null ? pickXp(graded.priceAtPick) : 0,
+    at: graded.at,
+  };
+};
+
 export async function historyFor(address: string, { checkIns, graded }: Board): Promise<History> {
   const user = address.toLowerCase();
 
@@ -61,29 +75,7 @@ export async function historyFor(address: string, { checkIns, graded }: Board): 
   const conditionIds = mine.flatMap((p) => (p.conditionId ? [p.conditionId] : []));
   const markets = conditionIds.length ? await fetchByConditionIds(conditionIds) : new Map();
 
-  const plays = mine
-    .map((p): Play => {
-      const market = p.conditionId ? markets.get(p.conditionId.toLowerCase()) ?? null : null;
-      const side = market?.outcomes[p.outcome] ?? null;
-
-      return {
-        marketId: p.marketId,
-        conditionId: p.conditionId,
-        slug: p.slug,
-        question: market?.question ?? null,
-        image: market?.image ?? null,
-        outcome: p.outcome,
-        label: side?.label ?? null,
-        resolution: p.resolution,
-        priceAtPick: p.priceAtPick,
-        // A settled market's price collapses to 1 or 0, which would read as
-        // odds — only show it while the pick still has something to say.
-        currentPrice: p.resolution === "open" && side ? side.price : null,
-        xp: p.resolution === "won" && p.priceAtPick !== null ? pickXp(p.priceAtPick) : 0,
-        at: p.at,
-      };
-    })
-    .sort((a, b) => b.at - a.at);
+  const plays = mine.map((p) => createPlay(p, markets)).sort((a, b) => b.at - a.at);
 
   return { totals, plays };
 }
