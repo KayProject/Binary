@@ -1,10 +1,3 @@
-// POST /api/registry — record which Polymarket condition a marketId refers to.
-//
-// Called at pick time. The chain only ever sees keccak256(conditionId), and
-// that hash cannot be reversed, so if this doesn't run the pick can never be
-// graded. Best-effort from the client's side — a failure here must not cost
-// the user their pick — but every miss is permanent, so it runs on every pick
-// rather than lazily.
 import { NextResponse } from "next/server";
 import { fetchMarket } from "@/lib/polymarket/gamma";
 import { register, registryReady } from "@/lib/play/registry";
@@ -31,10 +24,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid slug" }, { status: 400 });
   }
 
-  // The client doesn't get to assert the marketId — we derive it from the
-  // conditionId, so the hash itself binds the claim and there's nothing to
-  // trust. But an unknown conditionId would still let anyone write junk keys,
-  // so confirm the market actually exists before storing it.
   const market = await fetchMarket(slug);
   if (!market || market.conditionId.toLowerCase() !== conditionId.toLowerCase()) {
     return NextResponse.json({ error: "unknown market" }, { status: 404 });
@@ -48,7 +37,4 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ marketId });
   } catch (e) {
-    console.error("registry write failed:", e);
-    return NextResponse.json({ error: "write failed" }, { status: 502 });
-  }
-}
+    console.error("registry write failed:\
