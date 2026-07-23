@@ -29,21 +29,107 @@ export type Moment =
   | { t: "rankup"; rank: number }
   | { t: "share"; heading: string; line: string; text: string };
 
+function ClaimedBody({
+  amount,
+  goBet,
+  close,
+  primaryBtn,
+  ghostBtn,
+}: {
+  amount: number;
+  goBet: () => void;
+  close: () => void;
+  primaryBtn: string;
+  ghostBtn: string;
+}) {
+  const shown = useCountUp(amount);
+  return (
+    <>
+      <Headline>YOURS, FREE</Headline>
+      <p className="font-mono text-5xl font-black tabular-nums">${shown.toFixed(2)}</p>
+      <p className="text-center text-sm text-(--m-sub)">
+        Real USDm, straight to your wallet. Top it up into Binary and put it on
+        a market — or keep it. It&apos;s yours either way.
+      </p>
+      <div className="mt-6 w-full space-y-1">
+        <button className={primaryBtn} onClick={goBet}>
+          See the markets
+        </button>
+        <button className={ghostBtn} onClick={close}>
+          Later
+        </button>
+      </div>
+    </>
+  );
+}
+
 const BURST = new Set(["picked", "bet", "checkedin", "win", "funded", "cashout", "rankup"]);
 const cents = (p: number) => `${(p * 100).toFixed(p < 0.1 || p > 0.9 ? 1 : 0)}¢`;
 
-export function shareOrCopy(text: string): Promise<"shared" | "copied" | "failed"> {
-  if (typeof navigator !== "undefined" && navigator.share) {
-    return navigator
-      .share({ text })
-      .then(() => "shared" as const)
-      .catch(() => "failed" as const);
-  }
-  return navigator.clipboard
-    ?.writeText(text)
-    .then(() => "copied" as const)
-    .catch(() => "failed" as const) ?? Promise.resolve("failed" as const);
+function FundedBody({
+  balance,
+  goBet,
+  close,
+  primaryBtn,
+  ghostBtn,
+}: {
+  balance: number;
+  goBet: () => void;
+  close: () => void;
+  primaryBtn: string;
+  ghostBtn: string;
+}) {
+  const shown = useCountUp(balance);
+  return (
+    <>
+      <Headline>MONEY&apos;S IN</Headline>
+      <p className="font-mono text-5xl font-black tabular-nums">${shown.toFixed(2)}</p>
+      <p className="text-center text-sm text-(--m-sub)">
+        Your balance is live. Every bet is a real order in Polymarket&apos;s book.
+      </p>
+      <div className="mt-6 w-full space-y-1">
+        <button className={primaryBtn} onClick={goBet}>
+          Place your first bet
+        </button>
+        <button className={ghostBtn} onClick={close}>
+          Later
+        </button>
+      </div>
+    </>
+  );
 }
+
+function CashoutBody({
+  amount,
+  close,
+  primaryBtn,
+  ghostBtn,
+}: {
+  amount: number;
+  close: () => void;
+  primaryBtn: string;
+  ghostBtn: string;
+}) {
+  const shown = useCountUp(amount);
+  return (
+    <>
+      <Headline>PAID OUT</Headline>
+      <p className="font-mono text-5xl font-black tabular-nums">${shown.toFixed(2)}</p>
+      <p className="text-center text-sm text-(--m-sub)">
+        USDm is back in your wallet — the same one it came from. Always.
+      </p>
+      <div className="mt-6 w-full space-y-1">
+        <button className={primaryBtn} onClick={close}>
+          Done
+        </button>
+        <button className={ghostBtn} onClick={close}>
+          Close
+        </button>
+      </div>
+    </>
+  );
+}
+
 
 /** Animated $-count-up (skipped under prefers-reduced-motion). */
 function useCountUp(target: number, ms = 900): number {
@@ -63,6 +149,37 @@ function useCountUp(target: number, ms = 900): number {
   }, [target, ms]);
   return value;
 }
+
+  const shareBtn = (heading: string, line: string, text: string, label = "Share") => (
+    <button className={primaryBtn} onClick={() => onShare(heading, line, text)}>
+      {label}
+    </button>
+  );
+
+export interface MomentHandlers {
+  onClose: () => void;
+  onShare: (heading: string, line: string, text: string) => void;
+  onGoBet: () => void; // close + land on markets, ready to bet
+}
+
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full bg-(--m-chip) px-4 py-1.5 font-mono text-sm font-bold">
+      {children}
+    </span>
+  );
+}
+
+  // One visual system, two grounds: burst screens repoint the local --m-*
+  // slots at the burst tokens; quiet screens keep the app surface.
+  const ground = burst
+    ? "moment-burst-bg [--m-text:var(--s-burst-text)] [--m-sub:var(--s-burst-sub)] [--m-chip:var(--s-burst-chip)]"
+    : "bg-(--s-bg) [--m-text:var(--s-text)] [--m-sub:var(--s-sub)] [--m-chip:var(--s-card)]";
+
+  const primaryBtn = burst
+    ? "w-full rounded-2xl bg-(--m-text) py-4 text-base font-bold text-(--s-burst-a) active:scale-[0.98]"
+    : "w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98]";
+  const ghostBtn = "w-full py-3 text-center text-sm font-semibold text-(--m-sub)";
 
 function Particles() {
   // Deterministic scatter — no hydration mismatch, no Math.random.
@@ -84,56 +201,6 @@ function Particles() {
     </div>
   );
 }
-
-function Headline({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="moment-pop text-center text-4xl font-black italic tracking-tight">{children}</p>
-  );
-}
-
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-full bg-(--m-chip) px-4 py-1.5 font-mono text-sm font-bold">
-      {children}
-    </span>
-  );
-}
-
-export interface MomentHandlers {
-  onClose: () => void;
-  onShare: (heading: string, line: string, text: string) => void;
-  onGoBet: () => void; // close + land on markets, ready to bet
-}
-
-export function MomentScreen({
-  moment,
-  themeClass,
-  handlers,
-}: {
-  moment: Moment;
-  themeClass: string;
-  handlers: MomentHandlers;
-}) {
-  const { onClose, onShare, onGoBet } = handlers;
-  const burst = BURST.has(moment.t);
-  const [copied, setCopied] = useState(false);
-
-  // One visual system, two grounds: burst screens repoint the local --m-*
-  // slots at the burst tokens; quiet screens keep the app surface.
-  const ground = burst
-    ? "moment-burst-bg [--m-text:var(--s-burst-text)] [--m-sub:var(--s-burst-sub)] [--m-chip:var(--s-burst-chip)]"
-    : "bg-(--s-bg) [--m-text:var(--s-text)] [--m-sub:var(--s-sub)] [--m-chip:var(--s-card)]";
-
-  const primaryBtn = burst
-    ? "w-full rounded-2xl bg-(--m-text) py-4 text-base font-bold text-(--s-burst-a) active:scale-[0.98]"
-    : "w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98]";
-  const ghostBtn = "w-full py-3 text-center text-sm font-semibold text-(--m-sub)";
-
-  const shareBtn = (heading: string, line: string, text: string, label = "Share") => (
-    <button className={primaryBtn} onClick={() => onShare(heading, line, text)}>
-      {label}
-    </button>
-  );
 
   return (
     // Full-bleed on a phone, where a takeover IS the screen. At lg it becomes
@@ -412,100 +479,34 @@ export function MomentScreen({
   );
 }
 
-function FundedBody({
-  balance,
-  goBet,
-  close,
-  primaryBtn,
-  ghostBtn,
-}: {
-  balance: number;
-  goBet: () => void;
-  close: () => void;
-  primaryBtn: string;
-  ghostBtn: string;
-}) {
-  const shown = useCountUp(balance);
-  return (
-    <>
-      <Headline>MONEY&apos;S IN</Headline>
-      <p className="font-mono text-5xl font-black tabular-nums">${shown.toFixed(2)}</p>
-      <p className="text-center text-sm text-(--m-sub)">
-        Your balance is live. Every bet is a real order in Polymarket&apos;s book.
-      </p>
-      <div className="mt-6 w-full space-y-1">
-        <button className={primaryBtn} onClick={goBet}>
-          Place your first bet
-        </button>
-        <button className={ghostBtn} onClick={close}>
-          Later
-        </button>
-      </div>
-    </>
-  );
+export function shareOrCopy(text: string): Promise<"shared" | "copied" | "failed"> {
+  if (typeof navigator !== "undefined" && navigator.share) {
+    return navigator
+      .share({ text })
+      .then(() => "shared" as const)
+      .catch(() => "failed" as const);
+  }
+  return navigator.clipboard
+    ?.writeText(text)
+    .then(() => "copied" as const)
+    .catch(() => "failed" as const) ?? Promise.resolve("failed" as const);
 }
 
-function ClaimedBody({
-  amount,
-  goBet,
-  close,
-  primaryBtn,
-  ghostBtn,
+export function MomentScreen({
+  moment,
+  themeClass,
+  handlers,
 }: {
-  amount: number;
-  goBet: () => void;
-  close: () => void;
-  primaryBtn: string;
-  ghostBtn: string;
+  moment: Moment;
+  themeClass: string;
+  handlers: MomentHandlers;
 }) {
-  const shown = useCountUp(amount);
-  return (
-    <>
-      <Headline>YOURS, FREE</Headline>
-      <p className="font-mono text-5xl font-black tabular-nums">${shown.toFixed(2)}</p>
-      <p className="text-center text-sm text-(--m-sub)">
-        Real USDm, straight to your wallet. Top it up into Binary and put it on
-        a market — or keep it. It&apos;s yours either way.
-      </p>
-      <div className="mt-6 w-full space-y-1">
-        <button className={primaryBtn} onClick={goBet}>
-          See the markets
-        </button>
-        <button className={ghostBtn} onClick={close}>
-          Later
-        </button>
-      </div>
-    </>
-  );
-}
+  const { onClose, onShare, onGoBet } = handlers;
+  const burst = BURST.has(moment.t);
+  const [copied, setCopied] = useState(false);
 
-function CashoutBody({
-  amount,
-  close,
-  primaryBtn,
-  ghostBtn,
-}: {
-  amount: number;
-  close: () => void;
-  primaryBtn: string;
-  ghostBtn: string;
-}) {
-  const shown = useCountUp(amount);
+function Headline({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <Headline>PAID OUT</Headline>
-      <p className="font-mono text-5xl font-black tabular-nums">${shown.toFixed(2)}</p>
-      <p className="text-center text-sm text-(--m-sub)">
-        USDm is back in your wallet — the same one it came from. Always.
-      </p>
-      <div className="mt-6 w-full space-y-1">
-        <button className={primaryBtn} onClick={close}>
-          Done
-        </button>
-        <button className={ghostBtn} onClick={close}>
-          Close
-        </button>
-      </div>
-    </>
+    <p className="moment-pop text-center text-4xl font-black italic tracking-tight">{children}</p>
   );
 }
