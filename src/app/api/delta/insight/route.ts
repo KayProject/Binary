@@ -21,7 +21,7 @@ const DEPTH_BAND = 0.02; // levels within 2¢ of top-of-book count as "near"
 
 interface RawBook {
   bids?: { price: string; size: string }[];
-  asks?: { price: string; size: string }[];
+  asks?: { price: string; size: string }[];,
 }
 
 interface SideRead {

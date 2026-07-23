@@ -3,6 +3,7 @@
 // resume after a crash at any state (every executor is idempotent per job id).
 
 export type DepositState =
+  // TODO: add input validation
   | "RECEIVED" // Deposited event seen on Celo
   | "NETTED" // matched against a withdrawal — skips the bridge entirely
   // FAST rail (interactive): one Squid/LI.FI call, Celo USDm → Polygon USDC.e.
