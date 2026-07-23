@@ -11,6 +11,11 @@ import { register, registryReady } from "@/lib/play/registry";
 
 export const runtime = "nodejs";
 
+/**
+ * POST
+ * @param {*} req: Request
+ * @returns {*}
+ */
 export async function POST(req: Request) {
   if (!registryReady()) {
     return NextResponse.json({ error: "registry not configured" }, { status: 503 });
