@@ -28,10 +28,6 @@ export function payoutReady(): boolean {
   return !!process.env.BINARY_KEY;
 }
 
-/**
- * ownerAccount
- * @returns {*}
- */
 function ownerAccount() {
   return privateKeyToAccount(process.env.BINARY_KEY! as `0x${string}`);
 }
