@@ -9,27 +9,35 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@celo/attribution-tags": "^0.3.0",
-    "@polymarket/clob-client-v2": "^1.0.8",
-    "@privy-io/react-auth": "^3.35.0",
-    "ethers": "^5.8.0",
-    "next": "16.2.10",
-    "permissionless": "^0.2.57",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "thirdweb": "^5.120.1",
-    "viem": "^2.55.1"
+    "frameworks": {
+      "next": "16.2.10",
+      "react": "19.2.4",
+      "react-dom": "19.2.4"
+    },
+    "libraries": {
+      "ethers": "^5.8.0",
+      "@celo/attribution-tags": "^0.3.0",
+      "@polymarket/clob-client-v2": "^1.0.8",
+      "@privy-io/react-auth": "^3.35.0",
+      "permissionless": "^0.2.57",
+      "thirdweb": "^5.120.1",
+      "viem": "^2.55.1"
+    }
   },
   "devDependencies": {
-    "@iconify-json/solar": "^1.2.5",
-    "@phosphor-icons/core": "^2.1.1",
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.10",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "types": {
+      "@types/node": "^20",
+      "@types/react": "^19",
+      "@types/react-dom": "^19"
+    },
+    "tools": {
+      "eslint": "^9",
+      "eslint-config-next": "16.2.10",
+      "tailwindcss": "^4",
+      "typescript": "^5",
+      "@iconify-json/solar": "^1.2.5",
+      "@phosphor-icons/core": "^2.1.1",
+      "@tailwindcss/postcss": "^4"
+    }
   }
 }
