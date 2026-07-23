@@ -10,6 +10,7 @@
 // forever; the cache in lib/play/board.ts is what keeps it viable, and a cursor
 // + stored snapshot is the next step when the scan outgrows a request.
 // Deliberately not built yet: a stored snapshot is a second source of truth,
+// and it isn't worth maintaining until the numbers demand it.
 //
 // The scan is shared with /api/plays so the board and a player's own history
 // can never disagree — see lib/play/board.ts.
