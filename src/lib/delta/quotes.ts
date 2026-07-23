@@ -1,3 +1,14 @@
+// SLA quote store for the paid Delta insight endpoint.
+//
+// Every paid insight response carries a short-lived quote: "this is the ask we
+// showed you, and if you bet through us inside the window and fill materially
+// worse, the insight fee comes back." Both the quoted ask and the eventual
+// fill are server-side facts, so the SLA is ungameable — there is no user
+// claim input, only a comparison we run ourselves.
+//
+// Same store discipline as bets/ledger.ts: one blob per quote, deterministic
+// path, status mutates (active → refunding → refunded) so reads are always
+// cache-busted and never trust the CDN.
 import { randomBytes } from "crypto";
 
 const BLOB_API = "https://blob.vercel-storage.com";
@@ -26,33 +37,27 @@ export const quotesReady = () => !!process.env.BLOB_READ_WRITE_TOKEN;
 
 const pathFor = (quoteId: string) => `${PREFIX}/${quoteId}.json`;
 
-const getAuthHeaders = () => ({
+const auth = () => ({
   authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
   "x-api-version": "7",
 });
 
-const getPublicBase = () => {
+function publicBase(): string {
   const token = process.env.BLOB_READ_WRITE_TOKEN!;
   return `https://${token.split("_")[3].toLowerCase()}.public.blob.vercel-storage.com`;
-};
+}
 
-const getBlobUrl = (quoteId: string) => `${BLOB_API}/${pathFor(quoteId)}`;
-
-const getPublicBlobUrl = (quoteId: string) => `${getPublicBase()}/${pathFor(quoteId)}`;
-
-export const newQuoteId = () => randomBytes(12).toString("hex/>
+export const newQuoteId = () => randomBytes(12).toString("hex");
 
 export async function writeQuote(quote: SlaQuote): Promise<void> {
-  const url = getBlobUrl(quote.quoteId);
-  const headers = {
-    ...getAuthHeaders(),
-    "x-content-type": "application/json",
-    "x-add-random-suffix": "0",
-    "x-cache-control-max-age": "0",
-  };
-  const res = await fetch(url, {
+  const res = await fetch(`${BLOB_API}/${pathFor(quote.quoteId)}`, {
     method: "PUT",
-    headers,
+    headers: {
+      ...auth(),
+      "x-content-type": "application/json",
+      "x-add-random-suffix": "0",
+      "x-cache-control-max-age": "0",
+    },
     body: JSON.stringify(quote),
   });
   if (!res.ok) throw new Error(`blob put ${res.status}: ${await res.text()}`);
@@ -62,8 +67,7 @@ export async function readQuote(quoteId: string): Promise<SlaQuote | null> {
   if (!/^[0-9a-f]{24}$/.test(quoteId)) return null;
   // Unique query defeats the CDN's minimum cache — a refund decision must
   // never run against a stale "active" status.
-  const url = `${getPublicBlobUrl(quoteId)}?v=${Date.now()}`;
-  const res = await fetch(url, {
+  const res = await fetch(`${publicBase()}/${pathFor(quoteId)}?v=${Date.now()}`, {
     cache: "no-store",
   });
   if (res.status === 404) return null;
