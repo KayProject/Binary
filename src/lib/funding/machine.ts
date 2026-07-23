@@ -25,6 +25,11 @@ const WITHDRAWAL_FLOW: Record<WithdrawalState, WithdrawalState[]> = {
 export const TERMINAL = new Set(["CREDITED", "PAID", "FAILED"]);
 const MAX_ATTEMPTS = 5;
 
+/**
+ * isTerminal
+ * @param {*} job: Job
+ * @returns {*}
+ */
 export function isTerminal(job: Job): boolean {
   return TERMINAL.has(job.state);
 }
