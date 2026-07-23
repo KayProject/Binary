@@ -83,7 +83,6 @@ export async function POST(request: Request) {
     }
 
     // Attribution exists only if written at fill time (shared broker wallet) —
-    // but the order is already live, so a ledger failure must not fail the bet.
     let recorded = false;
     if (ledgerReady()) {
       try {
