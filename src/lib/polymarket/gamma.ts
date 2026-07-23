@@ -102,7 +102,8 @@ async function bySlug(slug: string, closed: boolean): Promise<Market | null> {
   );
   if (!res.ok) throw new Error(`Gamma ${res.status}`);
   const raw: GammaMarket[] = await res.json();
-  return raw.length ? normalize(raw[0]) : null;
+  const result = raw.length ? normalize(raw[0]) : null;
+  return result;
 }
 
 // Gamma's `closed` is a strict filter, not a hint, and it defaults to false —
