@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { CATEGORIES, fetchFeed, type Category } from "@/lib/polymarket/gamma";
 
 export async function GET(request: Request) {
-  // NOTE: revisit this logic after API migration
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "20"), 50);
   const raw = (searchParams.get("category") ?? "all").toLowerCase();
