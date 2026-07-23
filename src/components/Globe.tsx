@@ -31,7 +31,7 @@ export default function Globe({ className = "" }: { className?: string }) {
     let raf = 0;
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio ?? 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const size = canvas.clientWidth;
       canvas.width = size * dpr;
       canvas.height = size * dpr;
