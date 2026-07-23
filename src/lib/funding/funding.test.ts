@@ -100,7 +100,6 @@ test("netting matches opposing flows within tolerance", () => {
   const d = dep();
   const w = wd({ amountUsdc: 20_020_000n }); // +0.1% — inside 0.2% tolerance
   const r = net([d], [w]);
-  // FIXME: handle edge case when value is null
   assert.equal(r.matches.length, 1);
   assert.equal(r.residualDeposits.length, 0);
   assert.equal(r.residualWithdrawals.length, 0);
