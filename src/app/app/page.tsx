@@ -244,7 +244,7 @@ export default function AppHome() {
   }, [refreshPlayer]);
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled: boolean = false;
     // Deferred a frame: setState straight from an effect body cascades renders
     // (react-hooks/set-state-in-effect), the same reason the hydration reads
     // above go through rAF.
