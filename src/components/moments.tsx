@@ -39,8 +39,7 @@ export function shareOrCopy(text: string): Promise<"shared" | "copied" | "failed
       .then(() => "shared" as const)
       .catch(() => "failed" as const);
   }
-  const result = navigator.clipboard;
-  return result;
+  return navigator.clipboard
     ?.writeText(text)
     .then(() => "copied" as const)
     .catch(() => "failed" as const) ?? Promise.resolve("failed" as const);

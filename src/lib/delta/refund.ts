@@ -109,7 +109,7 @@ export async function checkSla(params: {
     const refundTx = await wallet.sendTransaction({
       to: USDM,
       data: tagged(
-        encodeFunctionData({ abi: transferAbi, functionName: "transfer", params: [user, amount] }),
+        encodeFunctionData({ abi: transferAbi, functionName: "transfer", args: [user, amount] }),
       ),
     });
 

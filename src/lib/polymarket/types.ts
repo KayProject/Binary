@@ -1,3 +1,6 @@
+// Shapes Binary's UI consumes. Raw Gamma responses are normalized into these —
+// nothing downstream should ever touch Gamma's stringified-JSON fields.
+
 export interface MarketOutcome {
   label: string; // "Yes" / "No" (or team names on some markets)
   price: number; // 0..1 — also the implied probability
@@ -50,35 +53,4 @@ export interface GammaMarket {
   takerBaseFee?: number; // bps
   feeSchedule?: { exponent?: number; rate?: number; takerOnly?: boolean };
   orderPriceMinTickSize?: number;
-}
-
-function convertGammaMarketToMarket(gammaMarket: GammaMarket): Market {
-  const outcomes = JSON.parse(gammaMarket.outcomes) as string[];
-  const outcomePrices = JSON.parse(gammaMarket.outcomePrices) as string[];
-  const clobTokenIds = JSON.parse(gammaMarket.clobTokenIds) as string[];
-  const feeSchedule = gammaMarket.feeSchedule;
-
-  return {
-    question: gammaMarket.question,
-    slug: gammaMarket.slug,
-    conditionId: gammaMarket.conditionId,
-    outcomes: [
-      { label: outcomes[0], price: parseFloat(outcomePrices[0]), clobTokenId: clobTokenIds[0] },
-      { label: outcomes[1], price: parseFloat(outcomePrices[1]), clobTokenId: clobTokenIds[1] }
-    ],
-    negRisk: gammaMarket.negRisk || false,
-    closed: gammaMarket.closed || false,
-    volume24h: gammaMarket.volume24hr || 0,
-    liquidity: typeof gammaMarket.liquidity === 'string' ? parseFloat(gammaMarket.liquidity) : gammaMarket.liquidity,
-    endDate: gammaMarket.endDate || '',
-    image: gammaMarket.image || null,
-    bestBid: gammaMarket.bestBid || null,
-    bestAsk: gammaMarket.bestAsk || null,
-    spread: gammaMarket.spread || null,
-    oneDayPriceChange: gammaMarket.oneDayPriceChange || null,
-    feesEnabled: gammaMarket.feesEnabled || false,
-    feeRateBps: feeSchedule ? feeSchedule.rate : 0,
-    feeExponent: feeSchedule ? feeSchedule.exponent : 0,
-    tickSize: gammaMarket.orderPriceMinTickSize || 0
-  };
 }

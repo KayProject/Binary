@@ -487,17 +487,17 @@ export default function AppHome() {
     if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
     setTxBusy("withdraw");
     try {
-      const response = await fetch("/api/withdraw", {
+      const res = await fetch("/api/withdraw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user: from, usd }),
       });
-      const data = await response.json();
-      if (!response.ok) {
+      const data = await res.json();
+      if (!res.ok) {
         setTxError(
-          response.status === 402
+          res.status === 402
             ? `You can withdraw up to $${(data.availableUsd ?? 0).toFixed(2)}.`
-            : response.status === 503
+            : res.status === 503
               ? "Withdrawals are briefly paused — try again shortly."
               : data.error ?? "Withdrawal didn’t go through — try again."
         );
@@ -558,7 +558,7 @@ export default function AppHome() {
     if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
     setTxBusy("bet");
     try {
-      const response = await fetch("/api/bets", {
+      const res = await fetch("/api/bets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -570,10 +570,10 @@ export default function AppHome() {
           quoteId: insight?.sla?.quoteId,
         }),
       });
-      const data = await response.json();
-      if (!response.ok) {
+      const data = await res.json();
+      if (!res.ok) {
         setTxError(
-          response.status === 409
+          res.status === 409
             ? "Your deposit is still funding — give it a minute."
             : data.error ?? "Bet didn’t go through — try again."
         );
