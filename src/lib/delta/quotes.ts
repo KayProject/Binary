@@ -16,7 +16,7 @@ const PREFIX = "quotes";
 
 export type QuoteStatus =
   | "active" // issued; refundable at most once if the SLA trips
-  | 'refunding' // refund tx in flight — crash here needs manual review, never auto-retry
+  | "refunding" // refund tx in flight — crash here needs manual review, never auto-retry
   | "refunded"; // fee returned, terminal
 
 export interface SlaQuote {

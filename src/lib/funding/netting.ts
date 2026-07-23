@@ -11,11 +11,6 @@ import type { DepositJob, WithdrawalJob } from "./types";
 const TOLERANCE_BPS = 20n; // 0.2% — USDm/USDC oracle drift allowance
 
 // 18-dec USDm vs 6-dec USDC.e: compare in 6-dec units.
-/**
- * usdmTo6
- * @param {*} amount18: bigint
- * @returns {*}
- */
 function usdmTo6(amount18: bigint): bigint {
   return amount18 / 10n ** 12n;
 }

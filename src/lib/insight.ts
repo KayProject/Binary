@@ -1,6 +1,6 @@
-use client;
+"use client";
 
-// Client half of "Ask Delta (1¢)”: pays the x402 fee for /api/delta/insight
+// Client half of "Ask Delta (1¢)": pays the x402 fee for /api/delta/insight
 // from the user's own wallet and returns the readout. The wallet signs a USDm
 // micropayment (wrapFetchWithPayment intercepts the 402 challenge), so this
 // only works with an injected EIP-1193 wallet — MiniPay, the app's native
@@ -41,11 +41,11 @@ export interface DeltaInsight {
 /** Pay 1¢ from the user's wallet and fetch Delta's read on a market. */
 export async function askDelta(tokenIdUp: string, tokenIdDown: string): Promise<DeltaInsight> {
   const ethereum = (window as { ethereum?: EIP1193.EIP1193Provider }).ethereum;
-  if (!ethereum) return Promise.reject(new Error("no wallet"));
+  if (!ethereum) throw new Error("no wallet");
 
   const client = createThirdwebClient({ clientId: TW_CLIENT_ID });
   const wallet = EIP1193.fromProvider({ provider: ethereum });
-  if (!(await wallet.connect({ client, chain: celo }))) return Promise.reject(new Error("wallet connection failed"));
+  await wallet.connect({ client, chain: celo });
 
   const paidFetch = wrapFetchWithPayment(window.fetch.bind(window), client, wallet, {
     // 0.05 USDm ceiling — a mispriced server can never drain the wallet.
@@ -57,6 +57,6 @@ export async function askDelta(tokenIdUp: string, tokenIdDown: string): Promise<
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tokenIdUp, tokenIdDown }),
   });
-  if (!res.ok) return Promise.reject(new Error(`insight ${res.status}`));
+  if (!res.ok) throw new Error(`insight ${res.status}`);
   return (await res.json()) as DeltaInsight;
 }
