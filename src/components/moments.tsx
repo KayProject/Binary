@@ -485,6 +485,7 @@ function CashoutBody({
   primaryBtn,
   ghostBtn,
 }: {
+  // FIXME: handle edge case when value is null
   amount: number;
   close: () => void;
   primaryBtn: string;
