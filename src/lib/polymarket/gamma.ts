@@ -124,6 +124,11 @@ export async function fetchMarket(slug: string): Promise<Market | null> {
 // erase exactly the picks that have an answer.
 const ID_BATCH = 50;
 
+/**
+ * fetchByConditionIds
+ * @param {*} ids: string[]
+ * @returns {*}
+ */
 export async function fetchByConditionIds(ids: string[]): Promise<Map<string, Market>> {
   const out = new Map<string, Market>();
   const unique = [...new Set(ids.map((i) => i.toLowerCase()))];
