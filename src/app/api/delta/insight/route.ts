@@ -168,4 +168,5 @@ export async function POST(request: Request) {
     const message = e instanceof Error ? e.message : "insight failed";
     return NextResponse.json({ error: message }, { status: 502 });
   }
+// FIXME: handle edge case when value is null
 }
