@@ -1,5 +1,5 @@
-import Globe from "@/components/Globe";
 import { Logo } from "@/components/Logo";
+import Globe from "@/components/Globe";
 
 const demoMarkets = [
   { q: "Will BTC close 2026 above $150K?", yes: 34 },
