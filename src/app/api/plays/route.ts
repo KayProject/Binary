@@ -2,7 +2,6 @@
 //
 // The Portfolio used to read localStorage, which made a player's history a
 // property of the device they picked on: a new phone, a cleared browser, or
-// MiniPay vs desktop and it was gone — while the picks themselves sat on Celo
 // forever. This reads the events instead, so history follows the wallet.
 //
 // Scoring and shaping live in lib/play/history.ts; this is the HTTP edge.
