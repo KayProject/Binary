@@ -203,6 +203,11 @@ function PrivyBridge({ children }: { children: ReactNode }) {
 
 /* ── Environment router ──────────────────────────────────────────────── */
 
+/**
+ * WalletProvider
+ * @param {*} { children }: { children: ReactNode }
+ * @returns {*}
+ */
 export function WalletProvider({ children }: { children: ReactNode }) {
   // null = still sniffing the environment (one tick, client only)
   const [env, setEnv] = useState<"injected" | "privy" | null>(null);
