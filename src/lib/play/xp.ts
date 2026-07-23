@@ -22,32 +22,32 @@ export const CHECKIN_XP = 5;
 // dwarfing a season of good calls.
 export const MAX_PICK_XP = 200;
 
+/**
+ * Score a window. `from`/`to` are unix seconds; a pick counts if it happened
+ * inside the window, and a check-in day counts if that UTC day falls in it.
+ * Void resolutions score nothing either way — the market never had an answer,
+ * so neither crediting nor penalising it is defensible.
+ */
+export function score(
+  checkIns: CheckIn[],
+  graded: Graded[],
+  window?: { from: number; to: number }
+): Row[] {
+  const inWindow = (at: number) => !window || (at >= window.from && at < window.to);
+  const dayInWindow = (day: number) => inWindow(day * 86_400);
+
 export function pickXp(priceAtPick: number): number {
   if (!(priceAtPick > 0)) return 0;
   return Math.min(Math.round(10 / priceAtPick), MAX_PICK_XP);
 }
 
-/** Latest pick per (user, market) — mirrors the contract's last-write-wins. */
-export function latestPicks(picks: PickEvent[]): PickEvent[] {
-  const byKey = new Map<string, PickEvent>();
-  for (const p of picks) {
-    const key = `${p.user}:${p.marketId}`;
-    const prev = byKey.get(key);
-    if (!prev || p.block >= prev.block) byKey.set(key, p);
-  }
-  return [...byKey.values()];
+/** Start of the current weekly window: Monday 00:00 UTC. */
+export function weekStart(now = Date.now()): number {
+  const d = new Date(now);
+  const day = (d.getUTCDay() + 6) % 7; // Mon = 0
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day) / 1000;
 }
 
-/** Distinct (user, day) pairs — same-day repeats collapse to one. */
-export function distinctCheckInDays(checkIns: CheckIn[]): Map<string, Set<number>> {
-  const byUser = new Map<string, Set<number>>();
-  for (const c of checkIns) {
-    const days = byUser.get(c.user) ?? new Set<number>();
-    days.add(c.day);
-    byUser.set(c.user, days);
-  }
-  return byUser;
-}
 
 export interface Row {
   user: `0x${string}`;
@@ -70,19 +70,16 @@ export interface Graded extends PickEvent {
   slug: string | null;
 }
 
-/**
- * Score a window. `from`/`to` are unix seconds; a pick counts if it happened
- * inside the window, and a check-in day counts if that UTC day falls in it.
- * Void resolutions score nothing either way — the market never had an answer,
- * so neither crediting nor penalising it is defensible.
- */
-export function score(
-  checkIns: CheckIn[],
-  graded: Graded[],
-  window?: { from: number; to: number }
-): Row[] {
-  const inWindow = (at: number) => !window || (at >= window.from && at < window.to);
-  const dayInWindow = (day: number) => inWindow(day * 86_400);
+/** Distinct (user, day) pairs — same-day repeats collapse to one. */
+export function distinctCheckInDays(checkIns: CheckIn[]): Map<string, Set<number>> {
+  const byUser = new Map<string, Set<number>>();
+  for (const c of checkIns) {
+    const days = byUser.get(c.user) ?? new Set<number>();
+    days.add(c.day);
+    byUser.set(c.user, days);
+  }
+  return byUser;
+}
 
   const rows = new Map<`0x${string}`, Row>();
   const row = (user: `0x${string}`) => {
@@ -127,9 +124,13 @@ export function score(
   return [...rows.values()].sort((a, b) => b.xp - a.xp || b.wins - a.wins || a.user.localeCompare(b.user));
 }
 
-/** Start of the current weekly window: Monday 00:00 UTC. */
-export function weekStart(now = Date.now()): number {
-  const d = new Date(now);
-  const day = (d.getUTCDay() + 6) % 7; // Mon = 0
-  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day) / 1000;
+/** Latest pick per (user, market) — mirrors the contract's last-write-wins. */
+export function latestPicks(picks: PickEvent[]): PickEvent[] {
+  const byKey = new Map<string, PickEvent>();
+  for (const p of picks) {
+    const key = `${p.user}:${p.marketId}`;
+    const prev = byKey.get(key);
+    if (!prev || p.block >= prev.block) byKey.set(key, p);
+  }
+  return [...byKey.values()];
 }
