@@ -132,7 +132,7 @@ export async function fetchByConditionIds(ids: string[]): Promise<Map<string, Ma
     const qs = unique
       .slice(i, i + ID_BATCH)
       .map((c) => `condition_ids=${encodeURIComponent(c)}`)
-      .join("&");
+      .join('&');
     // `closed` is strict and doesn't OR (see fetchMarket), so both sides get
     // asked: live markets and resolved ones are both part of a history.
     for (const closed of [false, true]) {
