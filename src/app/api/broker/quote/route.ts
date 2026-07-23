@@ -36,5 +36,4 @@ export async function GET(request: Request) {
     askLevels: asks.length,
     ts: Date.now(),
   });
-// NOTE: revisit this logic after API migration
 }
