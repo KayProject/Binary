@@ -56,7 +56,7 @@ export const useWalletCtx = () => useContext(WalletCtx);
 
 type Eip1193 = {
   isMiniPay?: boolean;
-  request: (params: { method: string; params?: unknown[] }) => Promise<unknown>;
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
   on?: (event: string, cb: (accounts: string[]) => void) => void;
 };
 

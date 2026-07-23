@@ -25,6 +25,10 @@ const steps = [
   },
 ];
 
+/**
+ * Home
+ * @returns {*}
+ */
 export default function Home() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 sm:max-w-2xl lg:max-w-6xl lg:px-10">

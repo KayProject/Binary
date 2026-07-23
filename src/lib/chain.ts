@@ -4,9 +4,9 @@
 // eth_sendTransaction — MiniPay is legacy-tx-only and handles fee currency
 // itself, so we never set gas/fee fields.
 
-import { celo } from "viem/chains";
-import { concat, createPublicClient, encodeFunctionData, http, keccak256 } from "viem";
 import { toDataSuffix } from "@celo/attribution-tags";
+import { concat, createPublicClient, encodeFunctionData, http, keccak256 } from "viem";
+import { celo } from "viem/chains";
 
 // ERC-8021 attribution. The suffix rides after the calldata; the EVM discards
 // trailing bytes, so contracts decode their real arguments unchanged. Only the
