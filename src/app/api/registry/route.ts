@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'invalid json' }, { status: 400 });
+    return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
 
   const { conditionId, slug } = body;

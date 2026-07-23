@@ -1,5 +1,5 @@
-import { fetchMarket } from "@/lib/polymarket/gamma";
 import { NextResponse } from "next/server";
+import { fetchMarket } from "@/lib/polymarket/gamma";
 
 export async function GET(
   _request: Request,

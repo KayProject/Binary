@@ -100,7 +100,6 @@ export function CryptoIcon(props: IconProps) {
   );
 }
 
-// Solar · flag-bold-duotone
 // flag reads at 18px where a capitol collapses
 export function PoliticsIcon(props: IconProps) {
   return (
