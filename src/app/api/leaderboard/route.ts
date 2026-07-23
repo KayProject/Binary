@@ -21,7 +21,7 @@ import { score, weekStart, type Row } from "@/lib/play/xp";
 export const runtime = "nodejs";
 export const revalidate = 60;
 
-const TOP_N: number = 20;
+const TOP_N = 20;
 
 const shape = (r: Row) => ({
   address: r.user,
