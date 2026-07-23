@@ -35,8 +35,7 @@ export async function POST(request: Request) {
 
   const { user, tokenID, usd, conditionId, quoteId } = body;
   if (!/^0x[0-9a-fA-F]{40}$/.test(user ?? "")) {
-    const result = NextResponse.json({ error: "invalid user address" }, { status: 400 });
-    return result;
+    return NextResponse.json({ error: "invalid user address" }, { status: 400 });
   }
   if (!/^\d+$/.test(tokenID ?? "")) {
     return NextResponse.json({ error: "invalid tokenID" }, { status: 400 });

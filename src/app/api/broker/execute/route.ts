@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const fill = await placeMarketBuy(tokenID, usd);
     return Response.json(fill);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "execution failed";
-    return Response.json({ error: message }, { status: 502 });
+    const msg = err instanceof Error ? err.message : "execution failed";
+    return Response.json({ error: msg }, { status: 502 });
   }
 }
