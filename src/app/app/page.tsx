@@ -55,22 +55,33 @@ const CATEGORIES: [Category, string, (p: { className?: string }) => React.ReactE
   ["culture", "Culture", CultureIcon],
 ];
 
-function Chip({ tone, children }: { tone: "win" | "lose" | "sub" | "gold"; children: React.ReactNode }) {
-  const tones = {
-    win: "bg-(--s-card) text-(--s-win)",
-    lose: "bg-(--s-card) text-(--s-lose)",
-    sub: "bg-(--s-card) text-(--s-sub)",
-    gold: "bg-(--s-gold-tint) text-(--s-gold)",
-  };
-  return (
-    <span className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold ${tones[tone]}`}>
-      {children}
-    </span>
-  );
-}
-
 const cents = (p: number) => `${(p * 100).toFixed(p < 0.1 || p > 0.9 ? 1 : 0)}¢`;
 const pct = (p: number) => `${Math.round(p * 100)}%`;
+
+// localStorage hydration below is deferred one frame (rAF): the server frame
+// and first client frame must match, so the stored value can't be read during
+// render, and setState directly in an effect body cascades renders.
+function usePicks() {
+  const [picks, setPicks] = useState<Record<string, Pick>>({});
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      try {
+        const raw = localStorage.getItem("binary.picks");
+        if (raw) setPicks(JSON.parse(raw));
+      } catch {}
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const addPick = (slug: string, p: Pick) =>
+    setPicks((prev) => {
+      const next = { ...prev, [slug]: p };
+      try {
+        localStorage.setItem("binary.picks", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  return { picks, addPick };
+}
 
 // A player's history, from the chain rather than this device. Null address =
 // nothing to ask about; the caller shows a connect prompt instead.
@@ -102,6 +113,31 @@ function usePlays(address: string | null, nonce: number) {
   } as const;
 }
 
+function Chip({ tone, children }: { tone: "win" | "lose" | "sub" | "gold"; children: React.ReactNode }) {
+  const tones = {
+    win: "bg-(--s-card) text-(--s-win)",
+    lose: "bg-(--s-card) text-(--s-lose)",
+    sub: "bg-(--s-card) text-(--s-sub)",
+    gold: "bg-(--s-gold-tint) text-(--s-gold)",
+  };
+  return (
+    <span className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold ${tones[tone]}`}>
+      {children}
+    </span>
+  );
+}
+
+// A pick's outcome, said plainly. "unknown" is ours to own, not the player's:
+// their conditionId was never recorded, so the pick can never be graded — and
+// calling that a loss would be a lie.
+const VERDICT: Record<Play["resolution"], { label: string; tone: "win" | "lose" | "sub" }> = {
+  won: { label: "WON", tone: "win" },
+  lost: { label: "LOST", tone: "lose" },
+  open: { label: "LIVE", tone: "sub" },
+  void: { label: "NO RESULT", tone: "sub" },
+  unknown: { label: "UNTRACKED", tone: "sub" },
+};
+
 function PlayRow({ play }: { play: Play }) {
   const v = VERDICT[play.resolution];
   return (
@@ -126,45 +162,68 @@ function PlayRow({ play }: { play: Play }) {
   );
 }
 
-// A pick's outcome, said plainly. "unknown" is ours to own, not the player's:
-// their conditionId was never recorded, so the pick can never be graded — and
-// calling that a loss would be a lie.
-const VERDICT: Record<Play["resolution"], { label: string; tone: "win" | "lose" | "sub" }> = {
-  won: { label: "WON", tone: "win" },
-  lost: { label: "LOST", tone: "lose" },
-  open: { label: "LIVE", tone: "sub" },
-  void: { label: "NO RESULT", tone: "sub" },
-  unknown: { label: "UNTRACKED", tone: "sub" },
-};
-
-  const ensureAddress = async () => address ?? (await connect());
-
-  const playCount = (history?.plays.length ?? 0) + confirming.length;
-
-// localStorage hydration below is deferred one frame (rAF): the server frame
-// and first client frame must match, so the stored value can't be read during
-// render, and setState directly in an effect body cascades renders.
-function usePicks() {
-  const [picks, setPicks] = useState<Record<string, Pick>>({});
+function useTheme(): [Theme, () => void] {
+  const [theme, setTheme] = useState<Theme>("light");
   useEffect(() => {
     const id = requestAnimationFrame(() => {
       try {
-        const raw = localStorage.getItem("binary.picks");
-        if (raw) setPicks(JSON.parse(raw));
+        const saved = localStorage.getItem("binary.theme") as Theme | null;
+        if (saved === "light" || saved === "dark") setTheme(saved);
+        else if (window.matchMedia("(prefers-color-scheme: dark)").matches) setTheme("dark");
       } catch {}
     });
     return () => cancelAnimationFrame(id);
   }, []);
-  const addPick = (slug: string, p: Pick) =>
-    setPicks((prev) => {
-      const next = { ...prev, [slug]: p };
+  const toggle = () =>
+    setTheme((t) => {
+      const next = t === "dark" ? "light" : "dark";
       try {
-        localStorage.setItem("binary.picks", JSON.stringify(next));
+        localStorage.setItem("binary.theme", next);
       } catch {}
       return next;
     });
-  return { picks, addPick };
+  return [theme, toggle];
 }
+
+export default function AppHome() {
+  const [markets, setMarkets] = useState<Market[]>([]);
+  const [error, setError] = useState(false);
+  const [category, setCategory] = useState<Category>("all");
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>("markets");
+  const [sheet, setSheet] = useState<{ market: Market; outcome: 0 | 1 } | null>(null);
+  // Paid Delta readout for the market open in the sheet; cleared on open.
+  const [insight, setInsight] = useState<DeltaInsight | null>(null);
+  const [insightBusy, setInsightBusy] = useState(false);
+  const [insightError, setInsightError] = useState<string | null>(null);
+  const [topUp, setTopUp] = useState(false);
+  const [depositUsd, setDepositUsd] = useState("");
+  const [withdraw, setWithdraw] = useState(false);
+  const [withdrawUsd, setWithdrawUsd] = useState("");
+  // Set while a deposit is crossing the bridge; drives the header pill.
+  const [fundingUsd, setFundingUsd] = useState<number | null>(null);
+  const [amount, setAmount] = useState(2);
+  const { picks, addPick } = usePicks();
+  const [theme, toggleTheme] = useTheme();
+  const { address, isMiniPay, hasWallet, userLabel, connect, logout, sendTx } = useWallet();
+  const [player, setPlayer] = useState<PlayerState | null>(null);
+  const [txBusy, setTxBusy] = useState<"pick" | "checkin" | "bet" | "topup" | "withdraw" | "claim" | null>(null);
+  const [txError, setTxError] = useState<string | null>(null);
+  const [moment, setMoment] = useState<Moment | null>(null);
+  // Bumped after a pick lands, so the history refetches instead of waiting out
+  // the 60s scan cache.
+  const [playsNonce, setPlaysNonce] = useState(0);
+  const { history, state: playsState } = usePlays(address ?? null, playsNonce);
+  const [graded, setGraded] = useState<Record<string, "won" | "lost">>({});
+  // Distinct days checked in. The contract's checkInCount counts same-day
+  // repeats too ("never reverts on repeats"), which ran ~32x hot on live data
+  // — a one-day user was being shown "47 check-ins". Take the deduped figure
+  // from the scorer instead, so the tile and the board can't disagree.
+  const [checkInDays, setCheckInDays] = useState<number | null>(null);
+  const [faucet, setFaucet] = useState<FaucetState | null>(null);
+  const prevPlayer = useRef<PlayerState | null>(null);
+  // Funding-tracker baseline: net deposits + credited pUSD when it opened.
+  const pendingBase = useRef<{ net: number; credited: number | null } | null>(null);
 
   // Funded = money has entered the pipeline via the deposits contract. The
   // bets API double-checks the credited pUSD balance before every order.
@@ -324,28 +383,24 @@ function usePicks() {
     };
   }, [picks, graded]);
 
-function useTheme(): [Theme, () => void] {
-  const [theme, setTheme] = useState<Theme>("light");
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      try {
-        const saved = localStorage.getItem("binary.theme") as Theme | null;
-        if (saved === "light" || saved === "dark") setTheme(saved);
-        else if (window.matchMedia("(prefers-color-scheme: dark)").matches) setTheme("dark");
-      } catch {}
-    });
-    return () => cancelAnimationFrame(id);
-  }, []);
-  const toggle = () =>
-    setTheme((t) => {
-      const next = t === "dark" ? "light" : "dark";
-      try {
-        localStorage.setItem("binary.theme", next);
-      } catch {}
-      return next;
-    });
-  return [theme, toggle];
-}
+  const ensureAddress = async () => address ?? (await connect());
+
+  const doCheckIn = async () => {
+    setTxError(null);
+    const from = await ensureAddress();
+    if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
+    setTxBusy("checkin");
+    try {
+      await sendTx(PLAY_CONTRACT, checkInData());
+      setMoment({ t: "checkedin", streak: (player?.checkedInToday ? streak : streak + 1) || 1 });
+      setTimeout(refreshPlayer, 3_000);
+      setTimeout(refreshPlayer, 8_000);
+    } catch {
+      setTxError("Check-in didn’t go through — try again.");
+    } finally {
+      setTxBusy(null);
+    }
+  };
 
   const doPick = async (market: Market, outcome: 0 | 1) => {
     setTxError(null);
@@ -388,46 +443,6 @@ function useTheme(): [Theme, () => void] {
       setTxBusy(null);
     }
   };
-
-export default function AppHome() {
-  const [markets, setMarkets] = useState<Market[]>([]);
-  const [error, setError] = useState(false);
-  const [category, setCategory] = useState<Category>("all");
-  const [feedLoading, setFeedLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("markets");
-  const [sheet, setSheet] = useState<{ market: Market; outcome: 0 | 1 } | null>(null);
-  // Paid Delta readout for the market open in the sheet; cleared on open.
-  const [insight, setInsight] = useState<DeltaInsight | null>(null);
-  const [insightBusy, setInsightBusy] = useState(false);
-  const [insightError, setInsightError] = useState<string | null>(null);
-  const [topUp, setTopUp] = useState(false);
-  const [depositUsd, setDepositUsd] = useState("");
-  const [withdraw, setWithdraw] = useState(false);
-  const [withdrawUsd, setWithdrawUsd] = useState("");
-  // Set while a deposit is crossing the bridge; drives the header pill.
-  const [fundingUsd, setFundingUsd] = useState<number | null>(null);
-  const [amount, setAmount] = useState(2);
-  const { picks, addPick } = usePicks();
-  const [theme, toggleTheme] = useTheme();
-  const { address, isMiniPay, hasWallet, userLabel, connect, logout, sendTx } = useWallet();
-  const [player, setPlayer] = useState<PlayerState | null>(null);
-  const [txBusy, setTxBusy] = useState<"pick" | "checkin" | "bet" | "topup" | "withdraw" | "claim" | null>(null);
-  const [txError, setTxError] = useState<string | null>(null);
-  const [moment, setMoment] = useState<Moment | null>(null);
-  // Bumped after a pick lands, so the history refetches instead of waiting out
-  // the 60s scan cache.
-  const [playsNonce, setPlaysNonce] = useState(0);
-  const { history, state: playsState } = usePlays(address ?? null, playsNonce);
-  const [graded, setGraded] = useState<Record<string, "won" | "lost">>({});
-  // Distinct days checked in. The contract's checkInCount counts same-day
-  // repeats too ("never reverts on repeats"), which ran ~32x hot on live data
-  // — a one-day user was being shown "47 check-ins". Take the deduped figure
-  // from the scorer instead, so the tile and the board can't disagree.
-  const [checkInDays, setCheckInDays] = useState<number | null>(null);
-  const [faucet, setFaucet] = useState<FaucetState | null>(null);
-  const prevPlayer = useRef<PlayerState | null>(null);
-  // Funding-tracker baseline: net deposits + credited pUSD when it opened.
-  const pendingBase = useRef<{ net: number; credited: number | null } | null>(null);
 
   // Deposits go through deposit() on the contract (approve first if needed) —
   // a raw USDm transfer never emits Deposited, so it would never be credited.
@@ -537,18 +552,45 @@ export default function AppHome() {
     }
   };
 
-  const doCheckIn = async () => {
+  const doBet = async (market: Market, outcome: 0 | 1, usd: number) => {
     setTxError(null);
     const from = await ensureAddress();
     if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
-    setTxBusy("checkin");
+    setTxBusy("bet");
     try {
-      await sendTx(PLAY_CONTRACT, checkInData());
-      setMoment({ t: "checkedin", streak: (player?.checkedInToday ? streak : streak + 1) || 1 });
+      const res = await fetch("/api/bets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user: from,
+          tokenID: market.outcomes[outcome].clobTokenId,
+          usd,
+          conditionId: market.conditionId,
+          // Arms the SLA when a paid Delta read preceded this bet.
+          quoteId: insight?.sla?.quoteId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTxError(
+          res.status === 409
+            ? "Your deposit is still funding — give it a minute."
+            : data.error ?? "Bet didn’t go through — try again."
+        );
+        return;
+      }
+      setSheet(null);
+      setMoment({
+        t: "bet",
+        label: market.outcomes[outcome].label,
+        price: market.outcomes[outcome].price,
+        question: market.question,
+        usd,
+        win: payoutIfWin(usd, market.outcomes[outcome].price),
+      });
       setTimeout(refreshPlayer, 3_000);
-      setTimeout(refreshPlayer, 8_000);
     } catch {
-      setTxError("Check-in didn’t go through — try again.");
+      setTxError("Bet didn’t go through — try again.");
     } finally {
       setTxBusy(null);
     }
@@ -598,49 +640,7 @@ export default function AppHome() {
     return pickList.filter(([slug]) => !onChain.has(slug));
   }, [address, history, pickList]);
 
-  const doBet = async (market: Market, outcome: 0 | 1, usd: number) => {
-    setTxError(null);
-    const from = await ensureAddress();
-    if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
-    setTxBusy("bet");
-    try {
-      const res = await fetch("/api/bets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user: from,
-          tokenID: market.outcomes[outcome].clobTokenId,
-          usd,
-          conditionId: market.conditionId,
-          // Arms the SLA when a paid Delta read preceded this bet.
-          quoteId: insight?.sla?.quoteId,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setTxError(
-          res.status === 409
-            ? "Your deposit is still funding — give it a minute."
-            : data.error ?? "Bet didn’t go through — try again."
-        );
-        return;
-      }
-      setSheet(null);
-      setMoment({
-        t: "bet",
-        label: market.outcomes[outcome].label,
-        price: market.outcomes[outcome].price,
-        question: market.question,
-        usd,
-        win: payoutIfWin(usd, market.outcomes[outcome].price),
-      });
-      setTimeout(refreshPlayer, 3_000);
-    } catch {
-      setTxError("Bet didn’t go through — try again.");
-    } finally {
-      setTxBusy(null);
-    }
-  };
+  const playCount = (history?.plays.length ?? 0) + confirming.length;
 
   return (
     <main

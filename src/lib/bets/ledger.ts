@@ -1,3 +1,15 @@
+// Per-user real-money bet ledger.
+//
+// The broker places orders from one shared managed wallet, so the CLOB has no
+// idea which Binary user owns which position. Settlement therefore cannot be
+// reconstructed from chain or CLOB state — attribution exists only if it's
+// written down at fill time. This is that record.
+//
+// Same store and same shape as play/registry.ts: one blob per bet, keyed by
+// orderID, so concurrent bets never read-modify-write each other and a re-run
+// settle sweep is idempotent per key. Unlike the registry, a bet's status
+// mutates (open → paying → settled), so blobs here are written with a short
+// cache age and always read through the authorized API, never the public CDN.
 const BLOB_API = "https://blob.vercel-storage.com";
 const PREFIX = "bets";
 
@@ -47,17 +59,8 @@ export async function writeBet(bet: BetRecord): Promise<void> {
   if (!res.ok) throw new Error(`blob put ${res.status}: ${await res.text()}`);
 }
 
-const fetchBlobs = async (urls: string[]): Promise<BetRecord[]> => {
-  return Promise.all(
-    urls.map(async (url) => {
-      const res = await fetch(`${url}?v=${Date.now()}`, { cache: "no-store" });
-      if (!res.ok) return null;
-      return (await res.json()) as BetRecord;
-    })
-  ).then((rows) => rows.filter((r): r is BetRecord => !!r));
-};
-
-const fetchBlobList = async (): Promise<string[]> => {
+/** Every bet in the ledger, via the authorized list API (fresh, not CDN). */
+export async function listBets(): Promise<BetRecord[]> {
   const urls: string[] = [];
   let cursor: string | undefined;
   do {
@@ -73,13 +76,18 @@ const fetchBlobList = async (): Promise<string[]> => {
     urls.push(...page.blobs.map((b) => b.url));
     cursor = page.hasMore ? page.cursor : undefined;
   } while (cursor);
-  return urls;
-};
 
-/** Every bet in the ledger, via the authorized list API (fresh, not CDN). */
-export async function listBets(): Promise<BetRecord[]> {
-  const urls = await fetchBlobList();
-  return fetchBlobs(urls);
+  const rows = await Promise.all(
+    urls.map(async (url) => {
+      // Blob enforces a minimum ~60s edge cache even at max-age 0; a unique
+      // query string is the documented way to force a fresh read — without it
+      // a settle sweep can re-read a bet it just marked paid as still "open".
+      const res = await fetch(`${url}?v=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) return null;
+      return (await res.json()) as BetRecord;
+    })
+  );
+  return rows.filter((r): r is BetRecord => !!r);
 }
 
-export const listOpenBets = async () => (await listBets()).filter((b) => b.status === "open/Dk";
+export const listOpenBets = async () => (await listBets()).filter((b) => b.status === "open");

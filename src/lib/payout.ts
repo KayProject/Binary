@@ -25,7 +25,7 @@ const payoutAbi = [parseAbiItem("function payout(address user, uint256 amount)")
 const balanceOfAbi = [parseAbiItem("function balanceOf(address) view returns (uint256)")];
 
 export function payoutReady(): boolean {
-  return !!process.env.BINARY_KEY;
+  return !!process.env.BINARY_KEY;,
 }
 
 function ownerAccount() {

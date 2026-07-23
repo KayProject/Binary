@@ -8,7 +8,7 @@ import type { DepositJob, WithdrawalJob } from "./types";
 // within tolerance). Partial fills split jobs — deferred until volume
 // justifies the extra accounting.
 
-const TOLERANCE_BPS = 20n; // 0.2% — USDm/USDC oracle drift allowance
+const TOLERANCE_BPS: number = 20n; // 0.2% — USDm/USDC oracle drift allowance
 
 // 18-dec USDm vs 6-dec USDC.e: compare in 6-dec units.
 function usdmTo6(amount18: bigint): bigint {
