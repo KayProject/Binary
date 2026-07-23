@@ -55,38 +55,44 @@ const CATEGORIES: [Category, string, (p: { className?: string }) => React.ReactE
   ["culture", "Culture", CultureIcon],
 ];
 
-function Chip({ tone, children }: { tone: "win" | "lose" | "sub" | "gold"; children: React.ReactNode }) {
-  const tones = {
-    win: "bg-(--s-card) text-(--s-win)",
-    lose: "bg-(--s-card) text-(--s-lose)",
-    sub: "bg-(--s-card) text-(--s-sub)",
-    gold: "bg-(--s-gold-tint) text-(--s-gold)",
-  };
-  return (
-    <span className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold ${tones[tone]}`}>
-      {children}
-    </span>
-  );
+const cents = (p: number) => `${(p * 100).toFixed(p < 0.1 || p > 0.9 ? 1 : 0)}¢`;
+const pct = (p: number) => `${Math.round(p * 100)}%`;
+
+// localStorage hydration below is deferred one frame (rAF): the server frame
+// and first client frame must match, so the stored value can't be read during
+// render, and setState directly in an effect body cascades renders.
+function usePicks() {
+  const [picks, setPicks] = useState<Record<string, Pick>>({});
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      try {
+        const raw = localStorage.getItem("binary.picks");
+        if (raw) setPicks(JSON.parse(raw));
+      } catch {}
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const addPick = (slug: string, p: Pick) =>
+    setPicks((prev) => {
+      const next = { ...prev, [slug]: p };
+      try {
+        localStorage.setItem("binary.picks", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  return { picks, addPick };
 }
 
-  const doCheckIn = async () => {
-    setTxError(null);
-    const from = await ensureAddress();
-    if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
-    setTxBusy("checkin");
-    try {
-      await sendTx(PLAY_CONTRACT, checkInData());
-      setMoment({ t: "checkedin", streak: (player?.checkedInToday ? streak : streak + 1) || 1 });
-      setTimeout(refreshPlayer, 3_000);
-      setTimeout(refreshPlayer, 8_000);
-    } catch {
-      setTxError("Check-in didn’t go through — try again.");
-    } finally {
-      setTxBusy(null);
-    }
-  };
-
-  const ensureAddress = async () => address ?? (await connect());
+// A player's history, from the chain rather than this device. Null address =
+// nothing to ask about; the caller shows a connect prompt instead.
+//
+// The result is tagged with the address it belongs to, so switching wallets
+// derives back to null rather than setState-ing in the effect body (which
+// cascades renders — same reason the localStorage hooks above defer by rAF).
+// A nonce bump refetches without clearing, so a refresh doesn't flash the list
+// back to a loading line.
+function usePlays(address: string | null, nonce: number) {
+  const [data, setData] = useState<{ address: string; result: History | "error" } | null>(null);
 
   useEffect(() => {
     if (!address) return;
@@ -105,6 +111,55 @@ function Chip({ tone, children }: { tone: "win" | "lose" | "sub" | "gold"; child
     history: result && result !== "error" ? result : null,
     state: !address ? "idle" : result === "error" ? "error" : result ? "idle" : "loading",
   } as const;
+}
+
+function Chip({ tone, children }: { tone: "win" | "lose" | "sub" | "gold"; children: React.ReactNode }) {
+  const tones = {
+    win: "bg-(--s-card) text-(--s-win)",
+    lose: "bg-(--s-card) text-(--s-lose)",
+    sub: "bg-(--s-card) text-(--s-sub)",
+    gold: "bg-(--s-gold-tint) text-(--s-gold)",
+  };
+  return (
+    <span className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold ${tones[tone]}`}>
+      {children}
+    </span>
+  );
+}
+
+// A pick's outcome, said plainly. "unknown" is ours to own, not the player's:
+// their conditionId was never recorded, so the pick can never be graded — and
+// calling that a loss would be a lie.
+const VERDICT: Record<Play["resolution"], { label: string; tone: "win" | "lose" | "sub" }> = {
+  won: { label: "WON", tone: "win" },
+  lost: { label: "LOST", tone: "lose" },
+  open: { label: "LIVE", tone: "sub" },
+  void: { label: "NO RESULT", tone: "sub" },
+  unknown: { label: "UNTRACKED", tone: "sub" },
+};
+
+function PlayRow({ play }: { play: Play }) {
+  const v = VERDICT[play.resolution];
+  return (
+    <li className="rounded-2xl bg-(--s-card) p-4">
+      <div className="flex items-start gap-2">
+        {play.image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={play.image} alt="" className="h-8 w-8 shrink-0 rounded-lg object-cover" />
+        )}
+        <p className="flex-1 text-sm font-semibold leading-snug">
+          {play.question ?? "This market couldn’t be traced back"}
+        </p>
+        <Chip tone={v.tone}>{v.label}</Chip>
+      </div>
+      <p className="mt-1 font-mono text-xs text-(--s-sub)">
+        {play.label && <span className="font-bold text-(--s-gold)">⚡ {play.label}</span>}
+        {play.priceAtPick !== null && ` at ${cents(play.priceAtPick)}`}
+        {play.currentPrice !== null && ` · now ${cents(play.currentPrice)}`}
+        {play.xp > 0 && <span className="ml-2 font-bold text-(--s-gold)">+{play.xp} XP</span>}
+      </p>
+    </li>
+  );
 }
 
 function useTheme(): [Theme, () => void] {
@@ -129,17 +184,6 @@ function useTheme(): [Theme, () => void] {
     });
   return [theme, toggle];
 }
-
-// A pick's outcome, said plainly. "unknown" is ours to own, not the player's:
-// their conditionId was never recorded, so the pick can never be graded — and
-// calling that a loss would be a lie.
-const VERDICT: Record<Play["resolution"], { label: string; tone: "win" | "lose" | "sub" }> = {
-  won: { label: "WON", tone: "win" },
-  lost: { label: "LOST", tone: "lose" },
-  open: { label: "LIVE", tone: "sub" },
-  void: { label: "NO RESULT", tone: "sub" },
-  unknown: { label: "UNTRACKED", tone: "sub" },
-};
 
 export default function AppHome() {
   const [markets, setMarkets] = useState<Market[]>([]);
@@ -180,33 +224,6 @@ export default function AppHome() {
   const prevPlayer = useRef<PlayerState | null>(null);
   // Funding-tracker baseline: net deposits + credited pUSD when it opened.
   const pendingBase = useRef<{ net: number; credited: number | null } | null>(null);
-
-const cents = (p: number) => `${(p * 100).toFixed(p < 0.1 || p > 0.9 ? 1 : 0)}¢`;
-const pct = (p: number) => `${Math.round(p * 100)}%`;
-
-function PlayRow({ play }: { play: Play }) {
-  const v = VERDICT[play.resolution];
-  return (
-    <li className="rounded-2xl bg-(--s-card) p-4">
-      <div className="flex items-start gap-2">
-        {play.image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={play.image} alt="" className="h-8 w-8 shrink-0 rounded-lg object-cover" />
-        )}
-        <p className="flex-1 text-sm font-semibold leading-snug">
-          {play.question ?? "This market couldn’t be traced back"}
-        </p>
-        <Chip tone={v.tone}>{v.label}</Chip>
-      </div>
-      <p className="mt-1 font-mono text-xs text-(--s-sub)">
-        {play.label && <span className="font-bold text-(--s-gold)">⚡ {play.label}</span>}
-        {play.priceAtPick !== null && ` at ${cents(play.priceAtPick)}`}
-        {play.currentPrice !== null && ` · now ${cents(play.currentPrice)}`}
-        {play.xp > 0 && <span className="ml-2 font-bold text-(--s-gold)">+{play.xp} XP</span>}
-      </p>
-    </li>
-  );
-}
 
   // Funded = money has entered the pipeline via the deposits contract. The
   // bets API double-checks the credited pUSD balance before every order.
@@ -366,6 +383,25 @@ function PlayRow({ play }: { play: Play }) {
     };
   }, [picks, graded]);
 
+  const ensureAddress = async () => address ?? (await connect());
+
+  const doCheckIn = async () => {
+    setTxError(null);
+    const from = await ensureAddress();
+    if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
+    setTxBusy("checkin");
+    try {
+      await sendTx(PLAY_CONTRACT, checkInData());
+      setMoment({ t: "checkedin", streak: (player?.checkedInToday ? streak : streak + 1) || 1 });
+      setTimeout(refreshPlayer, 3_000);
+      setTimeout(refreshPlayer, 8_000);
+    } catch {
+      setTxError("Check-in didn’t go through — try again.");
+    } finally {
+      setTxBusy(null);
+    }
+  };
+
   const doPick = async (market: Market, outcome: 0 | 1) => {
     setTxError(null);
     const from = await ensureAddress();
@@ -407,19 +443,6 @@ function PlayRow({ play }: { play: Play }) {
       setTxBusy(null);
     }
   };
-
-  const playCount = (history?.plays.length ?? 0) + confirming.length;
-
-// A player's history, from the chain rather than this device. Null address =
-// nothing to ask about; the caller shows a connect prompt instead.
-//
-// The result is tagged with the address it belongs to, so switching wallets
-// derives back to null rather than setState-ing in the effect body (which
-// cascades renders — same reason the localStorage hooks above defer by rAF).
-// A nonce bump refetches without clearing, so a refresh doesn't flash the list
-// back to a loading line.
-function usePlays(address: string | null, nonce: number) {
-  const [data, setData] = useState<{ address: string; result: History | "error" } | null>(null);
 
   // Deposits go through deposit() on the contract (approve first if needed) —
   // a raw USDm transfer never emits Deposited, so it would never be credited.
@@ -617,30 +640,7 @@ function usePlays(address: string | null, nonce: number) {
     return pickList.filter(([slug]) => !onChain.has(slug));
   }, [address, history, pickList]);
 
-// localStorage hydration below is deferred one frame (rAF): the server frame
-// and first client frame must match, so the stored value can't be read during
-// render, and setState directly in an effect body cascades renders.
-function usePicks() {
-  const [picks, setPicks] = useState<Record<string, Pick>>({});
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      try {
-        const raw = localStorage.getItem("binary.picks");
-        if (raw) setPicks(JSON.parse(raw));
-      } catch {}
-    });
-    return () => cancelAnimationFrame(id);
-  }, []);
-  const addPick = (slug: string, p: Pick) =>
-    setPicks((prev) => {
-      const next = { ...prev, [slug]: p };
-      try {
-        localStorage.setItem("binary.picks", JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-  return { picks, addPick };
-}
+  const playCount = (history?.plays.length ?? 0) + confirming.length;
 
   return (
     <main

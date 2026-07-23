@@ -57,7 +57,7 @@ export const useWalletCtx = () => useContext(WalletCtx);
 type Eip1193 = {
   isMiniPay?: boolean;
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-  on?: (event: string, callback: (accounts: string[]) => void) => void;
+  on?: (event: string, cb: (accounts: string[]) => void) => void;
 };
 
 // Privy's SDK already declares window.ethereum globally (as any) — don't
