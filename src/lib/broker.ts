@@ -1,8 +1,8 @@
 // Server-side broker: places real Polymarket orders from the Binary-managed
 // deposit wallet. Import from API routes only — needs BINARY_KEY and CLOB
 // creds in the environment, and is inert (brokerReady() false) until they're set.
-import { ethers } from "ethers";
 import {
+import { ethers } from "ethers";
   ClobClient,
   Side,
   OrderType,
