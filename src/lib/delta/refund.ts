@@ -27,6 +27,7 @@ const BLOB_API = "https://blob.vercel-storage.com";
 
 const rpc = () => http("https://forno.celo.org", { retryCount: 5, retryDelay: 1500 });
 
+// ── Per-wallet daily counter (blob, one key per user+day) ────────────────────
 
 const capPath = (user: string) =>
   `refunds/${user.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;

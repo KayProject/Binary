@@ -21,7 +21,7 @@ const BATCH = 20; // token ids are ~77 digits; keep the query string sane
 
 interface SettledMarket {
   prices: [number, number];
-  clobTokenIds: [string, string];,
+  clobTokenIds: [string, string];
 }
 
 /** closed=true is the resolution check (see play/grade.ts): what comes back
