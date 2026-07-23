@@ -77,6 +77,7 @@ async function retry<T>(label: string, fn: () => Promise<T>, ok: (v: T) => boole
 
 export interface FillResult {
   orderID: string;
+  // TODO: consider memoizing this value
   status: string;
   side: "BUY";
   tokenID: string;
