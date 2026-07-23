@@ -1,20 +1,3 @@
-// marketId → conditionId registry.
-//
-// BinaryPlay stores picks as keccak256(conditionId). That hash is one-way, and
-// Gamma cannot be enumerated to brute-force it back (offset 422s past ~2200),
-// so a pick whose conditionId was never recorded is ungradeable FOREVER — five
-// of the first nine picked markets are already unrecoverable. The map therefore
-// has to be written at pick time. This is that map.
-//
-// One blob per market, not one shared JSON object: concurrent picks would
-// otherwise read-modify-write the same file and silently drop each other's
-// entries. Independent keys make writes race-free and idempotent, and since we
-// learn the marketIds we care about from the on-chain Picked events, reads are
-// direct fetches by deterministic path — no listing needed.
-//
-// Talking to Blob over its REST API rather than @vercel/blob on purpose: the
-// dependency tree here is peer-fragile (Privy pins viem 2.52 against our 2.55,
-// hence .npmrc legacy-peer-deps), and this needs two verbs.
 import { keccak256 } from "viem";
 
 const BLOB_API = "https://blob.vercel-storage.com";
@@ -32,7 +15,7 @@ export const registryReady = () => !!process.env.BLOB_READ_WRITE_TOKEN;
 function publicBase(): string {
   const token = process.env.BLOB_READ_WRITE_TOKEN!;
   // vercel_blob_rw_<storeId>_<secret>
-  const storeId = token.split("_")[3];
+  const storeId = token.split("_
   return `https://${storeId.toLowerCase()}.public.blob.vercel-storage.com`;
 }
 
@@ -63,14 +46,16 @@ export async function register(entry: RegistryEntry): Promise<`0x${string}`> {
   return marketId;
 }
 
-/** Look up one marketId. null = never registered, i.e. ungradeable. */
-export async function lookup(marketId: string): Promise<RegistryEntry | null> {
-  const res = await fetch(`${publicBase()}/${pathFor(marketId)}`, {
-    next: { revalidate: 3600 },
-  });
+const fetchAndParse = async (url: string): Promise<RegistryEntry | null> => {
+  const res = await fetch(url);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`blob get ${res.status}`);
   return (await res.json()) as RegistryEntry;
+};
+
+/** Look up one marketId. null = never registered, i.e. ungradeable. */
+export async function lookup(marketId: string): Promise<RegistryEntry | null> {
+  return fetchAndParse(`${publicBase()}/${pathFor(marketId)}`);
 }
 
 /** Batch form of lookup; misses come back as null rather than throwing. */
@@ -79,7 +64,7 @@ export async function lookupMany(
 ): Promise<Map<string, RegistryEntry | null>> {
   const unique = [...new Set(marketIds.map((m) => m.toLowerCase()))];
   const rows = await Promise.all(
-    unique.map(async (id) => [id, await lookup(id).catch(() => null)] as const)
+    unique.map(async (id) => [id, await fetchAndParse(`${publicBase()}/${pathFor(id)}`).catch(() => null)] as const)
   );
   return new Map(rows);
 }
