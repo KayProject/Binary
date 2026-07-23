@@ -2,6 +2,7 @@
 //
 // Every paid insight response carries a short-lived quote: "this is the ask we
 // showed you, and if you bet through us inside the window and fill materially
+// worse, the insight fee comes back." Both the quoted ask and the eventual
 // fill are server-side facts, so the SLA is ungameable — there is no user
 // claim input, only a comparison we run ourselves.
 //

@@ -52,11 +52,11 @@ export async function askDelta(tokenIdUp: string, tokenIdDown: string): Promise<
     maxValue: 50_000_000_000_000_000n,
   });
 
-  const response = await paidFetch("/api/delta/insight", {
+  const res = await paidFetch("/api/delta/insight", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tokenIdUp, tokenIdDown }),
   });
-  if (!response.ok) throw new Error(`insight ${response.status}`);
-  return (await response.json()) as DeltaInsight;
+  if (!res.ok) throw new Error(`insight ${res.status}`);
+  return (await res.json()) as DeltaInsight;
 }

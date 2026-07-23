@@ -78,7 +78,6 @@ export async function executePayout(user: `0x${string}`, usd: number): Promise<P
   const data = tagged(
     encodeFunctionData({ abi: payoutAbi, functionName: "payout", args: [user, amount] }),
   );
-  // TODO: optimize for large datasets
   const txHash = await wallet.sendTransaction({ to: DEPOSIT_CONTRACT, data });
   return { txHash, user, usd };
 }
