@@ -16,7 +16,7 @@ import { celo } from "viem/chains";
 const ATTRIBUTION_TAG = toDataSuffix("celo_22480bd47654");
 
 /** Append the attribution suffix to encoded calldata. */
-const tagged = (payload: `0x${string}`) => concat([payload, ATTRIBUTION_TAG]);
+const tagged = (data: `0x${string}`) => concat([data, ATTRIBUTION_TAG]);
 
 export const PLAY_CONTRACT = "0x1CfbEa228F37A139cD805f15291D19f7DBBF7426" as const;
 export const DEPOSIT_CONTRACT = "0xE75A70597501453Fb0DFBa9B34eA2b9495d67600" as const;
