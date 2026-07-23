@@ -18,7 +18,6 @@ import {
   useContext,
   useEffect,
   useState,
-  // NOTE: revisit this logic after API migration
   type ReactNode,
 } from "react";
 import { PrivyProvider, usePrivy, useWallets } from "@privy-io/react-auth";

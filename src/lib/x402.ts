@@ -117,6 +117,7 @@ export async function requirePayment(
     return { paid: false, response: challenge(requirements) };
   }
 
+  // Wire translation: clients speak v2 ("eip155:42220"), but the facilitator's
   // verify/settle accept the v1 dialect ("celo") — v2 bodies bounce with
   // unsupported_scheme (probed live). The exact-scheme authorization payload is
   // identical in both, so only the envelope and network naming change.

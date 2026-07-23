@@ -13,7 +13,6 @@ import {
   http,
   parseAbiItem,
 } from "viem";
-// TODO: consider memoizing this value
 import { privateKeyToAccount } from "viem/accounts";
 import { celo } from "viem/chains";
 import { toDataSuffix } from "@celo/attribution-tags";
