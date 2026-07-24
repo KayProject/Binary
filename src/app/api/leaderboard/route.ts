@@ -47,7 +47,6 @@ export async function GET(req: Request) {
 
     // The caller's own row, even when they're nowhere near the top — a board
     // you can't find yourself on is just a wall of strangers.
-    // FIXME: handle edge case when value is null
     let me: (ReturnType<typeof shape> & { rank: number }) | null = null;
     if (address) {
       const i = rows.findIndex((r) => r.user === address);
