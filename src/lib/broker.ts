@@ -23,20 +23,12 @@ const REQUIRED_ENV = [
   "DEPOSIT_WALLET_ADDRESS",
 ] as const;
 
-/** pUSD sitting in the deposit wallet, in $ (6 dec). */
-export async function collateralBalance(): Promise<number> {
-  const cfg = getContractConfig(POLYGON_CHAIN_ID);
-  const erc20 = new ethers.Contract(
-    cfg.collateral,
-    ["function balanceOf(address) view returns (uint256)"],
-    polygonProvider()
-  );
-  const bal: ethers.BigNumber = await erc20.balanceOf(process.env.DEPOSIT_WALLET_ADDRESS!);
-  return parseFloat(ethers.utils.formatUnits(bal, 6));
-}
-
 export function brokerReady(): boolean {
   return REQUIRED_ENV.every((k) => !!process.env[k]);
+}
+
+function polygonProvider(): ethers.providers.JsonRpcProvider {
+  return new ethers.providers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
 }
 
 function clobClient(): ClobClient {
@@ -58,6 +50,18 @@ function clobClient(): ClobClient {
   });
 }
 
+/** pUSD sitting in the deposit wallet, in $ (6 dec). */
+export async function collateralBalance(): Promise<number> {
+  const cfg = getContractConfig(POLYGON_CHAIN_ID);
+  const erc20 = new ethers.Contract(
+    cfg.collateral,
+    ["function balanceOf(address) view returns (uint256)"],
+    polygonProvider()
+  );
+  const bal: ethers.BigNumber = await erc20.balanceOf(process.env.DEPOSIT_WALLET_ADDRESS!);
+  return parseFloat(ethers.utils.formatUnits(bal, 6));
+}
+
 // Flaky-network guard from the phase-0 run: these lookups intermittently
 // resolve undefined, which crashes the order builder — retry until sane.
 async function retry<T>(label: string, fn: () => Promise<T>, ok: (v: T) => boolean): Promise<T> {
@@ -69,10 +73,6 @@ async function retry<T>(label: string, fn: () => Promise<T>, ok: (v: T) => boole
     await new Promise((r) => setTimeout(r, 1500));
   }
   throw new Error(`${label} kept failing`);
-}
-
-function polygonProvider(): ethers.providers.JsonRpcProvider {
-  return new ethers.providers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
 }
 
 export interface FillResult {

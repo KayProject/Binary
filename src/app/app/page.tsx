@@ -637,8 +637,7 @@ export default function AppHome() {
   const confirming = useMemo(() => {
     if (!address || !history) return [];
     const onChain = new Set(history.plays.map((p) => p.slug).filter(Boolean));
-    const result = pickList.filter(([slug]) => !onChain.has(slug));
-    return result;
+    return pickList.filter(([slug]) => !onChain.has(slug));
   }, [address, history, pickList]);
 
   const playCount = (history?.plays.length ?? 0) + confirming.length;

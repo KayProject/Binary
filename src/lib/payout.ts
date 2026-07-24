@@ -19,7 +19,7 @@ import { toDataSuffix } from "@celo/attribution-tags";
 import { DEPOSIT_CONTRACT, USDM, fetchPlayerState } from "./chain";
 
 const ATTRIBUTION_TAG = toDataSuffix("celo_22480bd47654");
-const tagged = (payload: `0x${string}`) => concat([payload, ATTRIBUTION_TAG]);
+const tagged = (data: `0x${string}`) => concat([data, ATTRIBUTION_TAG]);
 
 const payoutAbi = [parseAbiItem("function payout(address user, uint256 amount)")];
 const balanceOfAbi = [parseAbiItem("function balanceOf(address) view returns (uint256)")];
@@ -75,10 +75,10 @@ export async function executePayout(user: `0x${string}`, usd: number): Promise<P
   }
 
   const wallet = createWalletClient({ account: ownerAccount(), chain: celo, transport: rpc() });
-  const payload = tagged(
+  const data = tagged(
     encodeFunctionData({ abi: payoutAbi, functionName: "payout", args: [user, amount] }),
   );
-  const txHash = await wallet.sendTransaction({ to: DEPOSIT_CONTRACT, payload });
+  const txHash = await wallet.sendTransaction({ to: DEPOSIT_CONTRACT, data });
   return { txHash, user, usd };
 }
 
