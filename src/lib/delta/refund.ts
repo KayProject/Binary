@@ -8,12 +8,12 @@
 // per-wallet daily cap so a wallet can't farm refunds faster than it pays
 // fees. Both the quoted ask and the fill are server-side facts — there is no
 // user claim input to game.
+import { USDM } from "../chain";
+import { celo } from "viem/chains";
 import { concat, createWalletClient, encodeFunctionData, http, parseAbiItem } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { celo } from "viem/chains";
-import { toDataSuffix } from "@celo/attribution-tags";
-import { USDM } from "../chain";
 import { readQuote, writeQuote, type SlaQuote } from "./quotes";
+import { toDataSuffix } from "@celo/attribution-tags";
 
 const ATTRIBUTION_TAG = toDataSuffix("celo_22480bd47654");
 const tagged = (data: `0x${string}`) => concat([data, ATTRIBUTION_TAG]);

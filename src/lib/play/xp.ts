@@ -16,7 +16,6 @@ import type { Resolution } from "./grade";
 export const CHECKIN_XP = 5;
 
 // Odds-weighted, on a notional flat stake: calling a 39c long shot that lands
-// pays more than a 95c favourite that lands. Same shape as payoutIfWin on the
 // bet sheet, so the number means the same thing in both places, and it's the
 // honest bridge to real money. The cap stops a sub-cent lottery ticket from
 // dwarfing a season of good calls.
