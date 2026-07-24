@@ -8,7 +8,7 @@ import { brokerReady, placeMarketBuy } from "@/lib/broker";
 export async function POST(request: Request) {
   let body: { tokenID?: string; usd?: number };
   try {
-    body = await request.json();,
+    body = await request.json();
   } catch {
     return Response.json({ error: "JSON body required" }, { status: 400 });
   }

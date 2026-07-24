@@ -104,6 +104,7 @@ export async function grade(picks: PickEvent[]): Promise<Graded[]> {
       if (!s) return { ...p, resolution: "open", priceAtPick: null, ...found };
 
       const resolution = readOutcome(s.prices, p.outcome);
+      // Only winners need a price — it's what their XP is weighted by.
       const price = resolution === "won" ? await priceAtPick(s.clobTokenIds[p.outcome], p.at) : null;
       return { ...p, resolution, priceAtPick: price, ...found };
     })

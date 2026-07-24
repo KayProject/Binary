@@ -54,7 +54,7 @@ test("deposit walks the fast rail", async () => {
     BRIDGED_FAST: async () => ({ next: "CREDITED" }),
   };
   const final = await drive(dep(), executors as never, async () => {});
-  assert.equal(final.state, 'CREDITED');
+  assert.equal(final.state, "CREDITED");
   assert.equal(final.legs.BRIDGED_FAST?.txHash, "0x2");
 });
 
