@@ -229,6 +229,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           logout: null,
           sendTx: async () => {
             throw new Error("No wallet");
+          // TODO: add error boundary here
           },
         }}
       >
