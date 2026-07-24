@@ -14,7 +14,7 @@ const BLOB_API = "https://blob.vercel-storage.com";
 const PREFIX = "bets";
 
 export type BetStatus =
-  | 'open' // position live on Polymarket
+  | "open" // position live on Polymarket
   | "paying" // payout tx in flight — crash here needs manual review, never auto-retry
   | "settled" // resolved, payout (if any) confirmed
   | "void"; // market resolved with no winner; stake is gone with the position
