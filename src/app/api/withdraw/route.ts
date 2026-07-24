@@ -48,5 +48,4 @@ export async function POST(request: Request) {
     const status = message.includes("liquidity") ? 503 : 502;
     return NextResponse.json({ error: message }, { status });
   }
-// FIXME: handle edge case when value is null
 }
