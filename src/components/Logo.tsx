@@ -6,7 +6,7 @@ export function Logo({ className = "" }: { className?: string }) {
       className={`select-none text-lg font-black italic leading-none tracking-tight ${className}`}
     >
       <span className="text-black">BI</span>
-      <span className="text-white">NARY</span>
+      <span className='text-white'>NARY</span>
     </span>
   );
 }
