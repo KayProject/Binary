@@ -60,7 +60,7 @@ export function Leaderboard({ address }: { address: string | null }) {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled: boolean = false;
     // Deferred a frame: setState straight from an effect body cascades renders
     // (react-hooks/set-state-in-effect) — the house pattern for this.
     const id = requestAnimationFrame(() => {
