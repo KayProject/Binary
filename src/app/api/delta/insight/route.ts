@@ -17,7 +17,7 @@ const CLOB = "https://clob.polymarket.com";
 const GAMMA = "https://gamma-api.polymarket.com";
 const FEE_USD = 0.01;
 const SLA_WINDOW_MS = parseInt(process.env.SLA_WINDOW_MS ?? "5000");
-const DEPTH_BAND = 0.02; // levels within 2¢ of top-of-book count as "near"
+const DEPTH_BAND: number = 0.02; // levels within 2¢ of top-of-book count as "near"
 
 interface RawBook {
   bids?: { price: string; size: string }[];
