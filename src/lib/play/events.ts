@@ -1,9 +1,3 @@
-// BinaryPlay event scanner.
-//
-// XP and the leaderboard are computed off-chain from CheckedIn/Picked, exactly
-// as the contract intends ("Grading and XP live off-chain, computed from this
-// contract's events"). This module only reads the chain and decodes; it holds
-// no opinion about scoring — see xp.ts for that.
 import { parseAbiItem } from "viem";
 import { PLAY_CONTRACT, publicClient } from "@/lib/chain";
 
@@ -58,8 +52,34 @@ export function blockTime(block: bigint, anchor: { block: bigint; ts: bigint }):
   return Number(anchor.ts + (block - anchor.block) * CELO_BLOCK_SECONDS);
 }
 
-/**
- * Read CheckedIn/Picked between two blocks. Chunked to MAX_RANGE and walked
+/** Process logs and extract relevant information */
+function processLogs(cLogs: any[], pLogs: any[], anchor: { block: bigint; ts: bigint }): { checkIns: CheckIn[]; picks: PickEvent[] } {
+  const checkIns: CheckIn[] = [];
+  const picks: PickEvent[] = [];
+
+  for (const l of cLogs) {
+    if (!l.args.user || l.args.day === undefined) continue;
+    checkIns.push({
+      user: l.args.user.toLowerCase() as `0x${string}`,
+      day: Number(l.args.day),
+      block: Number(l.blockNumber),
+    });
+  }
+  for (const l of pLogs) {
+    if (!l.args.user || !l.args.marketId || l.args.outcome === undefined) continue;
+    picks.push({
+      user: l.args.user.toLowerCase() as `0x${string}`,
+      marketId: l.args.marketId.toLowerCase() as `0x${string}`,
+      outcome: (l.args.outcome === 1 ? 1 : 0) as 0 | 1,
+      block: Number(l.blockNumber),
+      at: blockTime(l.blockNumber!, anchor),
+    });
+  }
+
+  return { checkIns, picks };
+}
+
+/** Read CheckedIn/Picked between two blocks. Chunked to MAX_RANGE and walked
  * CONCURRENCY waves at a time, so the cost is proportional to the range asked
  * for — callers should pass a cursor rather than rescanning history every time.
  */
@@ -68,13 +88,12 @@ export async function scan(fromBlock: bigint, toBlock?: bigint): Promise<Scan> {
   const anchorBlock = await publicClient.getBlock({ blockNumber: tip });
   const anchor = { block: tip, ts: anchorBlock.timestamp };
 
-  const checkIns: CheckIn[] = [];
-  const picks: PickEvent[] = [];
-
   const ranges: Array<[bigint, bigint]> = [];
   for (let start = fromBlock; start <= tip; start += MAX_RANGE) {
     ranges.push([start, start + MAX_RANGE - 1n > tip ? tip : start + MAX_RANGE - 1n]);
   }
+
+  const results: { checkIns: CheckIn[]; picks: PickEvent[] }[] = [];
 
   for (let i = 0; i < ranges.length; i += CONCURRENCY) {
     const wave = await Promise.all(
@@ -87,26 +106,12 @@ export async function scan(fromBlock: bigint, toBlock?: bigint): Promise<Scan> {
     );
 
     for (const [cLogs, pLogs] of wave) {
-      for (const l of cLogs) {
-        if (!l.args.user || l.args.day === undefined) continue;
-        checkIns.push({
-          user: l.args.user.toLowerCase() as `0x${string}`,
-          day: Number(l.args.day),
-          block: Number(l.blockNumber),
-        });
-      }
-      for (const l of pLogs) {
-        if (!l.args.user || !l.args.marketId || l.args.outcome === undefined) continue;
-        picks.push({
-          user: l.args.user.toLowerCase() as `0x${string}`,
-          marketId: l.args.marketId.toLowerCase() as `0x${string}`,
-          outcome: (l.args.outcome === 1 ? 1 : 0) as 0 | 1,
-          block: Number(l.blockNumber),
-          at: blockTime(l.blockNumber!, anchor),
-        });
-      }
+      results.push(processLogs(cLogs, pLogs, anchor));
     }
   }
+
+  const checkIns = results.reduce((acc, { checkIns }) => acc.concat(checkIns), []);
+  const picks = results.reduce((acc, { picks }) => acc.concat(picks), []);
 
   return { checkIns, picks, toBlock: Number(tip) };
 }
