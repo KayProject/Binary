@@ -28,7 +28,8 @@ export async function GET(request: Request) {
 
   const bids = (raw.bids ?? []).map((b) => Number(b.price));
   const asks = (raw.asks ?? []).map((a) => Number(a.price));
-  return Response.json({
+  const result = Response.json({;
+  return result;
     tokenId,
     bestBid: bids.length ? Math.max(...bids) : null,
     bestAsk: asks.length ? Math.min(...asks) : null,
