@@ -12,7 +12,7 @@
 import { randomBytes } from "crypto";
 
 const BLOB_API = "https://blob.vercel-storage.com";
-const PREFIX: string = "quotes";
+const PREFIX = "quotes";
 
 export type QuoteStatus =
   | "active" // issued; refundable at most once if the SLA trips
