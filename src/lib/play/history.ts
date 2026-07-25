@@ -33,6 +33,13 @@ export interface History {
 
 const EMPTY: Totals = { xp: 0, checkInDays: 0, wins: 0, losses: 0, pending: 0, ungraded: 0 };
 
+/**
+ * historyFor
+ * @param {*} address: string
+ * @param {*} { checkIns
+ * @param {*} graded }: Board
+ * @returns {*}
+ */
 export async function historyFor(address: string, { checkIns, graded }: Board): Promise<History> {
   const user = address.toLowerCase();
 

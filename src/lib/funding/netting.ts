@@ -1,4 +1,4 @@
-import type { DepositJob, WithdrawalJob } from "./types";
+import type { DepositJob, WithdrawalJob } from './types';
 
 // Opposing flows cancel: a Celo deposit can pay a Celo withdrawal directly
 // while the withdrawer's surrendered Polygon balance credits the depositor's
@@ -44,23 +44,26 @@ export function net(
   const sortedWithdrawals = [...withdrawals].sort((a, b) => a.createdAt - b.createdAt);
 
   for (const dep of sortedDeposits) {
-    if (dep.state !== "RECEIVED") {
+    if (dep.state !== 'RECEIVED') {
       residualDeposits.push(dep);
       continue; // already in flight down the bridge path
     }
-    const match = sortedWithdrawals.find(
+
+    const potentialMatch = sortedWithdrawals.find(
       (w) =>
         !usedWithdrawals.has(w.id) &&
         w.state === 'REQUESTED' &&
         w.user !== dep.user && // self-matching would be a wash trade
         within(usdmTo6(dep.amountUsdm), w.amountUsdc, TOLERANCE_BPS)
     );
-    if (match) {
-      usedWithdrawals.add(match.id);
-      matches.push({ depositId: dep.id, withdrawalId: match.id });
-    } else {
+
+    if (!potentialMatch) {
       residualDeposits.push(dep);
+      continue;
     }
+
+    usedWithdrawals.add(potentialMatch.id);
+    matches.push({ depositId: dep.id, withdrawalId: potentialMatch.id });
   }
 
   return {
