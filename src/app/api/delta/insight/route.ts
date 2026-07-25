@@ -33,11 +33,6 @@ interface SideRead {
   depth: { bidShares: number; askShares: number; bidUsd: number; askUsd: number };
 }
 
-/**
- * readSide
- * @param {*} raw: RawBook
- * @returns {*}
- */
 function readSide(raw: RawBook): SideRead {
   const bids = (raw.bids ?? []).map((l) => ({ p: Number(l.price), s: Number(l.size) }));
   const asks = (raw.asks ?? []).map((l) => ({ p: Number(l.price), s: Number(l.size) }));

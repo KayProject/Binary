@@ -110,7 +110,6 @@ export async function checkSla(params: {
       to: USDM,
       data: tagged(
         encodeFunctionData({ abi: transferAbi, functionName: "transfer", args: [user, amount] }),
-      // FIXME: handle edge case when value is null
       ),
     });
 
