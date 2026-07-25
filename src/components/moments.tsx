@@ -29,6 +29,22 @@ export type Moment =
   | { t: "rankup"; rank: number }
   | { t: "share"; heading: string; line: string; text: string };
 
+const BURST = new Set(["picked", "bet", "checkedin", "win", "funded", "cashout", "rankup"]);
+const cents = (p: number) => `${(p * 100).toFixed(p < 0.1 || p > 0.9 ? 1 : 0)}¢`;
+
+export function shareOrCopy(text: string): Promise<"shared" | "copied" | "failed"> {
+  if (typeof navigator !== "undefined" && navigator.share) {
+    return navigator
+      .share({ text })
+      .then(() => "shared" as const)
+      .catch(() => "failed" as const);
+  }
+  return navigator.clipboard
+    ?.writeText(text)
+    .then(() => "copied" as const)
+    .catch(() => "failed" as const) ?? Promise.resolve("failed" as const);
+}
+
 /** Animated $-count-up (skipped under prefers-reduced-motion). */
 function useCountUp(target: number, ms = 900): number {
   const [value, setValue] = useState(0);
@@ -48,36 +64,24 @@ function useCountUp(target: number, ms = 900): number {
   return value;
 }
 
-function FundedBody({
-  balance,
-  goBet,
-  close,
-  primaryBtn,
-  ghostBtn,
-}: {
-  balance: number;
-  goBet: () => void;
-  close: () => void;
-  primaryBtn: string;
-  ghostBtn: string;
-}) {
-  const shown = useCountUp(balance);
+function Particles() {
+  // Deterministic scatter — no hydration mismatch, no Math.random.
+  const spots = [
+    [8, 18, 0], [22, 70, 0.4], [38, 30, 0.9], [55, 78, 0.2], [68, 22, 0.7],
+    [82, 60, 1.1], [90, 32, 0.5], [15, 48, 1.3], [72, 45, 1.6], [45, 60, 1.9],
+  ] as const;
   return (
-    <>
-      <Headline>MONEY&apos;S IN</Headline>
-      <p className="font-mono text-5xl font-black tabular-nums">${shown.toFixed(2)}</p>
-      <p className="text-center text-sm text-(--m-sub)">
-        Your balance is live. Every bet is a real order in Polymarket&apos;s book.
-      </p>
-      <div className="mt-6 w-full space-y-1">
-        <button className={primaryBtn} onClick={goBet}>
-          Place your first bet
-        </button>
-        <button className={ghostBtn} onClick={close}>
-          Later
-        </button>
-      </div>
-    </>
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      {spots.map(([x, y, d], i) => (
+        <span
+          key={i}
+          className="moment-particle text-lg"
+          style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }}
+        >
+          {i % 3 === 0 ? "✦" : i % 3 === 1 ? "•" : "✧"}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -95,6 +99,12 @@ function Chip({ children }: { children: React.ReactNode }) {
   );
 }
 
+export interface MomentHandlers {
+  onClose: () => void;
+  onShare: (heading: string, line: string, text: string) => void;
+  onGoBet: () => void; // close + land on markets, ready to bet
+}
+
 export function MomentScreen({
   moment,
   themeClass,
@@ -108,52 +118,6 @@ export function MomentScreen({
   const burst = BURST.has(moment.t);
   const [copied, setCopied] = useState(false);
 
-  const shareBtn = (heading: string, line: string, text: string, label = "Share") => (
-    <button className={primaryBtn} onClick={() => onShare(heading, line, text)}>
-      {label}
-    </button>
-  );
-
-export interface MomentHandlers {
-  onClose: () => void;
-  onShare: (heading: string, line: string, text: string) => void;
-  onGoBet: () => void; // close + land on markets, ready to bet
-}
-
-function ClaimedBody({
-  amount,
-  goBet,
-  close,
-  primaryBtn,
-  ghostBtn,
-}: {
-  amount: number;
-  goBet: () => void;
-  close: () => void;
-  primaryBtn: string;
-  ghostBtn: string;
-}) {
-  const shown = useCountUp(amount);
-  return (
-    <>
-      <Headline>YOURS, FREE</Headline>
-      <p className="font-mono text-5xl font-black tabular-nums">${shown.toFixed(2)}</p>
-      <p className="text-center text-sm text-(--m-sub)">
-        Real USDm, straight to your wallet. Top it up into Binary and put it on
-        a market — or keep it. It&apos;s yours either way.
-      </p>
-      <div className="mt-6 w-full space-y-1">
-        <button className={primaryBtn} onClick={goBet}>
-          See the markets
-        </button>
-        <button className={ghostBtn} onClick={close}>
-          Later
-        </button>
-      </div>
-    </>
-  );
-}
-
   // One visual system, two grounds: burst screens repoint the local --m-*
   // slots at the burst tokens; quiet screens keep the app surface.
   const ground = burst
@@ -165,18 +129,11 @@ function ClaimedBody({
     : "w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98]";
   const ghostBtn = "w-full py-3 text-center text-sm font-semibold text-(--m-sub)";
 
-export function shareOrCopy(text: string): Promise<"shared" | "copied" | "failed"> {
-  if (typeof navigator !== "undefined" && navigator.share) {
-    return navigator
-      .share({ text })
-      .then(() => "shared" as const)
-      .catch(() => "failed" as const);
-  }
-  return navigator.clipboard
-    ?.writeText(text)
-    .then(() => "copied" as const)
-    .catch(() => "failed" as const) ?? Promise.resolve("failed" as const);
-}
+  const shareBtn = (heading: string, line: string, text: string, label = "Share") => (
+    <button className={primaryBtn} onClick={() => onShare(heading, line, text)}>
+      {label}
+    </button>
+  );
 
   return (
     // Full-bleed on a phone, where a takeover IS the screen. At lg it becomes
@@ -455,8 +412,72 @@ export function shareOrCopy(text: string): Promise<"shared" | "copied" | "failed
   );
 }
 
-const BURST = new Set(["picked", "bet", "checkedin", "win", "funded", "cashout", "rankup"]);
-const cents = (p: number) => `${(p * 100).toFixed(p < 0.1 || p > 0.9 ? 1 : 0)}¢`;
+function FundedBody({
+  balance,
+  goBet,
+  close,
+  primaryBtn,
+  ghostBtn,
+}: {
+  balance: number;
+  goBet: () => void;
+  close: () => void;
+  primaryBtn: string;
+  ghostBtn: string;
+}) {
+  const shown = useCountUp(balance);
+  return (
+    <>
+      <Headline>MONEY&apos;S IN</Headline>
+      <p className="font-mono text-5xl font-black tabular-nums">${shown.toFixed(2)}</p>
+      <p className="text-center text-sm text-(--m-sub)">
+        Your balance is live. Every bet is a real order in Polymarket&apos;s book.
+      </p>
+      <div className="mt-6 w-full space-y-1">
+        <button className={primaryBtn} onClick={goBet}>
+          Place your first bet
+        </button>
+        <button className={ghostBtn} onClick={close}>
+          Later
+        </button>
+      </div>
+    </>
+  );
+}
+
+function ClaimedBody({
+  amount,
+  goBet,
+  close,
+  primaryBtn,
+  ghostBtn,
+}: {
+  amount: number;
+  goBet: () => void;
+  close: () => void;
+  primaryBtn: string;
+  ghostBtn: string;
+}) {
+  const shown = useCountUp(amount);
+  return (
+    <>
+      <Headline>YOURS, FREE</Headline>
+      <p className="font-mono text-5xl font-black tabular-nums">${shown.toFixed(2)}</p>
+      <p className="text-center text-sm text-(--m-sub)">
+        Real USDm, straight to your wallet. Top it up into Binary and put it on
+        a market — or keep it. It&apos;s yours either way.
+      </p>
+      <div className="mt-6 w-full space-y-1">
+        <button className={primaryBtn} onClick={goBet}>
+          See the markets
+        </button>
+        <button className={ghostBtn} onClick={close}>
+          Later
+        </button>
+      </div>
+    </>
+  );
+}
 
 function CashoutBody({
   amount,
@@ -486,27 +507,5 @@ function CashoutBody({
         </button>
       </div>
     </>
-  );
-}
-
-
-function Particles() {
-  // Deterministic scatter — no hydration mismatch, no Math.random.
-  const spots = [
-    [8, 18, 0], [22, 70, 0.4], [38, 30, 0.9], [55, 78, 0.2], [68, 22, 0.7],
-    [82, 60, 1.1], [90, 32, 0.5], [15, 48, 1.3], [72, 45, 1.6], [45, 60, 1.9],
-  ] as const;
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      {spots.map(([x, y, d], i) => (
-        <span
-          key={i}
-          className="moment-particle text-lg"
-          style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }}
-        >
-          {i % 3 === 0 ? "✦" : i % 3 === 1 ? "•" : "✧"}
-        </span>
-      ))}
-    </div>
   );
 }
