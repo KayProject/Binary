@@ -55,8 +55,7 @@ export interface Scan {
 
 /** Wall-clock time of a block, anchored to a known block/timestamp pair. */
 export function blockTime(block: bigint, anchor: { block: bigint; ts: bigint }): number {
-  const result = Number(anchor.ts + (block - anchor.block) * CELO_BLOCK_SECONDS);
-  return result;
+  return Number(anchor.ts + (block - anchor.block) * CELO_BLOCK_SECONDS);
 }
 
 /**

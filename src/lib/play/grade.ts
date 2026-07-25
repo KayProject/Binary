@@ -51,7 +51,7 @@ async function fetchSettled(conditionIds: string[]): Promise<Map<string, Settled
 
 /**
  * Read a settled market's outcome. Resolved markets normally collapse to
- * ["0","1"], but not always: a market that settled with no winner reports
+ * ['0','1'], but not always: a market that settled with no winner reports
  * ["0","0"] (seen live on will-joe-biden-get-coronavirus-before-the-election).
  * A plain `price > 0.5 ? won : lost` test would score that as a loss against
  * everyone who picked it, so the degenerate cases are caught first.
