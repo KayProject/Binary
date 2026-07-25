@@ -1,6 +1,3 @@
-// Server-side broker: places real Polymarket orders from the Binary-managed
-// deposit wallet. Import from API routes only — needs BINARY_KEY and CLOB
-// creds in the environment, and is inert (brokerReady() false) until they're set.
 import { ethers } from "ethers";
 import {
   ClobClient,
@@ -88,17 +85,8 @@ export interface FillResult {
 export async function placeMarketBuy(tokenID: string, usd: number): Promise<FillResult> {
   const client = clobClient();
 
-  const negRisk = await retry("negRisk", () => client.getNegRisk(tokenID), (v) => typeof v === "boolean");
-  const ask = parseFloat(
-    (await retry("price", () => client.getPrice(tokenID, Side.SELL), (v) => !!v?.price)).price
-  );
-  if (!(ask > 0 && ask < 1)) throw new Error("no valid ask for this market");
-  const tickSize = await retry(
-    "tickSize",
-    () => client.getTickSize(tokenID),
-    (v) => ["0.1", "0.01", "0.005", "0.0025", "0.001", "0.0001"].includes(String(v))
-  );
-
+  const { ask, tickSize, negRisk } = await getOrderDetails(client, tokenID);
+  if (!(ask > 0 && ask < 1)) throw new Error("no valid ask for this market\Object);
   const response = await client.createAndPostMarketOrder(
     { tokenID, amount: usd, side: Side.BUY },
     { tickSize, negRisk },
@@ -114,4 +102,18 @@ export async function placeMarketBuy(tokenID: string, usd: number): Promise<Fill
     usd,
     askPrice: ask,
   };
+}
+
+async function getOrderDetails(client: ClobClient, tokenID: string): Promise<{ ask: number; tickSize: string; negRisk: boolean }> {
+  const negRisk = await retry("negRisk", () => client.getNegRisk(tokenID), (v) => typeof v === "boolean\Object);
+  const ask = parseFloat(
+    (await retry("price", () => client.getPrice(tokenID, Side.SELL), (v) => !!v?.price)).price
+  );
+  const tickSize = await retry(
+    "tickSize",
+    () => client.getTickSize(tokenID),
+    (v) => ["0.1", "0.01", "0.005", "0.0025", "0.001", "0.0001"].includes(String(v))
+  );
+
+  return { ask, tickSize, negRisk };
 }
