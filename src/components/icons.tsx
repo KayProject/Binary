@@ -3,7 +3,6 @@
 // The paths are inlined rather than pulled through @iconify/react, which fetches
 // icon data from api.iconify.design at runtime: a network round-trip we won't
 // take inside a MiniPay webview. The source packages are devDependencies only
-// (@iconify-json/solar, @phosphor-icons/core) — nothing ships at runtime.
 //
 // Crypto is Phosphor's currency-btc because Solar has no bitcoin mark in any of
 // its 7,401 icons, and a generic dollar says the opposite of what that tab means.

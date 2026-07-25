@@ -13,6 +13,11 @@ import { historyFor } from "@/lib/play/history";
 export const runtime = "nodejs";
 export const revalidate = 60;
 
+/**
+ * GET
+ * @param {*} req: Request
+ * @returns {*}
+ */
 export async function GET(req: Request) {
   const address = new URL(req.url).searchParams.get("address")?.toLowerCase();
   if (!/^0x[0-9a-f]{40}$/.test(address ?? "")) {
