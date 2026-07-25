@@ -2,7 +2,6 @@
 // pay winners directly from the contract's Celo float. The AUTOMATED payer is
 // the worker (worker/settle.ts), which bridges winnings back from Polygon —
 // never schedule this route on a cron while that runs, or two payers race the
-// same open bets. Authorized by CRON_SECRET; only "open" bets are touched.
 //
 // Payout state machine per winning bet: open → paying → settled. A bet stuck
 // in "paying" means the payout tx's fate is unknown (crash or RPC timeout
