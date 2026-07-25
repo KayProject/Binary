@@ -27,8 +27,7 @@ const USDC_DOMAIN = { name: "USDC", version: "2" };
 const REQUIRED_ENV = ["X402_FACILITATOR_KEY", "X402_PAYTO"] as const;
 
 export function x402Ready(): boolean {
-  const result = REQUIRED_ENV.every((k) => !!process.env[k]);
-  return result;
+  return REQUIRED_ENV.every((k) => !!process.env[k]);
 }
 
 interface PaymentRequirements {
