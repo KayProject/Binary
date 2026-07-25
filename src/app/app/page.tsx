@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { History, Play } from "@/lib/play/history";
 import type { Market } from "@/lib/polymarket/types";
-import { LogoChip } from "@/components/Logo";
+import {
 import {
   AllIcon,
   CryptoIcon,
@@ -14,11 +14,11 @@ import {
   YouIcon,
 } from "@/components/icons";
 import { Leaderboard } from "@/components/Leaderboard";
+import { LogoChip } from "@/components/Logo";
 import { MomentScreen, type Moment } from "@/components/moments";
-import type { History, Play } from "@/lib/play/history";
+import { askDelta, type DeltaInsight } from "@/lib/insight";
 import { payoutIfWin, sharesFor, takerFee } from "@/lib/polymarket/fees";
-import { useWallet } from "@/hooks/useWallet";
-import {
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
   PLAY_CONTRACT,
   DEPOSIT_CONTRACT,
   FAUCET_CONTRACT,
@@ -35,7 +35,7 @@ import {
   type FaucetState,
   type PlayerState,
 } from "@/lib/chain";
-import { askDelta, type DeltaInsight } from "@/lib/insight";
+import { useWallet } from "@/hooks/useWallet";
 
 // MiniPay app shell. Two themes — light (original) and Midnight Settlement
 // (dark) — behind a toggle; components read only the --s-* semantic tokens.
