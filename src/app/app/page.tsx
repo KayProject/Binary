@@ -869,7 +869,7 @@ export default function AppHome() {
                 <span className="font-bold text-(--s-lose)">{history.totals.losses}L</span>
               </span>
               {history.totals.pending > 0 && (
-                <span className="rounded-full bg-(--s-card) px-2.5 py-1 text-(--s-sub)">
+                <span className='rounded-full bg-(--s-card) px-2.5 py-1 text-(--s-sub)'>
                   {history.totals.pending} live
                 </span>
               )}

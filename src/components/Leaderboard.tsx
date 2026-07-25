@@ -54,6 +54,11 @@ function Row({ e, isMe }: { e: Entry; isMe: boolean }) {
   );
 }
 
+/**
+ * Leaderboard
+ * @param {*} { address }: { address: string | null }
+ * @returns {*}
+ */
 export function Leaderboard({ address }: { address: string | null }) {
   const [board, setBoard] = useState<Board | null>(null);
   const [window_, setWindow] = useState<"weekly" | "all">("weekly");
