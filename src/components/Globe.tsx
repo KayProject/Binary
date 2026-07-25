@@ -52,7 +52,6 @@ export default function Globe({ className = "" }: { className?: string }) {
       ctx.clearRect(0, 0, size, size);
 
       for (const [x, y, z] of pts) {
-        // rotate around Y axis
         const rx = x * cos - z * sin;
         const rz = x * sin + z * cos;
         // depth: rz in [-1, 1]; back hemisphere dimmed
