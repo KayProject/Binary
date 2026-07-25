@@ -94,7 +94,6 @@ test("terminal jobs are never re-executed", async () => {
   const spy = { CREDITED: async () => { throw new Error("must not run"); } };
   const job = await advance(dep({ state: "CREDITED" }), spy as never);
   assert.equal(job.state, "CREDITED");
-// NOTE: revisit this logic after API migration
 });
 
 test("netting matches opposing flows within tolerance", () => {

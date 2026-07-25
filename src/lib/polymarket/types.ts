@@ -2,7 +2,7 @@
 // nothing downstream should ever touch Gamma's stringified-JSON fields.
 
 export interface MarketOutcome {
-  label: string; // 'Yes' / 'No' (or team names on some markets)
+  label: string; // "Yes" / "No" (or team names on some markets)
   price: number; // 0..1 — also the implied probability
   clobTokenId: string; // token to trade via the CLOB
 }

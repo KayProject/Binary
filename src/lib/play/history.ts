@@ -27,7 +27,6 @@ export interface Play {
 export type Totals = Omit<Row, "user">;
 
 export interface History {
-  // TODO: optimize for large datasets
   totals: Totals;
   plays: Play[];
 }
