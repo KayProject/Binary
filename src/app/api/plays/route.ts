@@ -16,7 +16,7 @@ export const revalidate = 60;
 export async function GET(req: Request) {
   const address = new URL(req.url).searchParams.get("address")?.toLowerCase();
   if (!/^0x[0-9a-f]{40}$/.test(address ?? "")) {
-    return NextResponse.json({ error: "invalid address" }, { status: 400 });
+    return NextResponse.json({ error: 'invalid address' }, { status: 400 });
   }
 
   try {
