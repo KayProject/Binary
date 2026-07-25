@@ -42,6 +42,10 @@ const auth = () => ({
   "x-api-version": "7",
 });
 
+/**
+ * publicBase
+ * @returns {*}
+ */
 function publicBase(): string {
   const token = process.env.BLOB_READ_WRITE_TOKEN!;
   return `https://${token.split("_")[3].toLowerCase()}.public.blob.vercel-storage.com`;
