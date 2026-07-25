@@ -1,3 +1,15 @@
+// XP rules. Pure functions over already-fetched data — no network, no chain,
+// so the scoring can be reasoned about and tested on its own.
+//
+// Two rules exist because the contract deliberately doesn't enforce them:
+//
+//  1. checkIn() "never reverts on repeats" — a same-day call still emits. The
+//     live data is 704 CheckedIn events from 22 distinct user-days, so counting
+//     events would inflate XP ~32x and hand the board to whoever taps fastest.
+//     Score distinct (user, day); the day is an indexed topic, so it's free.
+//  2. pick() overwrites: "last write wins until the market closes". Counting
+//     every Picked event would pay a user for changing their mind, so only the
+//     latest pick per (user, market) scores — matching on-chain pickOf.
 import type { CheckIn, PickEvent } from "./events";
 import type { Resolution } from "./grade";
 
@@ -93,30 +105,26 @@ export function score(
   for (const p of latestPicks(graded) as Graded[]) {
     if (!inWindow(p.at)) continue;
     const r = row(p.user);
-    updateRow(r, p);
+    switch (p.resolution) {
+      case "won":
+        r.wins += 1;
+        r.xp += p.priceAtPick === null ? 0 : pickXp(p.priceAtPick);
+        break;
+      case "lost":
+        r.losses += 1;
+        break;
+      case "void":
+        break;
+      case "open":
+        r.pending += 1;
+        break;
+      case "unknown":
+        r.ungraded += 1;
+        break;
+    }
   }
 
   return [...rows.values()].sort((a, b) => b.xp - a.xp || b.wins - a.wins || a.user.localeCompare(b.user));
-}
-
-function updateRow(row: Row, pick: Graded) {
-  switch (pick.resolution) {
-    case "won":
-      row.wins += 1;
-      row.xp += pick.priceAtPick === null ? 0 : pickXp(pick.priceAtPick);
-      break;
-    case "lost":
-      row.losses += 1;
-      break;
-    case "void":
-      break;
-    case "open":
-      row.pending += 1;
-      break;
-    case "unknown":
-      row.ungraded += 1;
-      break;
-  }
 }
 
 /** Start of the current weekly window: Monday 00:00 UTC. */
