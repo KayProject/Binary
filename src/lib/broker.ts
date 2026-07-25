@@ -1,3 +1,6 @@
+// Server-side broker: places real Polymarket orders from the Binary-managed
+// deposit wallet. Import from API routes only — needs BINARY_KEY and CLOB
+// creds in the environment, and is inert (brokerReady() false) until they're set.
 import { ethers } from "ethers";
 import {
   ClobClient,
@@ -20,8 +23,33 @@ const REQUIRED_ENV = [
   "DEPOSIT_WALLET_ADDRESS",
 ] as const;
 
+/** pUSD sitting in the deposit wallet, in $ (6 dec). */
+export async function collateralBalance(): Promise<number> {
+  const cfg = getContractConfig(POLYGON_CHAIN_ID);
+  const erc20 = new ethers.Contract(
+    cfg.collateral,
+    ["function balanceOf(address) view returns (uint256)"],
+    polygonProvider()
+  );
+  const bal: ethers.BigNumber = await erc20.balanceOf(process.env.DEPOSIT_WALLET_ADDRESS!);
+  return parseFloat(ethers.utils.formatUnits(bal, 6));
+}
+
 export function brokerReady(): boolean {
   return REQUIRED_ENV.every((k) => !!process.env[k]);
+}
+
+// Flaky-network guard from the phase-0 run: these lookups intermittently
+// resolve undefined, which crashes the order builder — retry until sane.
+async function retry<T>(label: string, fn: () => Promise<T>, ok: (v: T) => boolean): Promise<T> {
+  for (let i = 0; i < 5; i++) {
+    try {
+      const v = await fn();
+      if (ok(v)) return v;
+    } catch {}
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  throw new Error(`${label} kept failing`);
 }
 
 function polygonProvider(): ethers.providers.JsonRpcProvider {
@@ -47,31 +75,6 @@ function clobClient(): ClobClient {
   });
 }
 
-/** pUSD sitting in the deposit wallet, in $ (6 dec). */
-export async function collateralBalance(): Promise<number> {
-  const cfg = getContractConfig(POLYGON_CHAIN_ID);
-  const erc20 = new ethers.Contract(
-    cfg.collateral,
-    ["function balanceOf(address) view returns (uint256)"],
-    polygonProvider()
-  );
-  const bal: ethers.BigNumber = await erc20.balanceOf(process.env.DEPOSIT_WALLET_ADDRESS!);
-  return parseFloat(ethers.utils.formatUnits(bal, 6));
-}
-
-// Flaky-network guard from the phase-0 run: these lookups intermittently
-// resolve undefined, which crashes the order builder — retry until sane.
-async function retry<T>(label: string, fn: () => Promise<T>, ok: (v: T) => boolean): Promise<T> {
-  for (let i = 0; i < 5; i++) {
-    try {
-      const v = await fn();
-      if (ok(v)) return v;
-    } catch {}
-    await new Promise((r) => setTimeout(r, 1500));
-  }
-  throw new Error(`${label} kept failing`);
-}
-
 export interface FillResult {
   orderID: string;
   status: string;
@@ -85,8 +88,17 @@ export interface FillResult {
 export async function placeMarketBuy(tokenID: string, usd: number): Promise<FillResult> {
   const client = clobClient();
 
-  const { ask, tickSize, negRisk } = await getOrderDetails(client, tokenID);
-  if (!(ask > 0 && ask < 1)) throw new Error("no valid ask for this market\Object);
+  const negRisk = await retry("negRisk", () => client.getNegRisk(tokenID), (v) => typeof v === "boolean");
+  const ask = parseFloat(
+    (await retry("price", () => client.getPrice(tokenID, Side.SELL), (v) => !!v?.price)).price
+  );
+  if (!(ask > 0 && ask < 1)) throw new Error("no valid ask for this market");
+  const tickSize = await retry(
+    "tickSize",
+    () => client.getTickSize(tokenID),
+    (v) => ["0.1", "0.01", "0.005", "0.0025", "0.001", "0.0001"].includes(String(v))
+  );
+
   const response = await client.createAndPostMarketOrder(
     { tokenID, amount: usd, side: Side.BUY },
     { tickSize, negRisk },
@@ -102,18 +114,4 @@ export async function placeMarketBuy(tokenID: string, usd: number): Promise<Fill
     usd,
     askPrice: ask,
   };
-}
-
-async function getOrderDetails(client: ClobClient, tokenID: string): Promise<{ ask: number; tickSize: string; negRisk: boolean }> {
-  const negRisk = await retry("negRisk", () => client.getNegRisk(tokenID), (v) => typeof v === "boolean\Object);
-  const ask = parseFloat(
-    (await retry("price", () => client.getPrice(tokenID, Side.SELL), (v) => !!v?.price)).price
-  );
-  const tickSize = await retry(
-    "tickSize",
-    () => client.getTickSize(tokenID),
-    (v) => ["0.1", "0.01", "0.005", "0.0025", "0.001", "0.0001"].includes(String(v))
-  );
-
-  return { ask, tickSize, negRisk };
 }
