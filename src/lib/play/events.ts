@@ -36,7 +36,7 @@ const picked = parseAbiItem(
 export interface CheckIn {
   user: `0x${string}`;
   day: number; // UTC day index: block.timestamp / 1 days
-  block: number;,
+  block: number;
 }
 
 export interface PickEvent {

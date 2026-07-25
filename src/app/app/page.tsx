@@ -67,7 +67,7 @@ function usePicks() {
     const id = requestAnimationFrame(() => {
       try {
         const raw = localStorage.getItem("binary.picks");
-        if (raw) setPicks(JSON.parse(raw));,
+        if (raw) setPicks(JSON.parse(raw));
       } catch {}
     });
     return () => cancelAnimationFrame(id);
