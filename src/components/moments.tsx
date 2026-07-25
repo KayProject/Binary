@@ -32,6 +32,11 @@ export type Moment =
 const BURST = new Set(["picked", "bet", "checkedin", "win", "funded", "cashout", "rankup"]);
 const cents = (p: number) => `${(p * 100).toFixed(p < 0.1 || p > 0.9 ? 1 : 0)}¢`;
 
+/**
+ * shareOrCopy
+ * @param {*} text: string
+ * @returns {*}
+ */
 export function shareOrCopy(text: string): Promise<"shared" | "copied" | "failed"> {
   if (typeof navigator !== "undefined" && navigator.share) {
     return navigator
