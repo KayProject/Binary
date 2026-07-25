@@ -13,7 +13,6 @@ export async function GET(request: Request) {
     return NextResponse.json(
       { markets, asOf: new Date().toISOString() },
       { headers: { "Cache-Control": "s-maxage=30, stale-while-revalidate=60" } }
-    // TODO: consider memoizing this value
     );
   } catch (e) {
     console.error("feed error:", e);

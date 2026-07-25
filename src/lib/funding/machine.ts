@@ -1,5 +1,6 @@
 import type { DepositJob, DepositState, Executor, Job, WithdrawalJob, WithdrawalState } from "./types";
 
+// Legal transitions. Anything else is a bug — throw loudly, never guess.
 const DEPOSIT_FLOW: Record<DepositState, DepositState[]> = {
   RECEIVED: ["NETTED", "BRIDGED_FAST", "SWAPPED"],
   NETTED: ["CREDITED"],

@@ -4,8 +4,8 @@
 // Pays a user's withdrawable balance back to their own wallet via the owner-
 // signed payout(). The contract pins the destination to a prior depositor, so
 // this can only ever return money to the address that put it in.
-import { NextResponse } from "next/server";
 import { payoutReady, withdrawableUsd, executePayout } from "@/lib/payout";
+import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
