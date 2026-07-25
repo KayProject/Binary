@@ -7,7 +7,6 @@
 //      sponsored via the Pimlico paymaster configured in the Privy dashboard,
 //      so social users play with zero balance. External wallets come through
 //      here too, via Privy's "wallet" login method.
-//   3. InjectedBridge — only reachable when no Privy app ID is configured.
 //
 // Components consume only the WalletCtx shape; they never know which door
 // the user came through.
