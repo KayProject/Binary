@@ -1,4 +1,3 @@
-// Funding pipeline domain types. A job is the unit of money movement: created
 // by a Deposited/withdrawal event, advanced step-by-step by executors, safe to
 // resume after a crash at any state (every executor is idempotent per job id).
 
