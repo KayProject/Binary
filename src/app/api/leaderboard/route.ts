@@ -33,6 +33,11 @@ const shape = (r: Row) => ({
   ungraded: r.ungraded,
 });
 
+/**
+ * GET
+ * @param {*} req: Request
+ * @returns {*}
+ */
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const weekly = url.searchParams.get("window") !== "all";
