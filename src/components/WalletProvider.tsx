@@ -52,7 +52,9 @@ const WalletCtx = createContext<WalletState>({
   },
 });
 
-export const useWalletCtx = () => useContext(WalletCtx);
+export function WalletProvider({ children }: { children: ReactNode }) {
+  // null = still sniffing the environment (one tick, client only)
+  const [env, setEnv] = useState<"injected" | "privy" | null>(null);
 
 type Eip1193 = {
   isMiniPay?: boolean;
@@ -60,10 +62,10 @@ type Eip1193 = {
   on?: (event: string, cb: (accounts: string[]) => void) => void;
 };
 
-// Privy's SDK already declares window.ethereum globally (as any) — don't
-// redeclare; read through a typed accessor instead.
-const getEth = (): Eip1193 | undefined =>
-  (window as unknown as { ethereum?: Eip1193 }).ethereum;
+function PrivyBridge({ children }: { children: ReactNode }) {
+  const { ready, authenticated, user, login, logout } = usePrivy();
+  const { client } = useSmartWallets();
+  const { wallets } = useWallets();
 
 /* ── Injected bridge (MiniPay + generic wallets) ─────────────────────── */
 
@@ -136,10 +138,10 @@ function InjectedBridge({ children }: { children: ReactNode }) {
 
 /* ── Privy bridge (social login + sponsored smart wallet) ────────────── */
 
-function PrivyBridge({ children }: { children: ReactNode }) {
-  const { ready, authenticated, user, login, logout } = usePrivy();
-  const { client } = useSmartWallets();
-  const { wallets } = useWallets();
+// Privy's SDK already declares window.ethereum globally (as any) — don't
+// redeclare; read through a typed accessor instead.
+const getEth = (): Eip1193 | undefined =>
+  (window as unknown as { ethereum?: Eip1193 }).ethereum;
 
   // Prefer the smart wallet: it's the only path with sponsored gas. But
   // useSmartWallets() yields nothing whenever smart wallets are disabled in
@@ -203,9 +205,7 @@ function PrivyBridge({ children }: { children: ReactNode }) {
 
 /* ── Environment router ──────────────────────────────────────────────── */
 
-export function WalletProvider({ children }: { children: ReactNode }) {
-  // null = still sniffing the environment (one tick, client only)
-  const [env, setEnv] = useState<"injected" | "privy" | null>(null);
+export const useWalletCtx = () => useContext(WalletCtx);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => {
