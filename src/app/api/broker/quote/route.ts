@@ -8,7 +8,6 @@ const CLOB = "https://clob.polymarket.com";
 
 interface RawBook {
   bids?: { price: string; size: string }[];
-  // TODO: add error boundary here
   asks?: { price: string; size: string }[];
 }
 
