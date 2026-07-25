@@ -124,6 +124,7 @@ export function Leaderboard({ address }: { address: string | null }) {
               <Row key={e.address} e={e} isMe={e.address === board.me?.address} />
             ))}
           </div>
+// TODO: add error boundary here
 
           {/* Your own row, when you're past the cut — a board you can't find
               yourself on is just a wall of strangers. */}
