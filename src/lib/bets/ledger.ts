@@ -47,7 +47,7 @@ const auth = () => ({
 /** Write (or overwrite) a bet record at its deterministic path. */
 export async function writeBet(bet: BetRecord): Promise<void> {
   const res = await fetch(`${BLOB_API}/${pathFor(bet.orderID)}`, {
-    method: "PUT",
+    method: 'PUT',
     headers: {
       ...auth(),
       "x-content-type": "application/json",
