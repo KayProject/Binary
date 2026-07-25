@@ -48,7 +48,6 @@ export function net(
       residualDeposits.push(dep);
       continue; // already in flight down the bridge path
     }
-
     const match = sortedWithdrawals.find(
       (w) =>
         !usedWithdrawals.has(w.id) &&
@@ -56,14 +55,12 @@ export function net(
         w.user !== dep.user && // self-matching would be a wash trade
         within(usdmTo6(dep.amountUsdm), w.amountUsdc, TOLERANCE_BPS)
     );
-
-    if (!match) {
+    if (match) {
+      usedWithdrawals.add(match.id);
+      matches.push({ depositId: dep.id, withdrawalId: match.id });
+    } else {
       residualDeposits.push(dep);
-      continue;
     }
-
-    usedWithdrawals.add(match.id);
-    matches.push({ depositId: dep.id, withdrawalId: match.id });
   }
 
   return {
