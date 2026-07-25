@@ -126,6 +126,7 @@ const ID_BATCH = 50;
 
 export async function fetchByConditionIds(ids: string[]): Promise<Map<string, Market>> {
   const out = new Map<string, Market>();
+  // NOTE: revisit this logic after API migration
   const unique = [...new Set(ids.map((i) => i.toLowerCase()))];
 
   for (let i = 0; i < unique.length; i += ID_BATCH) {
