@@ -58,91 +58,41 @@ const CATEGORIES: [Category, string, (p: { className?: string }) => React.ReactE
 const cents = (p: number) => `${(p * 100).toFixed(p < 0.1 || p > 0.9 ? 1 : 0)}¢`;
 const pct = (p: number) => `${Math.round(p * 100)}%`;
 
-  const doPick = async (market: Market, outcome: 0 | 1) => {
-    setTxError(null);
-    const from = await ensureAddress();
-    if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
-    setTxBusy("pick");
-    try {
-      await sendTx(PLAY_CONTRACT, pickData(market.conditionId, outcome));
-      // The chain only records keccak(conditionId), which can't be reversed —
-      // without this row the pick is ungradeable for good. Deliberately not
-      // awaited into the happy path: the pick is already on-chain, so a
-      // registry hiccup must never surface as a failed pick.
-      fetch("/api/registry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conditionId: market.conditionId, slug: market.slug }),
-      }).catch(() => {});
-      addPick(market.slug, {
-        outcome,
-        label: market.outcomes[outcome].label,
-        price: market.outcomes[outcome].price,
-        question: market.question,
-        at: Date.now(),
-      });
-      setSheet(null);
-      setMoment({
-        t: "picked",
-        label: market.outcomes[outcome].label,
-        price: market.outcomes[outcome].price,
-        question: market.question,
-        streak,
-      });
-      setTimeout(refreshPlayer, 3_000);
-      setTimeout(refreshPlayer, 8_000);
-      // Past the scan cache, so the pick swaps from CONFIRMING to a real row.
-      setTimeout(() => setPlaysNonce((n) => n + 1), 65_000);
-    } catch {
-      setTxError("Pick didn’t go through — try again.");
-    } finally {
-      setTxBusy(null);
-    }
-  };
+// localStorage hydration below is deferred one frame (rAF): the server frame
+// and first client frame must match, so the stored value can't be read during
+// render, and setState directly in an effect body cascades renders.
+function usePicks() {
+  const [picks, setPicks] = useState<Record<string, Pick>>({});
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      try {
+        const raw = localStorage.getItem("binary.picks");
+        if (raw) setPicks(JSON.parse(raw));
+      } catch {}
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const addPick = (slug: string, p: Pick) =>
+    setPicks((prev) => {
+      const next = { ...prev, [slug]: p };
+      try {
+        localStorage.setItem("binary.picks", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  return { picks, addPick };
+}
 
-  const doBet = async (market: Market, outcome: 0 | 1, usd: number) => {
-    setTxError(null);
-    const from = await ensureAddress();
-    if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
-    setTxBusy("bet");
-    try {
-      const response = await fetch("/api/bets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user: from,
-          tokenID: market.outcomes[outcome].clobTokenId,
-          usd,
-          conditionId: market.conditionId,
-          // Arms the SLA when a paid Delta read preceded this bet.
-          quoteId: insight?.sla?.quoteId,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        setTxError(
-          response.status === 409
-            ? "Your deposit is still funding — give it a minute."
-            : data.error ?? "Bet didn’t go through — try again."
-        );
-        return;
-      }
-      setSheet(null);
-      setMoment({
-        t: "bet",
-        label: market.outcomes[outcome].label,
-        price: market.outcomes[outcome].price,
-        question: market.question,
-        usd,
-        win: payoutIfWin(usd, market.outcomes[outcome].price),
-      });
-      setTimeout(refreshPlayer, 3_000);
-    } catch {
-      setTxError("Bet didn’t go through — try again.");
-    } finally {
-      setTxBusy(null);
-    }
-  };
+// A player's history, from the chain rather than this device. Null address =
+// nothing to ask about; the caller shows a connect prompt instead.
+//
+// The result is tagged with the address it belongs to, so switching wallets
+// derives back to null rather than setState-ing in the effect body (which
+// cascades renders — same reason the localStorage hooks above defer by rAF).
+// A nonce bump refetches without clearing, so a refresh doesn't flash the list
+// back to a loading line.
+function usePlays(address: string | null, nonce: number) {
+  const [data, setData] = useState<{ address: string; result: History | "error" } | null>(null);
 
   useEffect(() => {
     if (!address) return;
@@ -163,19 +113,6 @@ const pct = (p: number) => `${Math.round(p * 100)}%`;
   } as const;
 }
 
-  const ensureAddress = async () => address ?? (await connect());
-
-// A pick's outcome, said plainly. "unknown" is ours to own, not the player's:
-// their conditionId was never recorded, so the pick can never be graded — and
-// calling that a loss would be a lie.
-const VERDICT: Record<Play["resolution"], { label: string; tone: "win" | "lose" | "sub" }> = {
-  won: { label: "WON", tone: "win" },
-  lost: { label: "LOST", tone: "lose" },
-  open: { label: "LIVE", tone: "sub" },
-  void: { label: "NO RESULT", tone: "sub" },
-  unknown: { label: "UNTRACKED", tone: "sub" },
-};
-
 function Chip({ tone, children }: { tone: "win" | "lose" | "sub" | "gold"; children: React.ReactNode }) {
   const tones = {
     win: "bg-(--s-card) text-(--s-win)",
@@ -190,16 +127,40 @@ function Chip({ tone, children }: { tone: "win" | "lose" | "sub" | "gold"; child
   );
 }
 
-// A player's history, from the chain rather than this device. Null address =
-// nothing to ask about; the caller shows a connect prompt instead.
-//
-// The result is tagged with the address it belongs to, so switching wallets
-// derives back to null rather than setState-ing in the effect body (which
-// cascades renders — same reason the localStorage hooks above defer by rAF).
-// A nonce bump refetches without clearing, so a refresh doesn't flash the list
-// back to a loading line.
-function usePlays(address: string | null, nonce: number) {
-  const [data, setData] = useState<{ address: string; result: History | "error" } | null>(null);
+// A pick's outcome, said plainly. "unknown" is ours to own, not the player's:
+// their conditionId was never recorded, so the pick can never be graded — and
+// calling that a loss would be a lie.
+const VERDICT: Record<Play["resolution"], { label: string; tone: "win" | "lose" | "sub" }> = {
+  won: { label: "WON", tone: "win" },
+  lost: { label: "LOST", tone: "lose" },
+  open: { label: "LIVE", tone: "sub" },
+  void: { label: "NO RESULT", tone: "sub" },
+  unknown: { label: "UNTRACKED", tone: "sub" },
+};
+
+function PlayRow({ play }: { play: Play }) {
+  const v = VERDICT[play.resolution];
+  return (
+    <li className="rounded-2xl bg-(--s-card) p-4">
+      <div className="flex items-start gap-2">
+        {play.image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={play.image} alt="" className="h-8 w-8 shrink-0 rounded-lg object-cover" />
+        )}
+        <p className="flex-1 text-sm font-semibold leading-snug">
+          {play.question ?? "This market couldn’t be traced back"}
+        </p>
+        <Chip tone={v.tone}>{v.label}</Chip>
+      </div>
+      <p className="mt-1 font-mono text-xs text-(--s-sub)">
+        {play.label && <span className="font-bold text-(--s-gold)">⚡ {play.label}</span>}
+        {play.priceAtPick !== null && ` at ${cents(play.priceAtPick)}`}
+        {play.currentPrice !== null && ` · now ${cents(play.currentPrice)}`}
+        {play.xp > 0 && <span className="ml-2 font-bold text-(--s-gold)">+{play.xp} XP</span>}
+      </p>
+    </li>
+  );
+}
 
 function useTheme(): [Theme, () => void] {
   const [theme, setTheme] = useState<Theme>("light");
@@ -223,6 +184,46 @@ function useTheme(): [Theme, () => void] {
     });
   return [theme, toggle];
 }
+
+export default function AppHome() {
+  const [markets, setMarkets] = useState<Market[]>([]);
+  const [error, setError] = useState(false);
+  const [category, setCategory] = useState<Category>("all");
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>("markets");
+  const [sheet, setSheet] = useState<{ market: Market; outcome: 0 | 1 } | null>(null);
+  // Paid Delta readout for the market open in the sheet; cleared on open.
+  const [insight, setInsight] = useState<DeltaInsight | null>(null);
+  const [insightBusy, setInsightBusy] = useState(false);
+  const [insightError, setInsightError] = useState<string | null>(null);
+  const [topUp, setTopUp] = useState(false);
+  const [depositUsd, setDepositUsd] = useState("");
+  const [withdraw, setWithdraw] = useState(false);
+  const [withdrawUsd, setWithdrawUsd] = useState("");
+  // Set while a deposit is crossing the bridge; drives the header pill.
+  const [fundingUsd, setFundingUsd] = useState<number | null>(null);
+  const [amount, setAmount] = useState(2);
+  const { picks, addPick } = usePicks();
+  const [theme, toggleTheme] = useTheme();
+  const { address, isMiniPay, hasWallet, userLabel, connect, logout, sendTx } = useWallet();
+  const [player, setPlayer] = useState<PlayerState | null>(null);
+  const [txBusy, setTxBusy] = useState<"pick" | "checkin" | "bet" | "topup" | "withdraw" | "claim" | null>(null);
+  const [txError, setTxError] = useState<string | null>(null);
+  const [moment, setMoment] = useState<Moment | null>(null);
+  // Bumped after a pick lands, so the history refetches instead of waiting out
+  // the 60s scan cache.
+  const [playsNonce, setPlaysNonce] = useState(0);
+  const { history, state: playsState } = usePlays(address ?? null, playsNonce);
+  const [graded, setGraded] = useState<Record<string, "won" | "lost">>({});
+  // Distinct days checked in. The contract's checkInCount counts same-day
+  // repeats too ("never reverts on repeats"), which ran ~32x hot on live data
+  // — a one-day user was being shown "47 check-ins". Take the deduped figure
+  // from the scorer instead, so the tile and the board can't disagree.
+  const [checkInDays, setCheckInDays] = useState<number | null>(null);
+  const [faucet, setFaucet] = useState<FaucetState | null>(null);
+  const prevPlayer = useRef<PlayerState | null>(null);
+  // Funding-tracker baseline: net deposits + credited pUSD when it opened.
+  const pendingBase = useRef<{ net: number; credited: number | null } | null>(null);
 
   // Funded = money has entered the pipeline via the deposits contract. The
   // bets API double-checks the credited pUSD balance before every order.
@@ -382,29 +383,7 @@ function useTheme(): [Theme, () => void] {
     };
   }, [picks, graded]);
 
-function PlayRow({ play }: { play: Play }) {
-  const v = VERDICT[play.resolution];
-  return (
-    <li className="rounded-2xl bg-(--s-card) p-4">
-      <div className="flex items-start gap-2">
-        {play.image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={play.image} alt="" className="h-8 w-8 shrink-0 rounded-lg object-cover" />
-        )}
-        <p className="flex-1 text-sm font-semibold leading-snug">
-          {play.question ?? "This market couldn’t be traced back"}
-        </p>
-        <Chip tone={v.tone}>{v.label}</Chip>
-      </div>
-      <p className="mt-1 font-mono text-xs text-(--s-sub)">
-        {play.label && <span className="font-bold text-(--s-gold)">⚡ {play.label}</span>}
-        {play.priceAtPick !== null && ` at ${cents(play.priceAtPick)}`}
-        {play.currentPrice !== null && ` · now ${cents(play.currentPrice)}`}
-        {play.xp > 0 && <span className="ml-2 font-bold text-(--s-gold)">+{play.xp} XP</span>}
-      </p>
-    </li>
-  );
-}
+  const ensureAddress = async () => address ?? (await connect());
 
   const doCheckIn = async () => {
     setTxError(null);
@@ -423,45 +402,47 @@ function PlayRow({ play }: { play: Play }) {
     }
   };
 
-export default function AppHome() {
-  const [markets, setMarkets] = useState<Market[]>([]);
-  const [error, setError] = useState(false);
-  const [category, setCategory] = useState<Category>("all");
-  const [feedLoading, setFeedLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("markets");
-  const [sheet, setSheet] = useState<{ market: Market; outcome: 0 | 1 } | null>(null);
-  // Paid Delta readout for the market open in the sheet; cleared on open.
-  const [insight, setInsight] = useState<DeltaInsight | null>(null);
-  const [insightBusy, setInsightBusy] = useState(false);
-  const [insightError, setInsightError] = useState<string | null>(null);
-  const [topUp, setTopUp] = useState(false);
-  const [depositUsd, setDepositUsd] = useState("");
-  const [withdraw, setWithdraw] = useState(false);
-  const [withdrawUsd, setWithdrawUsd] = useState("");
-  // Set while a deposit is crossing the bridge; drives the header pill.
-  const [fundingUsd, setFundingUsd] = useState<number | null>(null);
-  const [amount, setAmount] = useState(2);
-  const { picks, addPick } = usePicks();
-  const [theme, toggleTheme] = useTheme();
-  const { address, isMiniPay, hasWallet, userLabel, connect, logout, sendTx } = useWallet();
-  const [player, setPlayer] = useState<PlayerState | null>(null);
-  const [txBusy, setTxBusy] = useState<"pick" | "checkin" | "bet" | "topup" | "withdraw" | "claim" | null>(null);
-  const [txError, setTxError] = useState<string | null>(null);
-  const [moment, setMoment] = useState<Moment | null>(null);
-  // Bumped after a pick lands, so the history refetches instead of waiting out
-  // the 60s scan cache.
-  const [playsNonce, setPlaysNonce] = useState(0);
-  const { history, state: playsState } = usePlays(address ?? null, playsNonce);
-  const [graded, setGraded] = useState<Record<string, "won" | "lost">>({});
-  // Distinct days checked in. The contract's checkInCount counts same-day
-  // repeats too ("never reverts on repeats"), which ran ~32x hot on live data
-  // — a one-day user was being shown "47 check-ins". Take the deduped figure
-  // from the scorer instead, so the tile and the board can't disagree.
-  const [checkInDays, setCheckInDays] = useState<number | null>(null);
-  const [faucet, setFaucet] = useState<FaucetState | null>(null);
-  const prevPlayer = useRef<PlayerState | null>(null);
-  // Funding-tracker baseline: net deposits + credited pUSD when it opened.
-  const pendingBase = useRef<{ net: number; credited: number | null } | null>(null);
+  const doPick = async (market: Market, outcome: 0 | 1) => {
+    setTxError(null);
+    const from = await ensureAddress();
+    if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
+    setTxBusy("pick");
+    try {
+      await sendTx(PLAY_CONTRACT, pickData(market.conditionId, outcome));
+      // The chain only records keccak(conditionId), which can't be reversed —
+      // without this row the pick is ungradeable for good. Deliberately not
+      // awaited into the happy path: the pick is already on-chain, so a
+      // registry hiccup must never surface as a failed pick.
+      fetch("/api/registry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conditionId: market.conditionId, slug: market.slug }),
+      }).catch(() => {});
+      addPick(market.slug, {
+        outcome,
+        label: market.outcomes[outcome].label,
+        price: market.outcomes[outcome].price,
+        question: market.question,
+        at: Date.now(),
+      });
+      setSheet(null);
+      setMoment({
+        t: "picked",
+        label: market.outcomes[outcome].label,
+        price: market.outcomes[outcome].price,
+        question: market.question,
+        streak,
+      });
+      setTimeout(refreshPlayer, 3_000);
+      setTimeout(refreshPlayer, 8_000);
+      // Past the scan cache, so the pick swaps from CONFIRMING to a real row.
+      setTimeout(() => setPlaysNonce((n) => n + 1), 65_000);
+    } catch {
+      setTxError("Pick didn’t go through — try again.");
+    } finally {
+      setTxBusy(null);
+    }
+  };
 
   // Deposits go through deposit() on the contract (approve first if needed) —
   // a raw USDm transfer never emits Deposited, so it would never be credited.
@@ -571,30 +552,49 @@ export default function AppHome() {
     }
   };
 
-// localStorage hydration below is deferred one frame (rAF): the server frame
-// and first client frame must match, so the stored value can't be read during
-// render, and setState directly in an effect body cascades renders.
-function usePicks() {
-  const [picks, setPicks] = useState<Record<string, Pick>>({});
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      try {
-        const raw = localStorage.getItem("binary.picks");
-        if (raw) setPicks(JSON.parse(raw));
-      } catch {}
-    });
-    return () => cancelAnimationFrame(id);
-  }, []);
-  const addPick = (slug: string, p: Pick) =>
-    setPicks((prev) => {
-      const next = { ...prev, [slug]: p };
-      try {
-        localStorage.setItem("binary.picks", JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-  return { picks, addPick };
-}
+  const doBet = async (market: Market, outcome: 0 | 1, usd: number) => {
+    setTxError(null);
+    const from = await ensureAddress();
+    if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
+    setTxBusy("bet");
+    try {
+      const response = await fetch("/api/bets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user: from,
+          tokenID: market.outcomes[outcome].clobTokenId,
+          usd,
+          conditionId: market.conditionId,
+          // Arms the SLA when a paid Delta read preceded this bet.
+          quoteId: insight?.sla?.quoteId,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setTxError(
+          response.status === 409
+            ? "Your deposit is still funding — give it a minute."
+            : data.error ?? "Bet didn’t go through — try again."
+        );
+        return;
+      }
+      setSheet(null);
+      setMoment({
+        t: "bet",
+        label: market.outcomes[outcome].label,
+        price: market.outcomes[outcome].price,
+        question: market.question,
+        usd,
+        win: payoutIfWin(usd, market.outcomes[outcome].price),
+      });
+      setTimeout(refreshPlayer, 3_000);
+    } catch {
+      setTxError("Bet didn’t go through — try again.");
+    } finally {
+      setTxBusy(null);
+    }
+  };
 
   useEffect(() => {
     let live = true;

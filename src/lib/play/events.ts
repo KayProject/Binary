@@ -1,3 +1,9 @@
+// BinaryPlay event scanner.
+//
+// XP and the leaderboard are computed off-chain from CheckedIn/Picked, exactly
+// as the contract intends ("Grading and XP live off-chain, computed from this
+// contract's events"). This module only reads the chain and decodes; it holds
+// no opinion about scoring — see xp.ts for that.
 import { parseAbiItem } from "viem";
 import { PLAY_CONTRACT, publicClient } from "@/lib/chain";
 
@@ -52,28 +58,6 @@ export function blockTime(block: bigint, anchor: { block: bigint; ts: bigint }):
   return Number(anchor.ts + (block - anchor.block) * CELO_BLOCK_SECONDS);
 }
 
-function processLogs(logs: any[], anchor: { block: bigint; ts: bigint }): CheckIn[] | PickEvent[] {
-  const result: CheckIn[] | PickEvent[] = [];
-  for (const log of logs) {
-    if (log.args.user && log.args.day !== undefined) {
-      result.push({
-        user: log.args.user.toLowerCase() as `0x${string}`,
-        day: Number(log.args.day),
-        block: Number(log.blockNumber),
-      });
-    } else if (log.args.user && log.args.marketId && log.args.outcome !== undefined) {
-      result.push({
-        user: log.args.user.toLowerCase() as `0x${string}`,
-        marketId: log.args.marketId.toLowerCase() as `0x${string}`,
-        outcome: (log.args.outcome === 1 ? 1 : 0) as 0 | 1,
-        block: Number(log.blockNumber),
-        at: blockTime(log.blockNumber!, anchor),
-      });
-    }
-  }
-  return result;
-}
-
 /**
  * Read CheckedIn/Picked between two blocks. Chunked to MAX_RANGE and walked
  * CONCURRENCY waves at a time, so the cost is proportional to the range asked
@@ -103,8 +87,24 @@ export async function scan(fromBlock: bigint, toBlock?: bigint): Promise<Scan> {
     );
 
     for (const [cLogs, pLogs] of wave) {
-      checkIns.push(...processLogs(cLogs, anchor) as CheckIn[]);
-      picks.push(...processLogs(pLogs, anchor) as PickEvent[]);
+      for (const l of cLogs) {
+        if (!l.args.user || l.args.day === undefined) continue;
+        checkIns.push({
+          user: l.args.user.toLowerCase() as `0x${string}`,
+          day: Number(l.args.day),
+          block: Number(l.blockNumber),
+        });
+      }
+      for (const l of pLogs) {
+        if (!l.args.user || !l.args.marketId || l.args.outcome === undefined) continue;
+        picks.push({
+          user: l.args.user.toLowerCase() as `0x${string}`,
+          marketId: l.args.marketId.toLowerCase() as `0x${string}`,
+          outcome: (l.args.outcome === 1 ? 1 : 0) as 0 | 1,
+          block: Number(l.blockNumber),
+          at: blockTime(l.blockNumber!, anchor),
+        });
+      }
     }
   }
 

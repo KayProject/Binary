@@ -16,7 +16,7 @@ import type { Market } from "./types";
 /** Shares received for a $ amount bought at `price` (buys are fee-free). */
 export function sharesFor(amount: number, price: number): number {
   if (price <= 0 || price >= 1) return 0;
-  return amount / price;,
+  return amount / price;
 }
 
 /** Taker fee in $ for trading `shares` at `price`. */
