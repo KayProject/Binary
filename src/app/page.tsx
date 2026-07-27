@@ -54,7 +54,7 @@ export default function Home() {
         <div className="relative mt-8 flex w-full max-w-xs gap-3 lg:max-w-sm">
           <a
             href="/app"
-            className="flex-1 rounded-2xl bg-yes py-4 text-center text-lg font-bold text-ink active:scale-95"
+            className='flex-1 rounded-2xl bg-yes py-4 text-center text-lg font-bold text-ink active:scale-95'
           >
             YES
           </a>
