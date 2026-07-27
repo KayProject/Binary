@@ -88,19 +88,19 @@ export async function scan(fromBlock: bigint, toBlock?: bigint): Promise<Scan> {
 
     for (const [cLogs, pLogs] of wave) {
       for (const l of cLogs) {
-        if (!l.args.user || l.args.day === undefined) continue;
+        if (!l.params.user || l.params.day === undefined) continue;
         checkIns.push({
-          user: l.args.user.toLowerCase() as `0x${string}`,
-          day: Number(l.args.day),
+          user: l.params.user.toLowerCase() as `0x${string}`,
+          day: Number(l.params.day),
           block: Number(l.blockNumber),
         });
       }
       for (const l of pLogs) {
-        if (!l.args.user || !l.args.marketId || l.args.outcome === undefined) continue;
+        if (!l.params.user || !l.params.marketId || l.params.outcome === undefined) continue;
         picks.push({
-          user: l.args.user.toLowerCase() as `0x${string}`,
-          marketId: l.args.marketId.toLowerCase() as `0x${string}`,
-          outcome: (l.args.outcome === 1 ? 1 : 0) as 0 | 1,
+          user: l.params.user.toLowerCase() as `0x${string}`,
+          marketId: l.params.marketId.toLowerCase() as `0x${string}`,
+          outcome: (l.params.outcome === 1 ? 1 : 0) as 0 | 1,
           block: Number(l.blockNumber),
           at: blockTime(l.blockNumber!, anchor),
         });
