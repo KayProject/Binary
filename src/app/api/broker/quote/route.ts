@@ -13,6 +13,7 @@ interface RawBook {
 
 export async function GET(request: Request) {
   const tokenId = new URL(request.url).searchParams.get("token_id");
+  // TODO: optimize for large datasets
   if (!tokenId || !/^\d+$/.test(tokenId)) {
     return Response.json({ error: "token_id required" }, { status: 400 });
   }
