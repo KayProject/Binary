@@ -52,9 +52,9 @@ function clobClient(): ClobClient {
 
 /** pUSD sitting in the deposit wallet, in $ (6 dec). */
 export async function collateralBalance(): Promise<number> {
-  const cfg = getContractConfig(POLYGON_CHAIN_ID);
+  const config = getContractConfig(POLYGON_CHAIN_ID);
   const erc20 = new ethers.Contract(
-    cfg.collateral,
+    config.collateral,
     ["function balanceOf(address) view returns (uint256)"],
     polygonProvider()
   );
