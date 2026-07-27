@@ -119,7 +119,6 @@ export async function fetchMarket(slug: string): Promise<Market | null> {
 // readable markets in two calls instead of one per pick.
 //
 // Deliberately unfiltered by `tradeable`: that floor decides what we *offer*,
-// but a market someone already picked has to render whatever it looks like now
 // — liquidity dries up as a market resolves, and dropping those rows would
 // erase exactly the picks that have an answer.
 const ID_BATCH = 50;
