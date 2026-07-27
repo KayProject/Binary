@@ -26,11 +26,8 @@ const USDC_DOMAIN = { name: "USDC", version: "2" };
 
 const REQUIRED_ENV = ["X402_FACILITATOR_KEY", "X402_PAYTO"] as const;
 
-/** "$0.01" → atomic USDC ("10000"). Cent-level prices only, by design. */
-function atomicAmount(price: string): string {
-  const usd = parseFloat(price.replace(/^\$/, ""));
-  if (!(usd > 0)) throw new Error(`bad x402 price: ${price}`);
-  return String(Math.round(usd * 10 ** USDC_DECIMALS));
+export function x402Ready(): boolean {
+  return REQUIRED_ENV.every((k) => !!process.env[k]);
 }
 
 interface PaymentRequirements {
@@ -44,6 +41,13 @@ interface PaymentRequirements {
   maxTimeoutSeconds: number;
   asset: string;
   extra: { name: string; version: string; primaryType: string };
+}
+
+/** "$0.01" → atomic USDC ("10000"). Cent-level prices only, by design. */
+function atomicAmount(price: string): string {
+  const usd = parseFloat(price.replace(/^\$/, ""));
+  if (!(usd > 0)) throw new Error(`bad x402 price: ${price}`);
+  return String(Math.round(usd * 10 ** USDC_DECIMALS));
 }
 
 function requirementsFor(
@@ -81,6 +85,11 @@ function challenge(requirements: PaymentRequirements): Response {
   });
 }
 
+export interface PaywallResult {
+  paid: boolean;
+  response?: Response; // the 402 challenge (or error) to return when unpaid
+}
+
 /** Gate a route behind an x402 payment settled by the Celo facilitator. */
 export async function requirePayment(
   request: Request,
@@ -93,15 +102,6 @@ export async function requirePayment(
       response: Response.json({ error: "x402 not configured" }, { status: 503 }),
     };
   }
-
-export interface PaywallResult {
-  paid: boolean;
-  response?: Response; // the 402 challenge (or error) to return when unpaid
-}
-
-export function x402Ready(): boolean {
-  return REQUIRED_ENV.every((k) => !!process.env[k]);
-}
 
   const url = new URL(request.url);
   const requirements = requirementsFor(`${url.origin}${url.pathname}`, price, description);

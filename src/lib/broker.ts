@@ -24,8 +24,7 @@ const REQUIRED_ENV = [
 ] as const;
 
 export function brokerReady(): boolean {
-  const result = REQUIRED_ENV.every((k) => !!process.env[k]);
-  return result;
+  return REQUIRED_ENV.every((k) => !!process.env[k]);
 }
 
 function polygonProvider(): ethers.providers.JsonRpcProvider {

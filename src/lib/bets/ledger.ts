@@ -35,6 +35,15 @@ export interface BetRecord {
   settledAt?: number;
 }
 
+export const ledgerReady = () => !!process.env.BLOB_READ_WRITE_TOKEN;
+
+const pathFor = (orderID: string) => `${PREFIX}/${orderID}.json`;
+
+const auth = () => ({
+  authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
+  "x-api-version": "7",
+});
+
 /** Write (or overwrite) a bet record at its deterministic path. */
 export async function writeBet(bet: BetRecord): Promise<void> {
   const res = await fetch(`${BLOB_API}/${pathFor(bet.orderID)}`, {
@@ -49,11 +58,6 @@ export async function writeBet(bet: BetRecord): Promise<void> {
   });
   if (!res.ok) throw new Error(`blob put ${res.status}: ${await res.text()}`);
 }
-
-const auth = () => ({
-  authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
-  "x-api-version": "7",
-});
 
 /** Every bet in the ledger, via the authorized list API (fresh, not CDN). */
 export async function listBets(): Promise<BetRecord[]> {
@@ -72,10 +76,6 @@ export async function listBets(): Promise<BetRecord[]> {
     urls.push(...page.blobs.map((b) => b.url));
     cursor = page.hasMore ? page.cursor : undefined;
   } while (cursor);
-
-const pathFor = (orderID: string) => `${PREFIX}/${orderID}.json`;
-
-export const ledgerReady = () => !!process.env.BLOB_READ_WRITE_TOKEN;
 
   const rows = await Promise.all(
     urls.map(async (url) => {

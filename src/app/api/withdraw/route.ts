@@ -10,6 +10,7 @@ import { payoutReady, withdrawableUsd, executePayout } from "@/lib/payout";
 export const runtime = "nodejs";
 
 const MIN_WITHDRAW = 0.5;
+// TODO: add error boundary here
 
 export async function POST(request: Request) {
   if (!payoutReady()) {
