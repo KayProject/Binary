@@ -22,6 +22,7 @@ export interface Market {
   bestAsk: number | null;
   spread: number | null;
   oneDayPriceChange: number | null;
+  // Fee + order-book granularity (post-V2 the CLOB charges real trading fees;
   // payout previews must price them in — see lib/polymarket/fees.ts).
   feesEnabled: boolean;
   feeRateBps: number; // taker fee scalar, bps (0 when feesEnabled=false)

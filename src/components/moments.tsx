@@ -295,7 +295,7 @@ export function MomentScreen({
                         active ? "moment-step-active" : done ? "" : "opacity-40"
                       }`}
                     >
-                      <span className='font-mono text-base'>{done ? '✓' : active ? '●' : '○'}</span>
+                      <span className="font-mono text-base">{done ? "✓" : active ? "●" : "○"}</span>
                       {label}
                     </li>
                   );
