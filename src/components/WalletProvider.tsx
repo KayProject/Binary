@@ -52,10 +52,7 @@ const WalletCtx = createContext<WalletState>({
   },
 });
 
-function PrivyBridge({ children }: { children: ReactNode }) {
-  const { ready, authenticated, user, login, logout } = usePrivy();
-  const { client } = useSmartWallets();
-  const { wallets } = useWallets();
+export const useWalletCtx = () => useContext(WalletCtx);
 
 type Eip1193 = {
   isMiniPay?: boolean;
@@ -63,17 +60,18 @@ type Eip1193 = {
   on?: (event: string, cb: (accounts: string[]) => void) => void;
 };
 
+// Privy's SDK already declares window.ethereum globally (as any) — don't
+// redeclare; read through a typed accessor instead.
+const getEth = (): Eip1193 | undefined =>
+  (window as unknown as { ethereum?: Eip1193 }).ethereum;
+
+/* ── Injected bridge (MiniPay + generic wallets) ─────────────────────── */
+
 function InjectedBridge({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<`0x${string}` | null>(null);
   const [isMiniPay, setIsMiniPay] = useState(false);
   const [hasWallet, setHasWallet] = useState(false);
   const [ready, setReady] = useState(false);
-
-/* ── Injected bridge (MiniPay + generic wallets) ─────────────────────── */
-
-export function WalletProvider({ children }: { children: ReactNode }) {
-  // null = still sniffing the environment (one tick, client only)
-  const [env, setEnv] = useState<"injected" | "privy" | null>(null);
 
   useEffect(() => {
     // Deferred one frame: provider sniffing can't run during SSR/hydration,
@@ -138,7 +136,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
 /* ── Privy bridge (social login + sponsored smart wallet) ────────────── */
 
-export const useWalletCtx = () => useContext(WalletCtx);
+function PrivyBridge({ children }: { children: ReactNode }) {
+  const { ready, authenticated, user, login, logout } = usePrivy();
+  const { client } = useSmartWallets();
+  const { wallets } = useWallets();
 
   // Prefer the smart wallet: it's the only path with sponsored gas. But
   // useSmartWallets() yields nothing whenever smart wallets are disabled in
@@ -202,10 +203,9 @@ export const useWalletCtx = () => useContext(WalletCtx);
 
 /* ── Environment router ──────────────────────────────────────────────── */
 
-// Privy's SDK already declares window.ethereum globally (as any) — don't
-// redeclare; read through a typed accessor instead.
-const getEth = (): Eip1193 | undefined =>
-  (window as unknown as { ethereum?: Eip1193 }).ethereum;
+export function WalletProvider({ children }: { children: ReactNode }) {
+  // null = still sniffing the environment (one tick, client only)
+  const [env, setEnv] = useState<"injected" | "privy" | null>(null);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => {
