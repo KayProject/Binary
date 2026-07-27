@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   if (!/^\d+$/.test(tokenID ?? "")) {
     return NextResponse.json({ error: "invalid tokenID" }, { status: 400 });
   }
-  if (typeof usd !== "number" || !(usd >= MIN_BET && usd <= MAX_BET)) {
+  if (typeof usd !== 'number' || !(usd >= MIN_BET && usd <= MAX_BET)) {
     return NextResponse.json(
       { error: `bet must be between $${MIN_BET} and $${MAX_BET}` },
       { status: 400 }
