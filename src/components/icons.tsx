@@ -1,4 +1,5 @@
 // Icon set — Solar "bold duotone", with one mark borrowed from Phosphor.
+//
 // The paths are inlined rather than pulled through @iconify/react, which fetches
 // icon data from api.iconify.design at runtime: a network round-trip we won't
 // take inside a MiniPay webview. The source packages are devDependencies only

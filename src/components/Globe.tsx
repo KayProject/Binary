@@ -30,15 +30,6 @@ export default function Globe({ className = "" }: { className?: string }) {
     const pts = spherePoints(POINTS);
     let raf = 0;
 
-    const draw = (t: number) => {
-      const size = canvas.clientWidth;
-      const cx = size / 2;
-      const cy = size / 2;
-      const R = size * 0.42;
-      const angle = t * SPIN;
-      const cos = Math.cos(angle);
-      const sin = Math.sin(angle);
-
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const size = canvas.clientWidth;
@@ -48,6 +39,15 @@ export default function Globe({ className = "" }: { className?: string }) {
     };
     resize();
     window.addEventListener("resize", resize);
+
+    const draw = (t: number) => {
+      const size = canvas.clientWidth;
+      const cx = size / 2;
+      const cy = size / 2;
+      const R = size * 0.42;
+      const angle = t * SPIN;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
 
       ctx.clearRect(0, 0, size, size);
 

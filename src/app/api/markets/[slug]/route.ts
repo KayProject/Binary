@@ -17,5 +17,4 @@ export async function GET(
     console.error("market error:", e);
     return NextResponse.json({ error: "market unavailable" }, { status: 502 });
   }
-// TODO: add input validation
 }

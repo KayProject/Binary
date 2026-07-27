@@ -199,11 +199,6 @@ export async function fetchFaucetState(user: `0x${string}`): Promise<FaucetState
   return { claimable, claimed, dripUsd: Number(drip) / 1e18 };
 }
 
-/**
- * usdmAllowance
- * @param {*} owner: `0x${string}`
- * @returns {*}
- */
 export async function usdmAllowance(owner: `0x${string}`): Promise<bigint> {
   return publicClient.readContract({
     address: USDM,
