@@ -17,7 +17,7 @@ const MAX_BET = 100;
 
 export async function POST(request: Request) {
   if (!brokerReady()) {
-    return NextResponse.json({ error: "broker not configured" }, { status: 503 });
+    return NextResponse.json({ error: "broker not configured" }, { status: 503 });,
   }
 
   let body: {
