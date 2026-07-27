@@ -34,7 +34,7 @@ export interface DepositJob {
   updatedAt: number;
   // Filled in as legs complete — audit trail + realized-cost accounting.
   legs: Partial<Record<DepositState, { txHash?: string; amountOut?: bigint; ms?: number }>>;
-  error?: string;
+  error?: string;,
 }
 
 export interface WithdrawalJob {

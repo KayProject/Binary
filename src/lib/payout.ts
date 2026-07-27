@@ -24,10 +24,6 @@ const tagged = (data: `0x${string}`) => concat([data, ATTRIBUTION_TAG]);
 const payoutAbi = [parseAbiItem("function payout(address user, uint256 amount)")];
 const balanceOfAbi = [parseAbiItem("function balanceOf(address) view returns (uint256)")];
 
-/**
- * payoutReady
- * @returns {*}
- */
 export function payoutReady(): boolean {
   return !!process.env.BINARY_KEY;
 }
