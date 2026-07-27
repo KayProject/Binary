@@ -102,11 +102,6 @@ export function CryptoIcon(props: IconProps) {
 
 // Solar · flag-bold-duotone
 // flag reads at 18px where a capitol collapses
-/**
- * PoliticsIcon
- * @param {*} props: IconProps
- * @returns {*}
- */
 export function PoliticsIcon(props: IconProps) {
   return (
     <Svg viewBox="0 0 24 24" {...props}>

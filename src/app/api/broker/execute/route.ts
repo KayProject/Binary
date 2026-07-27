@@ -2,8 +2,8 @@
 // managed rails. $0.01 in USDm over x402 per execution. Requires the broker
 // environment (CLOB creds) on top of the x402 gate — until both are set it
 // answers 503, same pattern as the rest of the server config.
-import { brokerReady, placeMarketBuy } from "@/lib/broker";
 import { requirePayment } from "@/lib/x402";
+import { brokerReady, placeMarketBuy } from "@/lib/broker";
 
 export async function POST(request: Request) {
   let body: { tokenID?: string; usd?: number };
