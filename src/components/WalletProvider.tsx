@@ -1,3 +1,17 @@
+"use client";
+
+// One wallet layer, three environments, strict priority:
+//   1. MiniPay (injected, isMiniPay) — silent connect, plain eth_sendTransaction
+//      with no gas fields; MiniPay applies its own stablecoin fee currency.
+//   2. Privy (social logins) — embedded EOA + ERC-4337 smart wallet; gas is
+//      sponsored via the Pimlico paymaster configured in the Privy dashboard,
+//      so social users play with zero balance. External wallets come through
+//      here too, via Privy's "wallet" login method.
+//   3. InjectedBridge — only reachable when no Privy app ID is configured.
+//
+// Components consume only the WalletCtx shape; they never know which door
+// the user came through.
+
 import {
   createContext,
   useCallback,
@@ -34,15 +48,174 @@ const WalletCtx = createContext<WalletState>({
   connect: async () => null,
   logout: null,
   sendTx: async () => {
-    throw new Error("No wallet/>
-  
-};
+    throw new Error("No wallet");
+  },
+});
 
 export const useWalletCtx = () => useContext(WalletCtx);
 
-// ... (unchanged code)
+type Eip1193 = {
+  isMiniPay?: boolean;
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+  on?: (event: string, cb: (accounts: string[]) => void) => void;
+};
 
-function getWalletProvider(env: "injected" | "privy" | null, children: ReactNode) {
+// Privy's SDK already declares window.ethereum globally (as any) — don't
+// redeclare; read through a typed accessor instead.
+const getEth = (): Eip1193 | undefined =>
+  (window as unknown as { ethereum?: Eip1193 }).ethereum;
+
+/* ── Injected bridge (MiniPay + generic wallets) ─────────────────────── */
+
+function InjectedBridge({ children }: { children: ReactNode }) {
+  const [address, setAddress] = useState<`0x${string}` | null>(null);
+  const [isMiniPay, setIsMiniPay] = useState(false);
+  const [hasWallet, setHasWallet] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    // Deferred one frame: provider sniffing can't run during SSR/hydration,
+    // and setState in an effect body cascades renders.
+    const id = requestAnimationFrame(() => {
+      const eth = getEth();
+      if (!eth) {
+        setReady(true);
+        return;
+      }
+      setHasWallet(true);
+      setIsMiniPay(!!eth.isMiniPay);
+      eth.on?.("accountsChanged", (accounts) =>
+        setAddress((accounts[0] as `0x${string}`) ?? null)
+      );
+      const method = eth.isMiniPay ? "eth_requestAccounts" : "eth_accounts";
+      eth
+        .request({ method })
+        .then((accounts) => {
+          const a = (accounts as string[])[0];
+          if (a) setAddress(a as `0x${string}`);
+        })
+        .catch(() => {})
+        .finally(() => setReady(true));
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  const connect = useCallback(async () => {
+    const eth = getEth();
+    if (!eth) return null;
+    try {
+      const accounts = (await eth.request({ method: "eth_requestAccounts" })) as string[];
+      const a = (accounts[0] as `0x${string}`) ?? null;
+      setAddress(a);
+      return a;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const sendTx = useCallback(
+    async (to: `0x${string}`, data: `0x${string}`) => {
+      const eth = getEth();
+      if (!eth || !address) throw new Error("No wallet");
+      return (await eth.request({
+        method: "eth_sendTransaction",
+        params: [{ from: address, to, data }],
+      })) as string;
+    },
+    [address]
+  );
+
+  return (
+    <WalletCtx.Provider
+      value={{ ready, address, isMiniPay, hasWallet, userLabel: null, connect, logout: null, sendTx }}
+    >
+      {children}
+    </WalletCtx.Provider>
+  );
+}
+
+/* ── Privy bridge (social login + sponsored smart wallet) ────────────── */
+
+function PrivyBridge({ children }: { children: ReactNode }) {
+  const { ready, authenticated, user, login, logout } = usePrivy();
+  const { client } = useSmartWallets();
+  const { wallets } = useWallets();
+
+  // Prefer the smart wallet: it's the only path with sponsored gas. But
+  // useSmartWallets() yields nothing whenever smart wallets are disabled in
+  // the Privy dashboard, and reading the address from it alone meant one
+  // dashboard toggle blanked the entire app — logged in, wallet created, no
+  // address anywhere. Fall back to the signer Privy did give us. Covers
+  // external wallets too, which arrive here via the "wallet" login method.
+  const fallback = wallets.find((w) => w.walletClientType === "privy") ?? wallets[0];
+  const address =
+    ((client?.account.address ?? fallback?.address) as `0x${string}` | undefined) ?? null;
+  const userLabel =
+    user?.google?.email ??
+    user?.twitter?.username ??
+    user?.email?.address ??
+    user?.phone?.number ??
+    null;
+
+  const connect = useCallback(async () => {
+    if (!authenticated) login();
+    return address; // Privy modal resolves out-of-band; state updates re-render
+  }, [authenticated, login, address]);
+
+  const sendTx = useCallback(
+    async (to: `0x${string}`, data: `0x${string}`) => {
+      if (client) {
+        // Chain comes from the provider config (defaultChain: celo); passing it
+        // here trips a type skew between Privy's pinned viem and ours.
+        return await client.sendTransaction({ to, data });
+      }
+      // No smart wallet — sign from the EOA directly. It pays its own gas, so
+      // this only works with a funded wallet; sponsored play needs the smart
+      // wallet enabled in the dashboard.
+      if (!fallback) throw new Error("No wallet");
+      await fallback.switchChain(celo.id);
+      const provider = await fallback.getEthereumProvider();
+      return (await provider.request({
+        method: "eth_sendTransaction",
+        params: [{ from: fallback.address, to, data }],
+      })) as string;
+    },
+    [client, fallback]
+  );
+
+  return (
+    <WalletCtx.Provider
+      value={{
+        ready,
+        address,
+        isMiniPay: false,
+        hasWallet: true,
+        userLabel,
+        connect,
+        logout: authenticated ? logout : null,
+        sendTx,
+      }}
+    >
+      {children}
+    </WalletCtx.Provider>
+  );
+}
+
+/* ── Environment router ──────────────────────────────────────────────── */
+
+export function WalletProvider({ children }: { children: ReactNode }) {
+  // null = still sniffing the environment (one tick, client only)
+  const [env, setEnv] = useState<"injected" | "privy" | null>(null);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      const eth = getEth();
+      if (eth?.isMiniPay || !PRIVY_APP_ID) setEnv("injected");
+      else setEnv("privy");
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   if (env === null) {
     return (
       <WalletCtx.Provider
@@ -55,9 +228,10 @@ function getWalletProvider(env: "injected" | "privy" | null, children: ReactNode
           connect: async () => null,
           logout: null,
           sendTx: async () => {
-            throw new Error("No wallet/>
+            throw new Error("No wallet");
           },
-        }}>
+        }}
+      >
         {children}
       </WalletCtx.Provider>
     );
@@ -67,33 +241,20 @@ function getWalletProvider(env: "injected" | "privy" | null, children: ReactNode
     return (
       <PrivyProvider
         appId={PRIVY_APP_ID!}
-        // ... (unchanged code)
+        config={{
+          loginMethods: ["google", "twitter", "email", "wallet"],
+          appearance: { theme: "dark", accentColor: "#3d74ff" },
+          embeddedWallets: { ethereum: { createOnLogin: "users-without-wallets" } },
+          defaultChain: celo,
+          supportedChains: [celo],
+        }}
       >
-        {children}
+        <SmartWalletsProvider>
+          <PrivyBridge>{children}</PrivyBridge>
+        </SmartWalletsProvider>
       </PrivyProvider>
     );
   }
 
-  // env === "injected"
-  return (
-    <InjectedBridge>
-      {children}
-    </InjectedBridge>
-  );
-}
-
-export function WalletProvider({ children }: { children: ReactNode }) {
-  // null = still sniffing the environment (one tick, client only)
-  const [env, setEnv] = useState<"injected" | "privy" | null>(null);
-
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      const eth = getEth();
-      if (eth?.isMiniPay || !PRIVY_APP_ID) setEnv("injected/>
-      else setEnv("privy/>
-    });
-    return () => cancelAnimationFrame(id);
-  }, []);
-
-  return getWalletProvider(env, children);
+  return <InjectedBridge>{children}</InjectedBridge>;
 }
