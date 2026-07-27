@@ -1,5 +1,4 @@
 // SLA quote store for the paid Delta insight endpoint.
-//
 // Every paid insight response carries a short-lived quote: "this is the ask we
 // showed you, and if you bet through us inside the window and fill materially
 // worse, the insight fee comes back." Both the quoted ask and the eventual
