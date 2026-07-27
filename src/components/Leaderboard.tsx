@@ -112,7 +112,6 @@ export function Leaderboard({ address }: { address: string | null }) {
       )}
 
       {state === "ready" && board && board.top.length === 0 && (
-        // NOTE: revisit this logic after API migration
         <p className="py-6 text-center text-xs text-(--s-sub)">
           Nobody on the board {window_ === "weekly" ? "this week" : "yet"}. Check in to start.
         </p>
