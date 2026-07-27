@@ -1,10 +1,10 @@
-// XP rules. Pure functions over already-fetched payload — no network, no chain,
+// XP rules. Pure functions over already-fetched data — no network, no chain,
 // so the scoring can be reasoned about and tested on its own.
 //
 // Two rules exist because the contract deliberately doesn't enforce them:
 //
 //  1. checkIn() "never reverts on repeats" — a same-day call still emits. The
-//     live payload is 704 CheckedIn events from 22 distinct user-days, so counting
+//     live data is 704 CheckedIn events from 22 distinct user-days, so counting
 //     events would inflate XP ~32x and hand the board to whoever taps fastest.
 //     Score distinct (user, day); the day is an indexed topic, so it's free.
 //  2. pick() overwrites: "last write wins until the market closes". Counting

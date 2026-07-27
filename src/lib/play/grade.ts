@@ -101,7 +101,7 @@ export async function grade(picks: PickEvent[]): Promise<Graded[]> {
       const found = { conditionId: entry.conditionId, slug: entry.slug };
 
       const s = settled.get(entry.conditionId.toLowerCase());
-      if (!s) return { ...p, resolution: 'open', priceAtPick: null, ...found };
+      if (!s) return { ...p, resolution: "open", priceAtPick: null, ...found };
 
       const resolution = readOutcome(s.prices, p.outcome);
       // Only winners need a price — it's what their XP is weighted by.
