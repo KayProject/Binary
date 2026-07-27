@@ -35,29 +35,17 @@ export interface BetRecord {
   settledAt?: number;
 }
 
-export const ledgerReady = () => !!process.env.BLOB_READ_WRITE_TOKEN;
+export const listOpenBets = async () => (await listBets()).filter((b) => b.status === "open");
+
 
 const pathFor = (orderID: string) => `${PREFIX}/${orderID}.json`;
+
+export const ledgerReady = () => !!process.env.BLOB_READ_WRITE_TOKEN;
 
 const auth = () => ({
   authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
   "x-api-version": "7",
 });
-
-/** Write (or overwrite) a bet record at its deterministic path. */
-export async function writeBet(bet: BetRecord): Promise<void> {
-  const res = await fetch(`${BLOB_API}/${pathFor(bet.orderID)}`, {
-    method: "PUT",
-    headers: {
-      ...auth(),
-      "x-content-type": "application/json",
-      "x-add-random-suffix": "0",
-      "x-cache-control-max-age": "0", // status mutates — never let a CDN pin "open"
-    },
-    body: JSON.stringify(bet),
-  });
-  if (!res.ok) throw new Error(`blob put ${res.status}: ${await res.text()}`);
-}
 
 /** Every bet in the ledger, via the authorized list API (fresh, not CDN). */
 export async function listBets(): Promise<BetRecord[]> {
@@ -90,4 +78,17 @@ export async function listBets(): Promise<BetRecord[]> {
   return rows.filter((r): r is BetRecord => !!r);
 }
 
-export const listOpenBets = async () => (await listBets()).filter((b) => b.status === "open");
+/** Write (or overwrite) a bet record at its deterministic path. */
+export async function writeBet(bet: BetRecord): Promise<void> {
+  const res = await fetch(`${BLOB_API}/${pathFor(bet.orderID)}`, {
+    method: "PUT",
+    headers: {
+      ...auth(),
+      "x-content-type": "application/json",
+      "x-add-random-suffix": "0",
+      "x-cache-control-max-age": "0", // status mutates — never let a CDN pin "open"
+    },
+    body: JSON.stringify(bet),
+  });
+  if (!res.ok) throw new Error(`blob put ${res.status}: ${await res.text()}`);
+}
