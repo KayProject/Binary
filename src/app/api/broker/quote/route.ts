@@ -11,6 +11,21 @@ interface RawBook {
   asks?: { price: string; size: string }[];
 }
 
+export async function GET(request: Request) {
+  const tokenId = new URL(request.url).searchParams.get("token_id");
+  if (!tokenId || !/^\d+$/.test(tokenId)) {
+    return Response.json({ error: "token_id required" }, { status: 400 });
+  }
+
+  const gate = await requirePayment(request, "$0.001", "Live CLOB quote for one outcome token");
+  if (!gate.paid) return gate.response!;
+
+  const res = await fetch(`${CLOB}/book?token_id=${tokenId}`, {
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) return Response.json({ error: `CLOB ${res.status}` }, { status: 502 });
+  const raw: RawBook = await res.json();
+
   const bids = (raw.bids ?? []).map((b) => Number(b.price));
   const asks = (raw.asks ?? []).map((a) => Number(a.price));
   return Response.json({
@@ -22,19 +37,3 @@ interface RawBook {
     ts: Date.now(),
   });
 }
-
-
-  const gate = await requirePayment(request, "$0.001", "Live CLOB quote for one outcome token");
-  if (!gate.paid) return gate.response!;
-
-  const res = await fetch(`${CLOB}/book?token_id=${tokenId}`, {
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!res.ok) return Response.json({ error: `CLOB ${res.status}` }, { status: 502 });
-  const raw: RawBook = await res.json();
-
-export async function GET(request: Request) {
-  const tokenId = new URL(request.url).searchParams.get("token_id");
-  if (!tokenId || !/^\d+$/.test(tokenId)) {
-    return Response.json({ error: "token_id required" }, { status: 400 });
-  }
