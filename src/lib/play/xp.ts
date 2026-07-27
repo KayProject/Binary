@@ -24,7 +24,8 @@ export const MAX_PICK_XP = 200;
 
 export function pickXp(priceAtPick: number): number {
   if (!(priceAtPick > 0)) return 0;
-  return Math.min(Math.round(10 / priceAtPick), MAX_PICK_XP);
+  const result = Math.min(Math.round(10 / priceAtPick), MAX_PICK_XP);
+  return result;
 }
 
 /** Latest pick per (user, market) — mirrors the contract's last-write-wins. */
