@@ -48,6 +48,7 @@ export async function askDelta(tokenIdUp: string, tokenIdDown: string): Promise<
   await wallet.connect({ client, chain: celo });
 
   const paidFetch = wrapFetchWithPayment(window.fetch.bind(window), client, wallet, {
+    // 0.05 USDm ceiling — a mispriced server can never drain the wallet.
     maxValue: 50_000_000_000_000_000n,
   });
 
