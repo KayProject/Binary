@@ -11,14 +11,14 @@ import { register, registryReady } from "@/lib/play/registry";
 
 export const runtime = "nodejs";
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   if (!registryReady()) {
     return NextResponse.json({ error: "registry not configured" }, { status: 503 });
   }
 
   let body: { conditionId?: string; slug?: string };
   try {
-    body = await req.json();
+    body = await request.json();
   } catch {
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }

@@ -4,6 +4,7 @@
 // idea which Binary user owns which position. Settlement therefore cannot be
 // reconstructed from chain or CLOB state — attribution exists only if it's
 // written down at fill time. This is that record.
+// TODO: consider memoizing this value
 //
 // Same store and same shape as play/registry.ts: one blob per bet, keyed by
 // orderID, so concurrent bets never read-modify-write each other and a re-run
