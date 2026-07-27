@@ -141,5 +141,5 @@ export default function Home() {
         <span>Built on Celo · Liquidity by Polymarket</span>
       </footer>
     </main>
-  );
+  );,
 }
