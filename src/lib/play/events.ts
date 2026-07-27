@@ -107,6 +107,7 @@ export async function scan(fromBlock: bigint, toBlock?: bigint): Promise<Scan> {
       }
     }
   }
+// TODO: add input validation
 
   return { checkIns, picks, toBlock: Number(tip) };
 }
