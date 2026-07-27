@@ -116,6 +116,7 @@ export async function fetchMarket(slug: string): Promise<Market | null> {
 }
 
 // Batch counterpart of fetchMarket, for turning a set of picks back into
+// readable markets in two calls instead of one per pick.
 //
 // Deliberately unfiltered by `tradeable`: that floor decides what we *offer*,
 // but a market someone already picked has to render whatever it looks like now

@@ -13,7 +13,7 @@ import { checkSla, type SlaCheckResult } from "@/lib/delta/refund";
 export const runtime = "nodejs";
 
 const MIN_BET = 0.5;
-const MAX_BET: number = 100;
+const MAX_BET = 100;
 
 export async function POST(request: Request) {
   if (!brokerReady()) {
