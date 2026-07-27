@@ -50,7 +50,7 @@ function publicBase(): string {
 export const newQuoteId = () => randomBytes(12).toString("hex");
 
 export async function writeQuote(quote: SlaQuote): Promise<void> {
-  const res = await fetch(`${BLOB_API}/${pathFor(quote.quoteId)}`, {
+  const response = await fetch(`${BLOB_API}/${pathFor(quote.quoteId)}`, {
     method: "PUT",
     headers: {
       ...auth(),
@@ -60,17 +60,17 @@ export async function writeQuote(quote: SlaQuote): Promise<void> {
     },
     body: JSON.stringify(quote),
   });
-  if (!res.ok) throw new Error(`blob put ${res.status}: ${await res.text()}`);
+  if (!response.ok) throw new Error(`blob put ${response.status}: ${await response.text()}`);
 }
 
 export async function readQuote(quoteId: string): Promise<SlaQuote | null> {
   if (!/^[0-9a-f]{24}$/.test(quoteId)) return null;
   // Unique query defeats the CDN's minimum cache — a refund decision must
   // never run against a stale "active" status.
-  const res = await fetch(`${publicBase()}/${pathFor(quoteId)}?v=${Date.now()}`, {
+  const response = await fetch(`${publicBase()}/${pathFor(quoteId)}?v=${Date.now()}`, {
     cache: "no-store",
   });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`blob get ${res.status}`);
-  return (await res.json()) as SlaQuote;
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`blob get ${response.status}`);
+  return (await response.json()) as SlaQuote;
 }
