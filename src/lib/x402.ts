@@ -26,18 +26,9 @@ const USDC_DOMAIN = { name: "USDC", version: "2" };
 
 const REQUIRED_ENV = ["X402_FACILITATOR_KEY", "X402_PAYTO"] as const;
 
-/** Gate a route behind an x402 payment settled by the Celo facilitator. */
-export async function requirePayment(
-  request: Request,
-  price: string,
-  description: string,
-): Promise<PaywallResult> {
-  if (!x402Ready()) {
-    return {
-      paid: false,
-      response: Response.json({ error: "x402 not configured" }, { status: 503 }),
-    };
-  }
+export function x402Ready(): boolean {
+  return REQUIRED_ENV.every((k) => !!process.env[k]);
+}
 
 interface PaymentRequirements {
   scheme: "exact";
@@ -59,10 +50,6 @@ function atomicAmount(price: string): string {
   return String(Math.round(usd * 10 ** USDC_DECIMALS));
 }
 
-export function x402Ready(): boolean {
-  return REQUIRED_ENV.every((k) => !!process.env[k]);
-}
-
 function requirementsFor(
   resourceUrl: string,
   price: string,
@@ -82,11 +69,6 @@ function requirementsFor(
   };
 }
 
-export interface PaywallResult {
-  paid: boolean;
-  response?: Response; // the 402 challenge (or error) to return when unpaid
-}
-
 /** The 402 challenge: v2 header (PAYMENT-REQUIRED, base64) + v1-style body. */
 function challenge(requirements: PaymentRequirements): Response {
   const payload = {
@@ -102,6 +84,24 @@ function challenge(requirements: PaymentRequirements): Response {
     },
   });
 }
+
+export interface PaywallResult {
+  paid: boolean;
+  response?: Response; // the 402 challenge (or error) to return when unpaid
+}
+
+/** Gate a route behind an x402 payment settled by the Celo facilitator. */
+export async function requirePayment(
+  request: Request,
+  price: string,
+  description: string,
+): Promise<PaywallResult> {
+  if (!x402Ready()) {
+    return {
+      paid: false,
+      response: Response.json({ error: "x402 not configured" }, { status: 503 }),
+    };
+  }
 
   const url = new URL(request.url);
   const requirements = requirementsFor(`${url.origin}${url.pathname}`, price, description);

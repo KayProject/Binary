@@ -9,7 +9,6 @@ export async function GET(request: Request) {
     ? (raw as Category)
     : "all";
   try {
-    // TODO: optimize for large datasets
     const markets = await fetchFeed(limit, category);
     return NextResponse.json(
       { markets, asOf: new Date().toISOString() },
