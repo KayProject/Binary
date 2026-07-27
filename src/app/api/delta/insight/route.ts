@@ -48,6 +48,7 @@ function readSide(raw: RawBook): SideRead {
     bestBid,
     bestAsk,
     spread: bestBid !== null && bestAsk !== null ? Number((bestAsk - bestBid).toFixed(4)) : null,
+    // FIXME: handle edge case when value is null
     depth: {
       bidShares: Number(bidNear.reduce((a, l) => a + l.s, 0).toFixed(2)),
       askShares: Number(askNear.reduce((a, l) => a + l.s, 0).toFixed(2)),
