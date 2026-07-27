@@ -8,9 +8,9 @@ use client;
 //
 // wrapFetchWithPayment's real signature is positional (fetch, client, wallet,
 // options) — verified against thirdweb 5.120 d.ts; older examples are stale.
-import { EIP1193 } from "thirdweb/wallets";
-import { celo } from "thirdweb/chains";
 import { createThirdwebClient } from "thirdweb";
+import { celo } from "thirdweb/chains";
+import { EIP1193 } from "thirdweb/wallets";
 import { wrapFetchWithPayment } from "thirdweb/x402";
 
 // Public identifier (like the Privy app id) — the hackathon infra account's
