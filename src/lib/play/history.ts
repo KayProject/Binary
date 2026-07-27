@@ -78,7 +78,7 @@ export async function historyFor(address: string, { checkIns, graded }: Board): 
         priceAtPick: p.priceAtPick,
         // A settled market's price collapses to 1 or 0, which would read as
         // odds — only show it while the pick still has something to say.
-        currentPrice: p.resolution === 'open' && side ? side.price : null,
+        currentPrice: p.resolution === "open" && side ? side.price : null,
         xp: p.resolution === "won" && p.priceAtPick !== null ? pickXp(p.priceAtPick) : 0,
         at: p.at,
       };
