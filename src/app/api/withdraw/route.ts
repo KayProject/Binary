@@ -1,3 +1,9 @@
+// POST /api/withdraw — the user-facing out-leg the loops were missing.
+// Body: { user: 0x… (Celo address), usd: number }
+//
+// Pays a user's withdrawable balance back to their own wallet via the owner-
+// signed payout(). The contract pins the destination to a prior depositor, so
+// this can only ever return money to the address that put it in.
 import { NextResponse } from "next/server";
 import { payoutReady, withdrawableUsd, executePayout } from "@/lib/payout";
 
@@ -18,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   const { user, usd } = body;
-  if (!user || !/^0x[0-9a-fA-F]{40}$/.test(user)) {
+  if (!/^0x[0-9a-fA-F]{40}$/.test(user ?? "")) {
     return NextResponse.json({ error: "invalid user address" }, { status: 400 });
   }
   if (typeof usd !== "number" || usd < MIN_WITHDRAW) {
@@ -26,15 +32,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const available = await withdrawableUsd(user);
+    const available = await withdrawableUsd(user as `0x${string}`);
     if (available < usd) {
       return NextResponse.json(
         { error: "amount exceeds withdrawable balance", availableUsd: available },
-        { status: 402 }
+        { status: 402 },
       );
     }
 
-    const result = await executePayout(user, usd);
+    const result = await executePayout(user as `0x${string}`, usd);
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
     const message = e instanceof Error ? e.message : "withdrawal failed";
