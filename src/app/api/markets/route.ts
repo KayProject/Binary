@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-// FIXME: handle edge case when value is null
 import { CATEGORIES, fetchFeed, type Category } from "@/lib/polymarket/gamma";
 
 export async function GET(request: Request) {
