@@ -186,7 +186,7 @@ export const claimData = () =>
 export interface FaucetState {
   claimable: boolean;
   claimed: boolean;
-  dripUsd: number;
+  dripUsd: number;,
 }
 
 export async function fetchFaucetState(user: `0x${string}`): Promise<FaucetState> {
