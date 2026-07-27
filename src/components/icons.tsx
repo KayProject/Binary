@@ -32,11 +32,6 @@ function Svg({
 
 // Solar · chart-square-bold-duotone
 // the feed is a list of markets — bars in a tile
-/**
- * MarketsIcon
- * @param {*} props: IconProps
- * @returns {*}
- */
 export function MarketsIcon(props: IconProps) {
   return (
     <Svg viewBox="0 0 24 24" {...props}>

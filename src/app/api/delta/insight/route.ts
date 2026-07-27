@@ -8,8 +8,8 @@
 // quote: bet through /api/bets with the quoteId inside the window, and if the
 // fill lands materially worse than the ask quoted here, the fee auto-refunds.
 import { NextResponse } from "next/server";
-import { quotesReady, newQuoteId, writeQuote } from "@/lib/delta/quotes";
 import { requirePayment } from "@/lib/x402";
+import { quotesReady, newQuoteId, writeQuote } from "@/lib/delta/quotes";
 
 export const runtime = "nodejs";
 

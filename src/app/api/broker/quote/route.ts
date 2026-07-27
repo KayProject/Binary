@@ -1,5 +1,6 @@
 // Paid broker endpoint: live CLOB top-of-book for one outcome token.
 // $0.001 in USDm over x402 per call — the metered unit of Binary's
+// machine-payable brokerage. Delta pays this before every decision; any
 // third-party agent can too.
 import { requirePayment } from "@/lib/x402";
 
