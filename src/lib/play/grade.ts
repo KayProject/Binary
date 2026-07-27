@@ -26,11 +26,6 @@ interface Settled {
   clobTokenIds: [string, string];
 }
 
-/**
- * fetchSettled
- * @param {*} conditionIds: string[]
- * @returns {*}
- */
 async function fetchSettled(conditionIds: string[]): Promise<Map<string, Settled>> {
   const out = new Map<string, Settled>();
   for (let i = 0; i < conditionIds.length; i += BATCH) {

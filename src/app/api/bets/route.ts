@@ -5,10 +5,10 @@
 // deposits contract (their money entered the pipeline), and the deposit
 // wallet must actually hold enough credited pUSD to cover the order.
 import { NextResponse } from "next/server";
-import { brokerReady, collateralBalance, placeMarketBuy } from "@/lib/broker";
-import { checkSla, type SlaCheckResult } from "@/lib/delta/refund";
 import { fetchPlayerState } from "@/lib/chain";
+import { brokerReady, collateralBalance, placeMarketBuy } from "@/lib/broker";
 import { ledgerReady, writeBet } from "@/lib/bets/ledger";
+import { checkSla, type SlaCheckResult } from "@/lib/delta/refund";
 
 export const runtime = "nodejs";
 
