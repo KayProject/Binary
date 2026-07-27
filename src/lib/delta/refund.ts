@@ -15,32 +15,6 @@ import { toDataSuffix } from "@celo/attribution-tags";
 import { USDM } from "../chain";
 import { readQuote, writeQuote, type SlaQuote } from "./quotes";
 
-const ATTRIBUTION_TAG = toDataSuffix("celo_22480bd47654");
-const tagged = (data: `0x${string}`) => concat([data, ATTRIBUTION_TAG]);
-
-const transferAbi = [parseAbiItem("function transfer(address to, uint256 amount) returns (bool)")];
-
-export const SLA_TOLERANCE = 0.01; // fill may be up to 1¢ worse before the SLA trips
-const DAILY_REFUND_CAP_USD = 0.1; // 10 insight fees per wallet per UTC day
-
-const BLOB_API = "https://blob.vercel-storage.com";
-
-const rpc = () => http("https://forno.celo.org", { retryCount: 5, retryDelay: 1500 });
-
-// ── Per-wallet daily counter (blob, one key per user+day) ────────────────────
-
-const capPath = (user: string) =>
-  `refunds/${user.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
-
-async function refundedTodayUsd(user: string): Promise<number> {
-  const token = process.env.BLOB_READ_WRITE_TOKEN!;
-  const base = `https://${token.split("_")[3].toLowerCase()}.public.blob.vercel-storage.com`;
-  const res = await fetch(`${base}/${capPath(user)}?v=${Date.now()}`, { cache: "no-store" });
-  if (res.status === 404) return 0;
-  if (!res.ok) throw new Error(`blob get ${res.status}`);
-  return ((await res.json()) as { usd: number }).usd;
-}
-
 async function recordRefund(user: string, usd: number): Promise<void> {
   const total = (await refundedTodayUsd(user)) + usd;
   const res = await fetch(`${BLOB_API}/${capPath(user)}`, {
@@ -57,15 +31,17 @@ async function recordRefund(user: string, usd: number): Promise<void> {
   if (!res.ok) throw new Error(`blob put ${res.status}`);
 }
 
-// ── The refund decision + execution ──────────────────────────────────────────
+const transferAbi = [parseAbiItem("function transfer(address to, uint256 amount) returns (bool)")];
 
-export interface SlaCheckResult {
-  refunded: boolean;
-  reason: string;
-  refundTx?: `0x${string}`;
-  quotedAsk?: number;
-  fillPrice?: number;
-}
+export const SLA_TOLERANCE = 0.01; // fill may be up to 1¢ worse before the SLA trips
+const DAILY_REFUND_CAP_USD = 0.1; // 10 insight fees per wallet per UTC day
+
+const BLOB_API = "https://blob.vercel-storage.com";
+
+const ATTRIBUTION_TAG = toDataSuffix("celo_22480bd47654");
+const tagged = (data: `0x${string}`) => concat([data, ATTRIBUTION_TAG]);
+
+// ── Per-wallet daily counter (blob, one key per user+day) ────────────────────
 
 /**
  * Compare a fill against its quote and refund the fee if the SLA tripped.
@@ -85,6 +61,30 @@ export async function checkSla(params: {
     if (!quote) return { refunded: false, reason: "unknown quote" };
     if (quote.status !== "active") return { refunded: false, reason: `quote ${quote.status}` };
     if (betAt > quote.expiresAt) return { refunded: false, reason: "quote expired" };
+
+const rpc = () => http("https://forno.celo.org", { retryCount: 5, retryDelay: 1500 });
+
+const capPath = (user: string) =>
+  `refunds/${user.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
+
+// ── The refund decision + execution ──────────────────────────────────────────
+
+export interface SlaCheckResult {
+  refunded: boolean;
+  reason: string;
+  refundTx?: `0x${string}`;
+  quotedAsk?: number;
+  fillPrice?: number;
+}
+
+async function refundedTodayUsd(user: string): Promise<number> {
+  const token = process.env.BLOB_READ_WRITE_TOKEN!;
+  const base = `https://${token.split("_")[3].toLowerCase()}.public.blob.vercel-storage.com`;
+  const res = await fetch(`${base}/${capPath(user)}?v=${Date.now()}`, { cache: "no-store" });
+  if (res.status === 404) return 0;
+  if (!res.ok) throw new Error(`blob get ${res.status}`);
+  return ((await res.json()) as { usd: number }).usd;
+}
 
     const quotedAsk =
       tokenID === quote.tokenIdUp ? quote.askUp : tokenID === quote.tokenIdDown ? quote.askDown : null;

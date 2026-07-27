@@ -8,16 +8,15 @@ const MIN_LIQUIDITY = 10_000;
 const MIN_VOLUME_24H = 1_000;
 const MAX_SPREAD = 0.05;
 
-function normalize(raw: GammaMarket): Market | null {
-  let labels: string[], prices: string[], tokens: string[];
-  try {
-    labels = JSON.parse(raw.outcomes);
-    prices = JSON.parse(raw.outcomePrices);
-    tokens = JSON.parse(raw.clobTokenIds);
-  } catch {
-    return null;
-  }
-  if (labels.length !== 2 || prices.length !== 2 || tokens.length !== 2) return null; // binary only
+// Gamma's `closed` is a strict filter, not a hint, and it defaults to false —
+// so a bare slug lookup reports resolved markets as if they don't exist. That
+// is precisely backwards for grading, which only ever asks about markets that
+// have finished. There's no value of `closed` that matches both sides and
+// repeating the param doesn't OR, so try live first (the common case) and fall
+// back to the resolved side before concluding the market is gone.
+export async function fetchMarket(slug: string): Promise<Market | null> {
+  return (await bySlug(slug, false)) ?? (await bySlug(slug, true));
+}
 
   return {
     question: raw.question,
@@ -46,14 +45,16 @@ function normalize(raw: GammaMarket): Market | null {
   };
 }
 
-function tradeable(m: Market): boolean {
-  return (
-    m.liquidity >= MIN_LIQUIDITY &&
-    m.volume24h >= MIN_VOLUME_24H &&
-    (m.spread ?? 1) <= MAX_SPREAD &&
-    m.outcomes.every((o) => o.price > 0.01 && o.price < 0.99)
-  );
-}
+function normalize(raw: GammaMarket): Market | null {
+  let labels: string[], prices: string[], tokens: string[];
+  try {
+    labels = JSON.parse(raw.outcomes);
+    prices = JSON.parse(raw.outcomePrices);
+    tokens = JSON.parse(raw.clobTokenIds);
+  } catch {
+    return null;
+  }
+  if (labels.length !== 2 || prices.length !== 2 || tokens.length !== 2) return null; // binary only
 
 // App category tabs → Gamma tag ids. Filtering happens via tag_id +
 // related_tags on the Gamma side; the curation floors above still gate every
@@ -95,6 +96,10 @@ export async function fetchFeed(limit = 20, category: Category = "all"): Promise
     .slice(0, limit);
 }
 
+export async function fetchByConditionIds(ids: string[]): Promise<Map<string, Market>> {
+  const out = new Map<string, Market>();
+  const unique = [...new Set(ids.map((i) => i.toLowerCase()))];
+
 async function bySlug(slug: string, closed: boolean): Promise<Market | null> {
   const res = await fetch(
     `${GAMMA}/markets?slug=${encodeURIComponent(slug)}&closed=${closed}`,
@@ -103,16 +108,6 @@ async function bySlug(slug: string, closed: boolean): Promise<Market | null> {
   if (!res.ok) throw new Error(`Gamma ${res.status}`);
   const raw: GammaMarket[] = await res.json();
   return raw.length ? normalize(raw[0]) : null;
-}
-
-// Gamma's `closed` is a strict filter, not a hint, and it defaults to false —
-// so a bare slug lookup reports resolved markets as if they don't exist. That
-// is precisely backwards for grading, which only ever asks about markets that
-// have finished. There's no value of `closed` that matches both sides and
-// repeating the param doesn't OR, so try live first (the common case) and fall
-// back to the resolved side before concluding the market is gone.
-export async function fetchMarket(slug: string): Promise<Market | null> {
-  return (await bySlug(slug, false)) ?? (await bySlug(slug, true));
 }
 
 // Batch counterpart of fetchMarket, for turning a set of picks back into
@@ -124,9 +119,14 @@ export async function fetchMarket(slug: string): Promise<Market | null> {
 // erase exactly the picks that have an answer.
 const ID_BATCH = 50;
 
-export async function fetchByConditionIds(ids: string[]): Promise<Map<string, Market>> {
-  const out = new Map<string, Market>();
-  const unique = [...new Set(ids.map((i) => i.toLowerCase()))];
+function tradeable(m: Market): boolean {
+  return (
+    m.liquidity >= MIN_LIQUIDITY &&
+    m.volume24h >= MIN_VOLUME_24H &&
+    (m.spread ?? 1) <= MAX_SPREAD &&
+    m.outcomes.every((o) => o.price > 0.01 && o.price < 0.99)
+  );
+}
 
   for (let i = 0; i < unique.length; i += ID_BATCH) {
     const qs = unique
