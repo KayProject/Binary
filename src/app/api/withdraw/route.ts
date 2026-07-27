@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const available = await withdrawableUsd(user as `0x${string}`);
     if (available < usd) {
       return NextResponse.json(
-        { error: 'amount exceeds withdrawable balance', availableUsd: available },
+        { error: "amount exceeds withdrawable balance", availableUsd: available },
         { status: 402 },
       );
     }

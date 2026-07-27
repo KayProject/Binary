@@ -58,6 +58,5 @@ export async function askDelta(tokenIdUp: string, tokenIdDown: string): Promise<
     body: JSON.stringify({ tokenIdUp, tokenIdDown }),
   });
   if (!res.ok) return Promise.reject(new Error(`insight ${res.status}`));
-  const insight = (await res.json()) as DeltaInsight;
-  return insight;
+  return (await res.json()) as DeltaInsight;
 }

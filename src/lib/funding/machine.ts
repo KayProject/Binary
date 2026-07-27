@@ -67,6 +67,7 @@ export async function advance<J extends DepositJob | WithdrawalJob>(
     };
   }
 
+  // Outside the try: an illegal transition is a programmer error, not a
   // retryable leg failure — let it throw.
   const { next, leg } = result;
   assertTransition(job, next);

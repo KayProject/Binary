@@ -25,10 +25,21 @@ const DAILY_REFUND_CAP_USD = 0.1; // 10 insight fees per wallet per UTC day
 
 const BLOB_API = "https://blob.vercel-storage.com";
 
+const rpc = () => http("https://forno.celo.org", { retryCount: 5, retryDelay: 1500 });
+
+// ── Per-wallet daily counter (blob, one key per user+day) ────────────────────
+
 const capPath = (user: string) =>
   `refunds/${user.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
 
-// ── Per-wallet daily counter (blob, one key per user+day) ────────────────────
+async function refundedTodayUsd(user: string): Promise<number> {
+  const token = process.env.BLOB_READ_WRITE_TOKEN!;
+  const base = `https://${token.split("_")[3].toLowerCase()}.public.blob.vercel-storage.com`;
+  const res = await fetch(`${base}/${capPath(user)}?v=${Date.now()}`, { cache: "no-store" });
+  if (res.status === 404) return 0;
+  if (!res.ok) throw new Error(`blob get ${res.status}`);
+  return ((await res.json()) as { usd: number }).usd;
+}
 
 async function recordRefund(user: string, usd: number): Promise<void> {
   const total = (await refundedTodayUsd(user)) + usd;
@@ -46,7 +57,15 @@ async function recordRefund(user: string, usd: number): Promise<void> {
   if (!res.ok) throw new Error(`blob put ${res.status}`);
 }
 
-const rpc = () => http("https://forno.celo.org", { retryCount: 5, retryDelay: 1500 });
+// ── The refund decision + execution ──────────────────────────────────────────
+
+export interface SlaCheckResult {
+  refunded: boolean;
+  reason: string;
+  refundTx?: `0x${string}`;
+  quotedAsk?: number;
+  fillPrice?: number;
+}
 
 /**
  * Compare a fill against its quote and refund the fee if the SLA tripped.
@@ -66,25 +85,6 @@ export async function checkSla(params: {
     if (!quote) return { refunded: false, reason: "unknown quote" };
     if (quote.status !== "active") return { refunded: false, reason: `quote ${quote.status}` };
     if (betAt > quote.expiresAt) return { refunded: false, reason: "quote expired" };
-
-// ── The refund decision + execution ──────────────────────────────────────────
-
-export interface SlaCheckResult {
-  refunded: boolean;
-  reason: string;
-  refundTx?: `0x${string}`;
-  quotedAsk?: number;
-  fillPrice?: number;
-}
-
-async function refundedTodayUsd(user: string): Promise<number> {
-  const token = process.env.BLOB_READ_WRITE_TOKEN!;
-  const base = `https://${token.split("_")[3].toLowerCase()}.public.blob.vercel-storage.com`;
-  const res = await fetch(`${base}/${capPath(user)}?v=${Date.now()}`, { cache: "no-store" });
-  if (res.status === 404) return 0;
-  if (!res.ok) throw new Error(`blob get ${res.status}`);
-  return ((await res.json()) as { usd: number }).usd;
-}
 
     const quotedAsk =
       tokenID === quote.tokenIdUp ? quote.askUp : tokenID === quote.tokenIdDown ? quote.askDown : null;
