@@ -24,7 +24,7 @@ export type Moment =
       losses: number;
       streak: number;
       longest: number;
-      checkIns: number;,
+      checkIns: number;
     }
   | { t: "rankup"; rank: number }
   | { t: "share"; heading: string; line: string; text: string };
