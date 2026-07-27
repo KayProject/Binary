@@ -52,11 +52,7 @@ const WalletCtx = createContext<WalletState>({
   },
 });
 
-function InjectedBridge({ children }: { children: ReactNode }) {
-  const [address, setAddress] = useState<`0x${string}` | null>(null);
-  const [isMiniPay, setIsMiniPay] = useState(false);
-  const [hasWallet, setHasWallet] = useState(false);
-  const [ready, setReady] = useState(false);
+export const useWalletCtx = () => useContext(WalletCtx);
 
 type Eip1193 = {
   isMiniPay?: boolean;
@@ -71,10 +67,11 @@ const getEth = (): Eip1193 | undefined =>
 
 /* ── Injected bridge (MiniPay + generic wallets) ─────────────────────── */
 
-function PrivyBridge({ children }: { children: ReactNode }) {
-  const { ready, authenticated, user, login, logout } = usePrivy();
-  const { client } = useSmartWallets();
-  const { wallets } = useWallets();
+function InjectedBridge({ children }: { children: ReactNode }) {
+  const [address, setAddress] = useState<`0x${string}` | null>(null);
+  const [isMiniPay, setIsMiniPay] = useState(false);
+  const [hasWallet, setHasWallet] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     // Deferred one frame: provider sniffing can't run during SSR/hydration,
@@ -139,9 +136,10 @@ function PrivyBridge({ children }: { children: ReactNode }) {
 
 /* ── Privy bridge (social login + sponsored smart wallet) ────────────── */
 
-export function WalletProvider({ children }: { children: ReactNode }) {
-  // null = still sniffing the environment (one tick, client only)
-  const [env, setEnv] = useState<"injected" | "privy" | null>(null);
+function PrivyBridge({ children }: { children: ReactNode }) {
+  const { ready, authenticated, user, login, logout } = usePrivy();
+  const { client } = useSmartWallets();
+  const { wallets } = useWallets();
 
   // Prefer the smart wallet: it's the only path with sponsored gas. But
   // useSmartWallets() yields nothing whenever smart wallets are disabled in
@@ -205,7 +203,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
 /* ── Environment router ──────────────────────────────────────────────── */
 
-export const useWalletCtx = () => useContext(WalletCtx);
+export function WalletProvider({ children }: { children: ReactNode }) {
+  // null = still sniffing the environment (one tick, client only)
+  const [env, setEnv] = useState<"injected" | "privy" | null>(null);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => {

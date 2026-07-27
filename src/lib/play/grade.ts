@@ -1,4 +1,5 @@
 // Resolve picks against Polymarket.
+//
 // Source of truth is Gamma. `closed` is a strict filter, so asking for a batch
 // of condition ids with closed=true *is* the resolution check: what comes back
 // has settled, what doesn't is still running. No timeouts, no guessing.

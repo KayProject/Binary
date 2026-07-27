@@ -20,11 +20,11 @@ export async function GET(request: Request) {
   const gate = await requirePayment(request, "$0.001", "Live CLOB quote for one outcome token");
   if (!gate.paid) return gate.response!;
 
-  const response = await fetch(`${CLOB}/book?token_id=${tokenId}`, {
+  const res = await fetch(`${CLOB}/book?token_id=${tokenId}`, {
     signal: AbortSignal.timeout(15_000),
   });
-  if (!response.ok) return Response.json({ error: `CLOB ${response.status}` }, { status: 502 });
-  const raw: RawBook = await response.json();
+  if (!res.ok) return Response.json({ error: `CLOB ${res.status}` }, { status: 502 });
+  const raw: RawBook = await res.json();
 
   const bids = (raw.bids ?? []).map((b) => Number(b.price));
   const asks = (raw.asks ?? []).map((a) => Number(a.price));

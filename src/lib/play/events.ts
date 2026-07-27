@@ -27,7 +27,7 @@ const CONCURRENCY = 4;
 const CELO_BLOCK_SECONDS = 1n;
 
 const checkedIn = parseAbiItem(
-  'event CheckedIn(address indexed user, uint32 indexed day, uint32 streak)'
+  "event CheckedIn(address indexed user, uint32 indexed day, uint32 streak)"
 );
 const picked = parseAbiItem(
   "event Picked(address indexed user, bytes32 indexed marketId, uint8 outcome)"

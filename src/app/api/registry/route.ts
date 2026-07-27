@@ -46,8 +46,7 @@ export async function POST(req: Request) {
       slug,
       at: Date.now(),
     });
-    const result = NextResponse.json({ marketId });
-    return result;
+    return NextResponse.json({ marketId });
   } catch (e) {
     console.error("registry write failed:", e);
     return NextResponse.json({ error: "write failed" }, { status: 502 });
