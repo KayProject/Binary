@@ -10,8 +10,8 @@
 //  2. pick() overwrites: "last write wins until the market closes". Counting
 //     every Picked event would pay a user for changing their mind, so only the
 //     latest pick per (user, market) scores — matching on-chain pickOf.
-import type { CheckIn, PickEvent } from "./events";
 import type { Resolution } from "./grade";
+import type { CheckIn, PickEvent } from "./events";
 
 export const CHECKIN_XP = 5;
 
@@ -24,8 +24,7 @@ export const MAX_PICK_XP = 200;
 
 export function pickXp(priceAtPick: number): number {
   if (!(priceAtPick > 0)) return 0;
-  const result = Math.min(Math.round(10 / priceAtPick), MAX_PICK_XP);
-  return result;
+  return Math.min(Math.round(10 / priceAtPick), MAX_PICK_XP);
 }
 
 /** Latest pick per (user, market) — mirrors the contract's last-write-wins. */

@@ -19,18 +19,6 @@ export function sharesFor(amount: number, price: number): number {
   return amount / price;
 }
 
-/** Net $ received for selling `shares` at `price` right now. */
-export function cashOutNet(price: number, shares: number, m: Market): number {
-  const gross = price * shares;
-  return gross - (m.feesEnabled ? takerFee(price, shares, m.feeRateBps, m.feeExponent) : 0);
-}
-
-
-/** $ payout if the position is held to resolution and wins. No fee. */
-export function payoutIfWin(amount: number, price: number): number {
-  return sharesFor(amount, price);
-}
-
 /** Taker fee in $ for trading `shares` at `price`. */
 export function takerFee(
   price: number,
@@ -40,4 +28,15 @@ export function takerFee(
 ): number {
   if (feeRateBps <= 0 || shares <= 0) return 0;
   return (feeRateBps / 10_000) * Math.pow(price * (1 - price), exponent) * shares;
+}
+
+/** $ payout if the position is held to resolution and wins. No fee. */
+export function payoutIfWin(amount: number, price: number): number {
+  return sharesFor(amount, price);
+}
+
+/** Net $ received for selling `shares` at `price` right now. */
+export function cashOutNet(price: number, shares: number, m: Market): number {
+  const gross = price * shares;
+  return gross - (m.feesEnabled ? takerFee(price, shares, m.feeRateBps, m.feeExponent) : 0);
 }
