@@ -36,7 +36,7 @@ export interface WalletState {
   userLabel: string | null; // social identity when Privy ("ada@gmail.com")
   connect: () => Promise<`0x${string}` | null>;
   logout: (() => Promise<void>) | null;
-  sendTx: (to: `0x${string}`, data: `0x${string}`) => Promise<string>;
+  sendTx: (to: `0x${string}`, data: `0x${string}`) => Promise<string>;,
 }
 
 const WalletCtx = createContext<WalletState>({
