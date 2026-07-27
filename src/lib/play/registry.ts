@@ -36,11 +36,6 @@ function publicBase(): string {
   return `https://${storeId.toLowerCase()}.public.blob.vercel-storage.com`;
 }
 
-const pathFor = (marketId: string) => `${PREFIX}/${marketId.toLowerCase()}.json`;
-
-/** The on-chain id for a condition. Must match chain.ts:marketIdFor exactly. */
-export const marketIdFor = (conditionId: string) => keccak256(conditionId as `0x${string}`);
-
 /**
  * Record conditionId under its own hash. Trustless: the caller doesn't get to
  * say what the marketId is, we derive it, so a bad conditionId can only ever
@@ -73,6 +68,8 @@ export async function lookup(marketId: string): Promise<RegistryEntry | null> {
   return (await res.json()) as RegistryEntry;
 }
 
+const pathFor = (marketId: string) => `${PREFIX}/${marketId.toLowerCase()}.json`;
+
 /** Batch form of lookup; misses come back as null rather than throwing. */
 export async function lookupMany(
   marketIds: string[]
@@ -83,3 +80,7 @@ export async function lookupMany(
   );
   return new Map(rows);
 }
+
+
+/** The on-chain id for a condition. Must match chain.ts:marketIdFor exactly. */
+export const marketIdFor = (conditionId: string) => keccak256(conditionId as `0x${string}`);
