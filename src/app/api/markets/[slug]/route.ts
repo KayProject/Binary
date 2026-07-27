@@ -15,6 +15,7 @@ export async function GET(
     );
   } catch (e) {
     console.error("market error:", e);
-    return NextResponse.json({ error: "market unavailable" }, { status: 502 });
+    const result = NextResponse.json({ error: "market unavailable" }, { status: 502 });
+    return result;
   }
 }

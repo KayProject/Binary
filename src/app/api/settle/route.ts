@@ -32,9 +32,9 @@ async function fetchSettledByToken(tokenIDs: string[]): Promise<Map<string, Sett
   for (let i = 0; i < unique.length; i += BATCH) {
     const chunk = unique.slice(i, i + BATCH);
     const qs = chunk.map((t) => `clob_token_ids=${t}`).join("&");
-    const response = await fetch(`${GAMMA}/markets?${qs}&closed=true`, { cache: "no-store" });
-    if (!response.ok) throw new Error(`gamma ${response.status}`);
-    for (const m of (await response.json()) as Array<Record<string, string>>) {
+    const res = await fetch(`${GAMMA}/markets?${qs}&closed=true`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`gamma ${res.status}`);
+    for (const m of (await res.json()) as Array<Record<string, string>>) {
       try {
         const prices = (JSON.parse(m.outcomePrices) as string[]).map(Number);
         const tokens = JSON.parse(m.clobTokenIds) as string[];
