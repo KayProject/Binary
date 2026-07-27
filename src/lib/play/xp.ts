@@ -115,7 +115,7 @@ export function score(
         break;
       case "void":
         break;
-      case 'open':
+      case "open":
         r.pending += 1;
         break;
       case "unknown":

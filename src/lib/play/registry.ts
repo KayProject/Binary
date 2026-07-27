@@ -48,7 +48,7 @@ export const marketIdFor = (conditionId: string) => keccak256(conditionId as `0x
  */
 export async function register(entry: RegistryEntry): Promise<`0x${string}`> {
   const marketId = marketIdFor(entry.conditionId);
-  const response = await fetch(`${BLOB_API}/${pathFor(marketId)}`, {
+  const res = await fetch(`${BLOB_API}/${pathFor(marketId)}`, {
     method: "PUT",
     headers: {
       authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
@@ -59,18 +59,18 @@ export async function register(entry: RegistryEntry): Promise<`0x${string}`> {
     },
     body: JSON.stringify(entry),
   });
-  if (!response.ok) throw new Error(`blob put ${response.status}: ${await response.text()}`);
+  if (!res.ok) throw new Error(`blob put ${res.status}: ${await res.text()}`);
   return marketId;
 }
 
 /** Look up one marketId. null = never registered, i.e. ungradeable. */
 export async function lookup(marketId: string): Promise<RegistryEntry | null> {
-  const response = await fetch(`${publicBase()}/${pathFor(marketId)}`, {
+  const res = await fetch(`${publicBase()}/${pathFor(marketId)}`, {
     next: { revalidate: 3600 },
   });
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error(`blob get ${response.status}`);
-  return (await response.json()) as RegistryEntry;
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`blob get ${res.status}`);
+  return (await res.json()) as RegistryEntry;
 }
 
 /** Batch form of lookup; misses come back as null rather than throwing. */
