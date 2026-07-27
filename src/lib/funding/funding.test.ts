@@ -18,7 +18,7 @@ const dep = (over: Partial<DepositJob> = {}): DepositJob => ({
   ...over,
 });
 const wd = (over: Partial<WithdrawalJob> = {}): WithdrawalJob => ({
-  kind: "withdrawal",
+  kind: 'withdrawal',
   id: "137:0xdef:0",
   user: "0xBob",
   amountUsdc: 20n * 10n ** 6n,
