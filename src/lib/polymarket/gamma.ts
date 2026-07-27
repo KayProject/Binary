@@ -83,11 +83,11 @@ export async function fetchFeed(limit = 20, category: Category = "all"): Promise
     params.set("tag_id", TAG_IDS[category]);
     params.set("related_tags", "true");
   }
-  const res = await fetch(`${GAMMA}/markets?${params}`, {
+  const response = await fetch(`${GAMMA}/markets?${params}`, {
     next: { revalidate: 30 }, // odds refresh cadence for the feed
   });
-  if (!res.ok) throw new Error(`Gamma ${res.status}`);
-  const raw: GammaMarket[] = await res.json();
+  if (!response.ok) throw new Error(`Gamma ${response.status}`);
+  const raw: GammaMarket[] = await response.json();
 
   return raw
     .map(normalize)
@@ -96,12 +96,12 @@ export async function fetchFeed(limit = 20, category: Category = "all"): Promise
 }
 
 async function bySlug(slug: string, closed: boolean): Promise<Market | null> {
-  const res = await fetch(
+  const response = await fetch(
     `${GAMMA}/markets?slug=${encodeURIComponent(slug)}&closed=${closed}`,
     { next: { revalidate: 10 } } // tighter on the detail view
   );
-  if (!res.ok) throw new Error(`Gamma ${res.status}`);
-  const raw: GammaMarket[] = await res.json();
+  if (!response.ok) throw new Error(`Gamma ${response.status}`);
+  const raw: GammaMarket[] = await response.json();
   return raw.length ? normalize(raw[0]) : null;
 }
 
@@ -136,11 +136,11 @@ export async function fetchByConditionIds(ids: string[]): Promise<Map<string, Ma
     // `closed` is strict and doesn't OR (see fetchMarket), so both sides get
     // asked: live markets and resolved ones are both part of a history.
     for (const closed of [false, true]) {
-      const res = await fetch(`${GAMMA}/markets?${qs}&closed=${closed}`, {
+      const response = await fetch(`${GAMMA}/markets?${qs}&closed=${closed}`, {
         next: { revalidate: 60 },
       });
-      if (!res.ok) continue;
-      for (const raw of (await res.json()) as GammaMarket[]) {
+      if (!response.ok) continue;
+      for (const raw of (await response.json()) as GammaMarket[]) {
         const m = normalize(raw);
         if (m) out.set(m.conditionId.toLowerCase(), m);
       }
