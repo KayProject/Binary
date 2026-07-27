@@ -11,6 +11,11 @@ export const runtime = "nodejs";
 
 const MIN_WITHDRAW = 0.5;
 
+/**
+ * POST
+ * @param {*} request: Request
+ * @returns {*}
+ */
 export async function POST(request: Request) {
   if (!payoutReady()) {
     return NextResponse.json({ error: "payout not configured" }, { status: 503 });

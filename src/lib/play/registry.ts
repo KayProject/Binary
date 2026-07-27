@@ -55,7 +55,7 @@ export async function register(entry: RegistryEntry): Promise<`0x${string}`> {
       "x-api-version": "7",
       "x-content-type": "application/json",
       "x-add-random-suffix": "0", // deterministic path — this is a key/value store
-      "x-cache-control-max-age": "31536000", // immutable: a hash never remaps
+      'x-cache-control-max-age': '31536000', // immutable: a hash never remaps
     },
     body: JSON.stringify(entry),
   });
