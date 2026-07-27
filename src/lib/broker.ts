@@ -90,7 +90,7 @@ export async function placeMarketBuy(tokenID: string, usd: number): Promise<Fill
 
   const negRisk = await retry("negRisk", () => client.getNegRisk(tokenID), (v) => typeof v === "boolean");
   const ask = parseFloat(
-    (await retry('price', () => client.getPrice(tokenID, Side.SELL), (v) => !!v?.price)).price
+    (await retry("price", () => client.getPrice(tokenID, Side.SELL), (v) => !!v?.price)).price
   );
   if (!(ask > 0 && ask < 1)) throw new Error("no valid ask for this market");
   const tickSize = await retry(
