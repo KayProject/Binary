@@ -11,9 +11,9 @@
 // here: the cache below, and de-duping concurrent misses — the app opens the
 // Portfolio and the leaderboard together, and a cold instance would otherwise
 // run the same 10s scan twice at once.
+import type { Graded } from "./xp";
 import { DEPLOY_BLOCK, scan, type CheckIn, type PickEvent } from "./events";
 import { grade } from "./grade";
-import type { Graded } from "./xp";
 
 const CACHE_MS = 60_000;
 
