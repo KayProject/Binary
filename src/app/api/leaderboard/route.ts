@@ -34,6 +34,7 @@ const shape = (r: Row) => ({
 });
 
 export async function GET(req: Request) {
+  // TODO: optimize for large datasets
   const url = new URL(req.url);
   const weekly = url.searchParams.get("window") !== "all";
   const address = url.searchParams.get("address")?.toLowerCase() ?? null;
