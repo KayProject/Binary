@@ -70,12 +70,6 @@ const TAG_IDS: Record<Exclude<Category, "all">, string> = {
   culture: "596", // Gamma slug "pop-culture", labeled "Culture"
 };
 
-/**
- * fetchFeed
- * @param {*} limit
- * @param {*} category: Category
- * @returns {*}
- */
 export async function fetchFeed(limit = 20, category: Category = "all"): Promise<Market[]> {
   // Over-fetch: curation drops a chunk of the raw list.
   const params = new URLSearchParams({

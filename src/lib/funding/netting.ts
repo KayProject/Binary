@@ -21,6 +21,7 @@ function within(a: bigint, b: bigint, bps: bigint): boolean {
 }
 
 export interface NetMatch {
+  // TODO: add error boundary here
   depositId: string;
   withdrawalId: string;
 }
