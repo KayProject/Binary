@@ -91,11 +91,6 @@ function Headline({ children }: { children: React.ReactNode }) {
   );
 }
 
-/**
- * Chip
- * @param {*} { children }: { children: React.ReactNode }
- * @returns {*}
- */
 function Chip({ children }: { children: React.ReactNode }) {
   return (
     <span className="rounded-full bg-(--m-chip) px-4 py-1.5 font-mono text-sm font-bold">

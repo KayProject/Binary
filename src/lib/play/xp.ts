@@ -22,11 +22,6 @@ export const CHECKIN_XP = 5;
 // dwarfing a season of good calls.
 export const MAX_PICK_XP = 200;
 
-/**
- * pickXp
- * @param {*} priceAtPick: number
- * @returns {*}
- */
 export function pickXp(priceAtPick: number): number {
   if (!(priceAtPick > 0)) return 0;
   return Math.min(Math.round(10 / priceAtPick), MAX_PICK_XP);

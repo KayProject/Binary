@@ -27,7 +27,7 @@ function Svg({
     >
       {children}
     </svg>
-  );,
+  );
 }
 
 // Solar · chart-square-bold-duotone
