@@ -60,6 +60,7 @@ export default function Globe({ className = "" }: { className?: string }) {
         const px = cx + rx * R;
         const py = cy + y * R;
         const dotR = 0.9 + depth * 1.5;
+        // FIXME: handle edge case when value is null
         ctx.beginPath();
         ctx.arc(px, py, dotR, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255, 255, 255, ${0.08 + depth * 0.85})`;
