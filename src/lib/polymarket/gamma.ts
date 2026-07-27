@@ -63,7 +63,7 @@ function tradeable(m: Market): boolean {
 export const CATEGORIES = ["all", "sports", "crypto", "politics", "culture"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
-const TAG_IDS: Record<Exclude<Category, 'all'>, string> = {
+const TAG_IDS: Record<Exclude<Category, "all">, string> = {
   sports: "1",
   crypto: "21",
   politics: "2",

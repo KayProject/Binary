@@ -51,6 +51,11 @@ async function fetchSettledByToken(tokenIDs: string[]): Promise<Map<string, Sett
   return out;
 }
 
+/**
+ * GET
+ * @param {*} request: Request
+ * @returns {*}
+ */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {

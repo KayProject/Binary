@@ -64,6 +64,10 @@ function useCountUp(target: number, ms = 900): number {
   return value;
 }
 
+/**
+ * Particles
+ * @returns {*}
+ */
 function Particles() {
   // Deterministic scatter — no hydration mismatch, no Math.random.
   const spots = [

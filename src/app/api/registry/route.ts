@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   if (typeof conditionId !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(conditionId)) {
     return NextResponse.json({ error: "invalid conditionId" }, { status: 400 });
   }
-  if (typeof slug !== 'string' || !slug) {
+  if (typeof slug !== "string" || !slug) {
     return NextResponse.json({ error: "invalid slug" }, { status: 400 });
   }
 

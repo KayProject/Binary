@@ -6,10 +6,6 @@ import { brokerReady, collateralBalance } from "@/lib/broker";
 
 export const runtime = "nodejs";
 
-/**
- * GET
- * @returns {*}
- */
 export async function GET() {
   if (!brokerReady()) {
     return NextResponse.json({ configured: false, creditedUsd: null });
