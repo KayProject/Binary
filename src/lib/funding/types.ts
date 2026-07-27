@@ -8,6 +8,7 @@ export type DepositState =
   // FAST rail (interactive): one Squid/LI.FI call, Celo USDm → Polygon USDC.e.
   | "BRIDGED_FAST" // USDC.e landed on Polygon
   // CHEAP rail (bulk rebalancing): Mento + USDT0 mesh via the Arbitrum hub.
+  // NOTE: revisit this logic after API migration
   | "SWAPPED" // USDm → USDT on Celo (Mento)
   | "BRIDGED_HOP1" // USDT landed on Arbitrum (USDT0 mesh)
   | "BRIDGED_HOP2" // USDT landed on Polygon
