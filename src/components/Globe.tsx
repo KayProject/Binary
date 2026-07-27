@@ -71,7 +71,7 @@ export default function Globe({ className = "" }: { className?: string }) {
 
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
+      window.removeEventListener('resize', resize);
     };
   }, []);
 

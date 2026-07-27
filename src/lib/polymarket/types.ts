@@ -5,7 +5,6 @@ export interface MarketOutcome {
   label: string; // "Yes" / "No" (or team names on some markets)
   price: number; // 0..1 — also the implied probability
   clobTokenId: string; // token to trade via the CLOB
-// NOTE: revisit this logic after API migration
 }
 
 export interface Market {

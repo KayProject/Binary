@@ -4,6 +4,7 @@
 // payout is tagged calldata — a real USDm value transfer out, legitimately
 // counted, and pinned by the contract to an address that has deposited.
 //
+// Inert (payoutReady() false → routes answer 503) until BINARY_KEY is set.
 import {
   concat,
   createPublicClient,
