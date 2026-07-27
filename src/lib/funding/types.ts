@@ -1,3 +1,7 @@
+// Funding pipeline domain types. A job is the unit of money movement: created
+// by a Deposited/withdrawal event, advanced step-by-step by executors, safe to
+// resume after a crash at any state (every executor is idempotent per job id).
+
 export type DepositState =
   | "RECEIVED" // Deposited event seen on Celo
   | "NETTED" // matched against a withdrawal — skips the bridge entirely
@@ -47,14 +51,6 @@ export interface WithdrawalJob {
 }
 
 export type Job = DepositJob | WithdrawalJob;
-
-function isTerminalState(job: Job): boolean {
-  if (job.kind === "deposit") {
-    return job.state === "CREDITED" || job.state === "FAILED";
-  } else {
-    return job.state === "PAID" || job.state === "FAILED";
-  }
-}
 
 // One executor per non-terminal state: performs the leg, returns the next
 // state. Executors MUST be idempotent — check on-chain effects before acting.

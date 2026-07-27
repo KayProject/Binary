@@ -63,6 +63,7 @@ export async function collateralBalance(): Promise<number> {
 }
 
 // Flaky-network guard from the phase-0 run: these lookups intermittently
+// resolve undefined, which crashes the order builder — retry until sane.
 async function retry<T>(label: string, fn: () => Promise<T>, ok: (v: T) => boolean): Promise<T> {
   for (let i = 0; i < 5; i++) {
     try {
