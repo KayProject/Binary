@@ -31,9 +31,9 @@ async function fetchSettled(conditionIds: string[]): Promise<Map<string, Settled
   for (let i = 0; i < conditionIds.length; i += BATCH) {
     const chunk = conditionIds.slice(i, i + BATCH);
     const qs = chunk.map((c) => `condition_ids=${encodeURIComponent(c)}`).join("&");
-    const response = await fetch(`${GAMMA}/markets?${qs}&closed=true`, { next: { revalidate: 300 } });
-    if (!response.ok) throw new Error(`gamma ${response.status}`);
-    for (const m of (await response.json()) as Array<Record<string, string>>) {
+    const res = await fetch(`${GAMMA}/markets?${qs}&closed=true`, { next: { revalidate: 300 } });
+    if (!res.ok) throw new Error(`gamma ${res.status}`);
+    for (const m of (await res.json()) as Array<Record<string, string>>) {
       try {
         const prices = (JSON.parse(m.outcomePrices) as string[]).map(Number);
         const tokens = JSON.parse(m.clobTokenIds) as string[];
@@ -65,12 +65,12 @@ export function readOutcome(prices: [number, number], outcome: 0 | 1): Resolutio
 
 /** Price of the picked outcome at the minute it was picked. */
 async function priceAtPick(tokenId: string, at: number): Promise<number | null> {
-  const response = await fetch(
+  const res = await fetch(
     `${CLOB}/prices-history?market=${tokenId}&startTs=${at - 300}&endTs=${at + 300}&fidelity=1`,
     { next: { revalidate: 86_400 } } // a past price never changes
   );
-  if (!response.ok) return null;
-  const history = ((await response.json()) as { history?: Array<{ t: number; p: number }> }).history;
+  if (!res.ok) return null;
+  const history = ((await res.json()) as { history?: Array<{ t: number; p: number }> }).history;
   if (!history?.length) return null;
   // Closest sample to the pick, rather than assuming an ordering.
   return history.reduce((best, h) =>

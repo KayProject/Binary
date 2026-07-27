@@ -13,7 +13,7 @@ import { quotesReady, newQuoteId, writeQuote } from "@/lib/delta/quotes";
 
 export const runtime = "nodejs";
 
-const CLOB = "https://clob.polymarket.com";
+const CLOB: string = "https://clob.polymarket.com";
 const GAMMA = "https://gamma-api.polymarket.com";
 const FEE_USD = 0.01;
 const SLA_WINDOW_MS = parseInt(process.env.SLA_WINDOW_MS ?? "5000");

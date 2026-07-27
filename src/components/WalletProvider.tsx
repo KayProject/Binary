@@ -20,9 +20,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { celo } from "viem/chains";
 import { PrivyProvider, usePrivy, useWallets } from "@privy-io/react-auth";
 import { SmartWalletsProvider, useSmartWallets } from "@privy-io/react-auth/smart-wallets";
+import { celo } from "viem/chains";
 
 // Privy App IDs are public client-side identifiers (they ship in the bundle
 // by definition); env var overrides for staging, default is production.
