@@ -1,4 +1,3 @@
-// POST /api/delta/insight — paid meta-intelligence on one market. $0.01 in
 // USDm over x402. Body: { tokenIdUp, tokenIdDown }.
 //
 // What's sold is Delta's MEASUREMENTS of the live book — spread, depth,
