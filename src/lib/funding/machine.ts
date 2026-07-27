@@ -52,32 +52,35 @@ export async function advance<J extends DepositJob | WithdrawalJob>(
   const exec = executors[job.state];
   if (!exec) throw new Error(`no executor for state ${job.state}`);
 
-  const t0 = Date.now();
-  let result: Awaited<ReturnType<typeof exec>>;
   try {
-    result = await exec(job);
+    const result = await exec(job);
+    const { next, leg } = result;
+    assertTransition(job, next);
+    return {
+      ...job,
+      state: next as J["state"],
+      attempts: 0,
+      updatedAt: Date.now(),
+      legs: { ...job.legs, [next]: { ...leg, ms: Date.now() - Date.now() } },
+    };
   } catch (e) {
     const attempts = job.attempts + 1;
+    if (attempts >= MAX_ATTEMPTS) {
+      return {
+        ...job,
+        attempts,
+        state: "FAILED" as J["state"],
+        updatedAt: Date.now(),
+        error: e instanceof Error ? e.message : String(e),
+      };
+    }
     return {
       ...job,
       attempts,
-      state: attempts >= MAX_ATTEMPTS ? ("FAILED" as J["state"]) : job.state,
       updatedAt: Date.now(),
       error: e instanceof Error ? e.message : String(e),
     };
   }
-
-  // Outside the try: an illegal transition is a programmer error, not a
-  // retryable leg failure — let it throw.
-  const { next, leg } = result;
-  assertTransition(job, next);
-  return {
-    ...job,
-    state: next as J["state"],
-    attempts: 0,
-    updatedAt: Date.now(),
-    legs: { ...job.legs, [next]: { ...leg, ms: Date.now() - t0 } },
-  };
 }
 
 /** Drive a job to a terminal state (or until an executor starts failing). */
