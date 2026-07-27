@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const raw = (searchParams.get("category") ?? "all").toLowerCase();
   const category: Category = (CATEGORIES as readonly string[]).includes(raw)
     ? (raw as Category)
-    : "all";
+    : 'all';
   try {
     const markets = await fetchFeed(limit, category);
     return NextResponse.json(
