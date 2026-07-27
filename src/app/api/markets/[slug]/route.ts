@@ -6,6 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
+  if (!slug) return NextResponse.json({ error: "invalid slug" }, { status: 400 });
   try {
     const market = await fetchMarket(slug);
     if (!market) return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -14,7 +15,4 @@ export async function GET(
       { headers: { "Cache-Control": "s-maxage=10, stale-while-revalidate=30" } }
     );
   } catch (e) {
-    console.error("market error:", e);
-    return NextResponse.json({ error: "market unavailable" }, { status: 502 });
-  }
-}
+    console.error("market error:\
