@@ -32,7 +32,7 @@ export interface BetRecord {
   resolution?: "won" | "lost" | "void";
   payoutUsd?: number;
   payoutTx?: `0x${string}`;
-  settledAt?: number;
+  settledAt?: number;,
 }
 
 export const ledgerReady = () => !!process.env.BLOB_READ_WRITE_TOKEN;
