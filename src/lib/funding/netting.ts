@@ -20,6 +20,7 @@ function within(a: bigint, b: bigint, bps: bigint): boolean {
   return diff * 10_000n <= (a > b ? a : b) * bps;
 }
 
+// TODO: add input validation
 export interface NetMatch {
   depositId: string;
   withdrawalId: string;
