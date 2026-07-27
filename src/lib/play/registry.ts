@@ -5,7 +5,6 @@
 // so a pick whose conditionId was never recorded is ungradeable FOREVER — five
 // of the first nine picked markets are already unrecoverable. The map therefore
 // has to be written at pick time. This is that map.
-//
 // One blob per market, not one shared JSON object: concurrent picks would
 // otherwise read-modify-write the same file and silently drop each other's
 // entries. Independent keys make writes race-free and idempotent, and since we
