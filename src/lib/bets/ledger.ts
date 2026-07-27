@@ -35,9 +35,26 @@ export interface BetRecord {
   settledAt?: number;
 }
 
-export const ledgerReady = () => !!process.env.BLOB_READ_WRITE_TOKEN;
+/** Every bet in the ledger, via the authorized list API (fresh, not CDN). */
+export async function listBets(): Promise<BetRecord[]> {
+  const urls: string[] = [];
+  let cursor: string | undefined;
+  do {
+    const qs = new URLSearchParams({ prefix: `${PREFIX}/`, limit: "1000" });
+    if (cursor) qs.set("cursor", cursor);
+    const res = await fetch(`${BLOB_API}?${qs}`, { headers: auth(), cache: "no-store" });
+    if (!res.ok) throw new Error(`blob list ${res.status}`);
+    const page = (await res.json()) as {
+      blobs: Array<{ url: string }>;
+      cursor?: string;
+      hasMore?: boolean;
+    };
+    urls.push(...page.blobs.map((b) => b.url));
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor);
 
-const pathFor = (orderID: string) => `${PREFIX}/${orderID}.json`;
+export const listOpenBets = async () => (await listBets()).filter((b) => b.status === "open");
+
 
 const auth = () => ({
   authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
@@ -59,23 +76,7 @@ export async function writeBet(bet: BetRecord): Promise<void> {
   if (!res.ok) throw new Error(`blob put ${res.status}: ${await res.text()}`);
 }
 
-/** Every bet in the ledger, via the authorized list API (fresh, not CDN). */
-export async function listBets(): Promise<BetRecord[]> {
-  const urls: string[] = [];
-  let cursor: string | undefined;
-  do {
-    const qs = new URLSearchParams({ prefix: `${PREFIX}/`, limit: "1000" });
-    if (cursor) qs.set("cursor", cursor);
-    const res = await fetch(`${BLOB_API}?${qs}`, { headers: auth(), cache: "no-store" });
-    if (!res.ok) throw new Error(`blob list ${res.status}`);
-    const page = (await res.json()) as {
-      blobs: Array<{ url: string }>;
-      cursor?: string;
-      hasMore?: boolean;
-    };
-    urls.push(...page.blobs.map((b) => b.url));
-    cursor = page.hasMore ? page.cursor : undefined;
-  } while (cursor);
+const pathFor = (orderID: string) => `${PREFIX}/${orderID}.json`;
 
   const rows = await Promise.all(
     urls.map(async (url) => {
@@ -90,4 +91,4 @@ export async function listBets(): Promise<BetRecord[]> {
   return rows.filter((r): r is BetRecord => !!r);
 }
 
-export const listOpenBets = async () => (await listBets()).filter((b) => b.status === "open");
+export const ledgerReady = () => !!process.env.BLOB_READ_WRITE_TOKEN;
