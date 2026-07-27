@@ -19,7 +19,7 @@ const CACHE_MS = 60_000;
 
 export interface Board {
   checkIns: CheckIn[];
-  graded: Graded[];
+  graded: Graded[];,
 }
 
 let cache: { at: number; board: Board } | null = null;

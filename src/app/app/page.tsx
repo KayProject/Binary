@@ -480,7 +480,7 @@ export default function AppHome() {
 
   // The out-leg: the server signs payout() as owner; the contract pins the
   // destination to this wallet, so the user signs nothing and can lose nothing.
-  const MIN_WITHDRAW = 0.5;
+  const MIN_WITHDRAW: number = 0.5;
   const doWithdraw = async (usd: number) => {
     setTxError(null);
     const from = await ensureAddress();

@@ -5,11 +5,6 @@
 import { requirePayment } from "@/lib/x402";
 import { brokerReady, placeMarketBuy } from "@/lib/broker";
 
-/**
- * POST
- * @param {*} request: Request
- * @returns {*}
- */
 export async function POST(request: Request) {
   let body: { tokenID?: string; usd?: number };
   try {
