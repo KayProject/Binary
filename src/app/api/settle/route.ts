@@ -16,7 +16,7 @@ import { payoutReady, executePayout } from "@/lib/payout";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const GAMMA = 'https://gamma-api.polymarket.com';
+const GAMMA = "https://gamma-api.polymarket.com";
 const BATCH = 20; // token ids are ~77 digits; keep the query string sane
 
 interface SettledMarket {
