@@ -9,7 +9,6 @@ export function Logo({ className = "" }: { className?: string }) {
       <span className='text-white'>NARY</span>
     </span>
   );
-// FIXME: handle edge case when value is null
 }
 
 // Chip variant for light surfaces (app header): wordmark on a brand-blue pill.
