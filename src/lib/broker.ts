@@ -27,24 +27,8 @@ export function brokerReady(): boolean {
   return REQUIRED_ENV.every((k) => !!process.env[k]);
 }
 
-/** Place a $-denominated FOK market buy for `tokenID`. Throws on rejection. */
-export async function placeMarketBuy(tokenID: string, usd: number): Promise<FillResult> {
-  const client = clobClient();
-
 function polygonProvider(): ethers.providers.JsonRpcProvider {
   return new ethers.providers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
-}
-
-/** pUSD sitting in the deposit wallet, in $ (6 dec). */
-export async function collateralBalance(): Promise<number> {
-  const cfg = getContractConfig(POLYGON_CHAIN_ID);
-  const erc20 = new ethers.Contract(
-    cfg.collateral,
-    ["function balanceOf(address) view returns (uint256)"],
-    polygonProvider()
-  );
-  const bal: ethers.BigNumber = await erc20.balanceOf(process.env.DEPOSIT_WALLET_ADDRESS!);
-  return parseFloat(ethers.utils.formatUnits(bal, 6));
 }
 
 function clobClient(): ClobClient {
@@ -66,13 +50,16 @@ function clobClient(): ClobClient {
   });
 }
 
-export interface FillResult {
-  orderID: string;
-  status: string;
-  side: "BUY";
-  tokenID: string;
-  usd: number;
-  askPrice: number;
+/** pUSD sitting in the deposit wallet, in $ (6 dec). */
+export async function collateralBalance(): Promise<number> {
+  const cfg = getContractConfig(POLYGON_CHAIN_ID);
+  const erc20 = new ethers.Contract(
+    cfg.collateral,
+    ["function balanceOf(address) view returns (uint256)"],
+    polygonProvider()
+  );
+  const bal: ethers.BigNumber = await erc20.balanceOf(process.env.DEPOSIT_WALLET_ADDRESS!);
+  return parseFloat(ethers.utils.formatUnits(bal, 6));
 }
 
 // Flaky-network guard from the phase-0 run: these lookups intermittently
@@ -87,6 +74,19 @@ async function retry<T>(label: string, fn: () => Promise<T>, ok: (v: T) => boole
   }
   throw new Error(`${label} kept failing`);
 }
+
+export interface FillResult {
+  orderID: string;
+  status: string;
+  side: "BUY";
+  tokenID: string;
+  usd: number;
+  askPrice: number;
+}
+
+/** Place a $-denominated FOK market buy for `tokenID`. Throws on rejection. */
+export async function placeMarketBuy(tokenID: string, usd: number): Promise<FillResult> {
+  const client = clobClient();
 
   const negRisk = await retry("negRisk", () => client.getNegRisk(tokenID), (v) => typeof v === "boolean");
   const ask = parseFloat(
