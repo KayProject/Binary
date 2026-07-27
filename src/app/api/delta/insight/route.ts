@@ -79,6 +79,11 @@ async function fetchEndDate(tokenId: string): Promise<string | null> {
   }
 }
 
+/**
+ * POST
+ * @param {*} request: Request
+ * @returns {*}
+ */
 export async function POST(request: Request) {
   let body: { tokenIdUp?: string; tokenIdDown?: string };
   try {

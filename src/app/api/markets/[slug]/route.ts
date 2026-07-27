@@ -14,4 +14,7 @@ export async function GET(
       { headers: { "Cache-Control": "s-maxage=10, stale-while-revalidate=30" } }
     );
   } catch (e) {
-    console.error("market error:\
+    console.error("market error:", e);
+    return NextResponse.json({ error: "market unavailable" }, { status: 502 });
+  }
+}

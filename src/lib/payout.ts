@@ -21,7 +21,7 @@ import { DEPOSIT_CONTRACT, USDM, fetchPlayerState } from "./chain";
 const ATTRIBUTION_TAG = toDataSuffix("celo_22480bd47654");
 const tagged = (data: `0x${string}`) => concat([data, ATTRIBUTION_TAG]);
 
-const payoutAbi = [parseAbiItem("function payout(address user, uint256 amount)")];
+const payoutAbi = [parseAbiItem('function payout(address user, uint256 amount)')];
 const balanceOfAbi = [parseAbiItem("function balanceOf(address) view returns (uint256)")];
 
 export function payoutReady(): boolean {
