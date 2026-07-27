@@ -15,11 +15,6 @@ export const runtime = "nodejs";
 const MIN_BET = 0.5;
 const MAX_BET = 100;
 
-/**
- * POST
- * @param {*} request: Request
- * @returns {*}
- */
 export async function POST(request: Request) {
   if (!brokerReady()) {
     return NextResponse.json({ error: "broker not configured" }, { status: 503 });
