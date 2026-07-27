@@ -4,8 +4,8 @@
 // as the contract intends ("Grading and XP live off-chain, computed from this
 // contract's events"). This module only reads the chain and decodes; it holds
 // no opinion about scoring — see xp.ts for that.
-import { parseAbiItem } from "viem";
 import { PLAY_CONTRACT, publicClient } from "@/lib/chain";
+import { parseAbiItem } from "viem";
 
 // Deploy block, measured — scanning from 0 would be ~72M blocks of nothing.
 export const DEPLOY_BLOCK = 72_047_029n;

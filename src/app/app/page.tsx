@@ -92,7 +92,7 @@ function usePicks() {
 // A nonce bump refetches without clearing, so a refresh doesn't flash the list
 // back to a loading line.
 function usePlays(address: string | null, nonce: number) {
-  const [payload, setData] = useState<{ address: string; result: History | "error" } | null>(null);
+  const [data, setData] = useState<{ address: string; result: History | "error" } | null>(null);
 
   useEffect(() => {
     if (!address) return;
@@ -106,7 +106,7 @@ function usePlays(address: string | null, nonce: number) {
     };
   }, [address, nonce]);
 
-  const result = address && payload?.address === address ? payload.result : null;
+  const result = address && data?.address === address ? data.result : null;
   return {
     history: result && result !== "error" ? result : null,
     state: !address ? "idle" : result === "error" ? "error" : result ? "idle" : "loading",
@@ -216,7 +216,7 @@ export default function AppHome() {
   const { history, state: playsState } = usePlays(address ?? null, playsNonce);
   const [graded, setGraded] = useState<Record<string, "won" | "lost">>({});
   // Distinct days checked in. The contract's checkInCount counts same-day
-  // repeats too ("never reverts on repeats"), which ran ~32x hot on live payload
+  // repeats too ("never reverts on repeats"), which ran ~32x hot on live data
   // — a one-day user was being shown "47 check-ins". Take the deduped figure
   // from the scorer instead, so the tile and the board can't disagree.
   const [checkInDays, setCheckInDays] = useState<number | null>(null);
@@ -319,7 +319,7 @@ export default function AppHome() {
   }, []);
 
   // Design review hatch: /app?moment=<type> renders any moment with sample
-  // payload — no on-chain event needed to see a screen on a real device.
+  // data — no on-chain event needed to see a screen on a real device.
   useEffect(() => {
     const id = requestAnimationFrame(() => {
       const t = new URLSearchParams(window.location.search).get("moment");
@@ -492,14 +492,14 @@ export default function AppHome() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user: from, usd }),
       });
-      const payload = await response.json();
+      const data = await response.json();
       if (!response.ok) {
         setTxError(
           response.status === 402
-            ? `You can withdraw up to $${(payload.availableUsd ?? 0).toFixed(2)}.`
+            ? `You can withdraw up to $${(data.availableUsd ?? 0).toFixed(2)}.`
             : response.status === 503
               ? "Withdrawals are briefly paused — try again shortly."
-              : payload.error ?? "Withdrawal didn’t go through — try again."
+              : data.error ?? "Withdrawal didn’t go through — try again."
         );
         return;
       }
@@ -570,12 +570,12 @@ export default function AppHome() {
           quoteId: insight?.sla?.quoteId,
         }),
       });
-      const payload = await response.json();
+      const data = await response.json();
       if (!response.ok) {
         setTxError(
           response.status === 409
             ? "Your deposit is still funding — give it a minute."
-            : payload.error ?? "Bet didn’t go through — try again."
+            : data.error ?? "Bet didn’t go through — try again."
         );
         return;
       }
