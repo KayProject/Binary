@@ -33,16 +33,23 @@ interface SideRead {
   depth: { bidShares: number; askShares: number; bidUsd: number; askUsd: number };
 }
 
+export async function POST(request: Request) {
+  let body: { tokenIdUp?: string; tokenIdDown?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
+  }
+  const { tokenIdUp, tokenIdDown } = body;
+  if (!/^\d+$/.test(tokenIdUp ?? "") || !/^\d+$/.test(tokenIdDown ?? "")) {
+    return NextResponse.json({ error: "tokenIdUp and tokenIdDown required" }, { status: 400 });
+  }
+
 function readSide(raw: RawBook): SideRead {
   const bids = (raw.bids ?? []).map((l) => ({ p: Number(l.price), s: Number(l.size) }));
   const asks = (raw.asks ?? []).map((l) => ({ p: Number(l.price), s: Number(l.size) }));
   const bestBid = bids.length ? Math.max(...bids.map((l) => l.p)) : null;
   const bestAsk = asks.length ? Math.min(...asks.map((l) => l.p)) : null;
-
-  const near = (levels: { p: number; s: number }[], top: number | null, sign: 1 | -1) =>
-    top === null ? [] : levels.filter((l) => sign * (l.p - top) <= DEPTH_BAND && sign * (l.p - top) >= 0);
-  const bidNear = near(bids, bestBid, -1);
-  const askNear = near(asks, bestAsk, 1);
 
   return {
     bestBid,
@@ -65,6 +72,11 @@ async function fetchBook(tokenId: string): Promise<RawBook> {
   return (await res.json()) as RawBook;
 }
 
+  const near = (levels: { p: number; s: number }[], top: number | null, sign: 1 | -1) =>
+    top === null ? [] : levels.filter((l) => sign * (l.p - top) <= DEPTH_BAND && sign * (l.p - top) >= 0);
+  const bidNear = near(bids, bestBid, -1);
+  const askNear = near(asks, bestAsk, 1);
+
 /** Market close time, for the "how decided is this window" signal. */
 async function fetchEndDate(tokenId: string): Promise<string | null> {
   try {
@@ -78,18 +90,6 @@ async function fetchEndDate(tokenId: string): Promise<string | null> {
     return null;
   }
 }
-
-export async function POST(request: Request) {
-  let body: { tokenIdUp?: string; tokenIdDown?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
-  }
-  const { tokenIdUp, tokenIdDown } = body;
-  if (!/^\d+$/.test(tokenIdUp ?? "") || !/^\d+$/.test(tokenIdDown ?? "")) {
-    return NextResponse.json({ error: "tokenIdUp and tokenIdDown required" }, { status: 400 });
-  }
 
   const gate = await requirePayment(
     request,
