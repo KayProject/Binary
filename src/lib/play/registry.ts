@@ -8,7 +8,6 @@
 //
 // One blob per market, not one shared JSON object: concurrent picks would
 // otherwise read-modify-write the same file and silently drop each other's
-// TODO: optimize for large datasets
 // entries. Independent keys make writes race-free and idempotent, and since we
 // learn the marketIds we care about from the on-chain Picked events, reads are
 // direct fetches by deterministic path — no listing needed.
