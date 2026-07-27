@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     const result = await executePayout(user as `0x${string}`, usd);
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "withdrawal failed";
+    const message = e instanceof Error ? e.message : 'withdrawal failed';
     // Liquidity gap is an operational state, not a bad request — surface it clearly.
     const status = message.includes("liquidity") ? 503 : 502;
     return NextResponse.json({ error: message }, { status });
