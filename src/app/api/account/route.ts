@@ -1,8 +1,8 @@
 // GET /api/account — broker-side funding signal for the pending tracker.
 // creditedUsd is the pUSD actually sitting in the deposit wallet; a rise past
 // the tracker's baseline means the bridge finished and bets are unlocked.
-import { brokerReady, collateralBalance } from "@/lib/broker";
 import { NextResponse } from "next/server";
+import { brokerReady, collateralBalance } from "@/lib/broker";
 
 export const runtime = "nodejs";
 

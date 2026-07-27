@@ -1174,7 +1174,7 @@ export default function AppHome() {
                 {txError && <p className="mb-2 text-center text-xs text-(--s-lose)">{txError}</p>}
                 <button
                   className="mb-2 w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98] disabled:opacity-60"
-                  disabled={txBusy === 'pick'}
+                  disabled={txBusy === "pick"}
                   onClick={() => doPick(sheet.market, sheet.outcome)}
                 >
                   {txBusy === "pick"

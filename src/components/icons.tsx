@@ -1,7 +1,7 @@
 // Icon set — Solar "bold duotone", with one mark borrowed from Phosphor.
 //
 // The paths are inlined rather than pulled through @iconify/react, which fetches
-// icon payload from api.iconify.design at runtime: a network round-trip we won't
+// icon data from api.iconify.design at runtime: a network round-trip we won't
 // take inside a MiniPay webview. The source packages are devDependencies only
 // (@iconify-json/solar, @phosphor-icons/core) — nothing ships at runtime.
 //
@@ -9,7 +9,7 @@
 // its 7,401 icons, and a generic dollar says the opposite of what that tab means.
 //
 // Each export names the set and icon it came from; re-pull from those packages
-// rather than editing path payload by hand.
+// rather than editing path data by hand.
 
 type IconProps = { className?: string };
 
