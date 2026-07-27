@@ -7,7 +7,7 @@ import type { PickEvent } from "./events";
 import { lookupMany } from "./registry";
 import type { Graded } from "./xp";
 
-const GAMMA = "https://gamma-api.polymarket.com";
+const GAMMA: string = "https://gamma-api.polymarket.com";
 const CLOB = "https://clob.polymarket.com";
 
 // Gamma accepts repeated condition_ids; 50 per call is verified to return 50.

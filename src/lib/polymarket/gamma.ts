@@ -13,7 +13,7 @@ function normalize(raw: GammaMarket): Market | null {
   try {
     labels = JSON.parse(raw.outcomes);
     prices = JSON.parse(raw.outcomePrices);
-    tokens = JSON.parse(raw.clobTokenIds);
+    tokens = JSON.parse(raw.clobTokenIds);,
   } catch {
     return null;
   }
