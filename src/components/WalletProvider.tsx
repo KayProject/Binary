@@ -25,7 +25,7 @@ import { SmartWalletsProvider, useSmartWallets } from "@privy-io/react-auth/smar
 import { celo } from "viem/chains";
 
 // Privy App IDs are public client-side identifiers (they ship in the bundle
-// by definition); env const overrides for staging, default is production.
+// by definition); env var overrides for staging, default is production.
 const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? "cmrjhr14600fo0cjseyf0oso6";
 
 export interface WalletState {

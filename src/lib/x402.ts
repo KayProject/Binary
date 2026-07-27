@@ -50,22 +50,6 @@ function atomicAmount(price: string): string {
   return String(Math.round(usd * 10 ** USDC_DECIMALS));
 }
 
-/** The 402 challenge: v2 header (PAYMENT-REQUIRED, base64) + v1-style body. */
-function challenge(requirements: PaymentRequirements): Response {
-  const payload = {
-    x402Version: 2,
-    error: "Payment required",
-    accepts: [requirements],
-    resource: { url: requirements.resource },
-  };
-  return Response.json(payload, {
-    status: 402,
-    headers: {
-      "PAYMENT-REQUIRED": Buffer.from(JSON.stringify(payload)).toString("base64"),
-    },
-  });
-}
-
 function requirementsFor(
   resourceUrl: string,
   price: string,
@@ -83,6 +67,22 @@ function requirementsFor(
     asset: USDC_CELO,
     extra: { ...USDC_DOMAIN, primaryType: "TransferWithAuthorization" },
   };
+}
+
+/** The 402 challenge: v2 header (PAYMENT-REQUIRED, base64) + v1-style body. */
+function challenge(requirements: PaymentRequirements): Response {
+  const payload = {
+    x402Version: 2,
+    error: "Payment required",
+    accepts: [requirements],
+    resource: { url: requirements.resource },
+  };
+  return Response.json(payload, {
+    status: 402,
+    headers: {
+      "PAYMENT-REQUIRED": Buffer.from(JSON.stringify(payload)).toString("base64"),
+    },
+  });
 }
 
 export interface PaywallResult {
