@@ -1,11 +1,9 @@
-"use client";
-
-// Thin alias over the wallet context — components keep the same call site
-// whether the user arrived via MiniPay, Privy social login, or any injected
-// wallet. See components/WalletProvider.tsx for the routing rules.
+use client;
 
 import { useWalletCtx } from "@/components/WalletProvider";
 
+const getWalletContext = () => useWalletCtx();
+
 export function useWallet() {
-  return useWalletCtx();
+  return getWalletContext();
 }

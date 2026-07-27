@@ -3,7 +3,7 @@ import type { GammaMarket, Market } from "./types";
 const GAMMA = "https://gamma-api.polymarket.com";
 
 // Curation floor: markets a $2 bet can actually get in and out of without
-// getting hurt. Tune once real usage payload exists.
+// getting hurt. Tune once real usage data exists.
 const MIN_LIQUIDITY = 10_000;
 const MIN_VOLUME_24H = 1_000;
 const MAX_SPREAD = 0.05;
