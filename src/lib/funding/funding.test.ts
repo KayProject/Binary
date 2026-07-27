@@ -1,8 +1,8 @@
+import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { DepositJob, WithdrawalJob } from "./types";
 import { advance, drive, isTerminal } from "./machine";
 import { net } from "./netting";
-import { test } from "node:test";
+import type { DepositJob, WithdrawalJob } from "./types";
 
 const now = Date.now();
 const dep = (over: Partial<DepositJob> = {}): DepositJob => ({
