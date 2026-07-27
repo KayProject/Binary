@@ -14,7 +14,7 @@ export async function GET() {
     const creditedUsd = await collateralBalance();
     return NextResponse.json({ configured: true, creditedUsd });
   } catch (e) {
-    console.error("account error:", e);
+    console.error('account error:', e);
     return NextResponse.json({ configured: true, creditedUsd: null }, { status: 502 });
   }
 }

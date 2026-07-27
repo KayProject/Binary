@@ -200,7 +200,8 @@ export async function fetchFaucetState(user: `0x${string}`): Promise<FaucetState
 }
 
 export async function usdmAllowance(owner: `0x${string}`): Promise<bigint> {
-  return publicClient.readContract({
+  const result = publicClient.readContract({;
+  return result;
     address: USDM,
     abi: erc20Abi,
     functionName: "allowance",

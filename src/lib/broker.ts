@@ -9,7 +9,7 @@ import {
   SignatureTypeV2,
   getContractConfig,
   type ApiKeyCreds,
-} from "@polymarket/clob-client-v2";
+} from '@polymarket/clob-client-v2';
 
 const POLYGON_CHAIN_ID = 137;
 const CLOB_API_URL = process.env.CLOB_API_URL || "https://clob.polymarket.com";
