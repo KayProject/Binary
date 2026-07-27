@@ -20,7 +20,8 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
+    const result = NextResponse.json({ error: "invalid JSON" }, { status: 400 });
+    return result;
   }
 
   const { user, usd } = body;
