@@ -64,7 +64,7 @@ export async function listBets(): Promise<BetRecord[]> {
   const urls: string[] = [];
   let cursor: string | undefined;
   do {
-    const qs = new URLSearchParams({ prefix: `${PREFIX}/`, limit: '1000' });
+    const qs = new URLSearchParams({ prefix: `${PREFIX}/`, limit: "1000" });
     if (cursor) qs.set("cursor", cursor);
     const res = await fetch(`${BLOB_API}?${qs}`, { headers: auth(), cache: "no-store" });
     if (!res.ok) throw new Error(`blob list ${res.status}`);
