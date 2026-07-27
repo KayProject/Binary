@@ -20,7 +20,7 @@ const FACILITATOR = "https://api.x402.celo.org";
 
 // Native USDC on Celo mainnet + its EIP-712 signing domain (name/version as
 // deployed — the client signs against these; wrong values = invalid sigs).
-const USDC_CELO = "0xcebA9300f2b948710d2653dD7B07f33A8B32118C";
+const USDC_CELO: string = "0xcebA9300f2b948710d2653dD7B07f33A8B32118C";
 const USDC_DECIMALS = 6;
 const USDC_DOMAIN = { name: "USDC", version: "2" };
 
