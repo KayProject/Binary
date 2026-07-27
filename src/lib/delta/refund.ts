@@ -41,6 +41,12 @@ async function refundedTodayUsd(user: string): Promise<number> {
   return ((await res.json()) as { usd: number }).usd;
 }
 
+/**
+ * recordRefund
+ * @param {*} user: string
+ * @param {*} usd: number
+ * @returns {*}
+ */
 async function recordRefund(user: string, usd: number): Promise<void> {
   const total = (await refundedTodayUsd(user)) + usd;
   const res = await fetch(`${BLOB_API}/${capPath(user)}`, {
