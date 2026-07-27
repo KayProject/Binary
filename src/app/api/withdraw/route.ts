@@ -9,7 +9,7 @@ import { payoutReady, withdrawableUsd, executePayout } from "@/lib/payout";
 
 export const runtime = "nodejs";
 
-const MIN_WITHDRAW: number = 0.5;
+const MIN_WITHDRAW = 0.5;
 
 export async function POST(request: Request) {
   if (!payoutReady()) {

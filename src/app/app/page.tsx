@@ -185,10 +185,6 @@ function useTheme(): [Theme, () => void] {
   return [theme, toggle];
 }
 
-/**
- * AppHome
- * @returns {*}
- */
 export default function AppHome() {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [error, setError] = useState(false);
