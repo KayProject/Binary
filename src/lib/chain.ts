@@ -43,7 +43,7 @@ const erc20Abi = [
       { name: "owner", type: "address" },
       { name: "spender", type: "address" },
     ],
-    outputs: [{ name: "", type: "uint256" }],
+    outputs: [{ name: '', type: 'uint256' }],
     stateMutability: "view",
   },
 ] as const;
