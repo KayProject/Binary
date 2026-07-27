@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 // Thin alias over the wallet context — components keep the same call site
 // whether the user arrived via MiniPay, Privy social login, or any injected
