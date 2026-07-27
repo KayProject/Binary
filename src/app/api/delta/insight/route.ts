@@ -57,14 +57,6 @@ function readSide(raw: RawBook): SideRead {
   };
 }
 
-async function fetchBook(tokenId: string): Promise<RawBook> {
-  const res = await fetch(`${CLOB}/book?token_id=${tokenId}`, {
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!res.ok) throw new Error(`CLOB ${res.status}`);
-  return (await res.json()) as RawBook;
-}
-
 /** Market close time, for the "how decided is this window" signal. */
 async function fetchEndDate(tokenId: string): Promise<string | null> {
   try {
@@ -77,6 +69,14 @@ async function fetchEndDate(tokenId: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+async function fetchBook(tokenId: string): Promise<RawBook> {
+  const res = await fetch(`${CLOB}/book?token_id=${tokenId}`, {
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) throw new Error(`CLOB ${res.status}`);
+  return (await res.json()) as RawBook;
 }
 
 export async function POST(request: Request) {
