@@ -23,7 +23,7 @@ export interface SideRead {
   bestBid: number | null;
   bestAsk: number | null;
   spread: number | null;
-  depth: { bidShares: number; askShares: number; bidUsd: number; askUsd: number };
+  depth: { bidShares: number; askShares: number; bidUsd: number; askUsd: number };,
 }
 
 export interface DeltaInsight {
