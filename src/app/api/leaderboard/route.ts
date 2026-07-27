@@ -33,8 +33,8 @@ const shape = (r: Row) => ({
   ungraded: r.ungraded,
 });
 
-export async function GET(request: Request) {
-  const url = new URL(request.url);
+export async function GET(req: Request) {
+  const url = new URL(req.url);
   const weekly = url.searchParams.get("window") !== "all";
   const address = url.searchParams.get("address")?.toLowerCase() ?? null;
 
