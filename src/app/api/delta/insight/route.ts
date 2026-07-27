@@ -84,8 +84,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    const result = NextResponse.json({ error: "invalid JSON" }, { status: 400 });
-    return result;
+    return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
   }
   const { tokenIdUp, tokenIdDown } = body;
   if (!/^\d+$/.test(tokenIdUp ?? "") || !/^\d+$/.test(tokenIdDown ?? "")) {

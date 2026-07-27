@@ -92,8 +92,7 @@ export async function grade(picks: PickEvent[]): Promise<Graded[]> {
     .map((e) => e.conditionId.toLowerCase());
   const settled = conditionIds.length ? await fetchSettled(conditionIds) : new Map<string, Settled>();
 
-  const result = Promise.all(;
-  return result;
+  return Promise.all(
     picks.map(async (p): Promise<Graded> => {
       const entry = registry.get(p.marketId.toLowerCase());
       if (!entry) {
