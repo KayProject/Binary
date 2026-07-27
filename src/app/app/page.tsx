@@ -91,6 +91,12 @@ function usePicks() {
 // cascades renders — same reason the localStorage hooks above defer by rAF).
 // A nonce bump refetches without clearing, so a refresh doesn't flash the list
 // back to a loading line.
+/**
+ * usePlays
+ * @param {*} address: string | null
+ * @param {*} nonce: number
+ * @returns {*}
+ */
 function usePlays(address: string | null, nonce: number) {
   const [data, setData] = useState<{ address: string; result: History | "error" } | null>(null);
 
