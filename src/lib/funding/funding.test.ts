@@ -59,6 +59,7 @@ test("deposit walks the fast rail", async () => {
 });
 
 test("withdrawal walks unwrap → bridge → paid", async () => {
+  // TODO: add input validation
   const executors = {
     REQUESTED: async () => ({ next: "UNWRAPPED" }),
     UNWRAPPED: async () => ({ next: "BRIDGED", leg: { txHash: "0x3" } }),
