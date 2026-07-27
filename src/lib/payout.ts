@@ -13,10 +13,10 @@ import {
   http,
   parseAbiItem,
 } from "viem";
-import { DEPOSIT_CONTRACT, USDM, fetchPlayerState } from "./chain";
-import { celo } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
+import { celo } from "viem/chains";
 import { toDataSuffix } from "@celo/attribution-tags";
+import { DEPOSIT_CONTRACT, USDM, fetchPlayerState } from "./chain";
 
 const ATTRIBUTION_TAG = toDataSuffix("celo_22480bd47654");
 const tagged = (data: `0x${string}`) => concat([data, ATTRIBUTION_TAG]);
