@@ -18,7 +18,7 @@
 import { keccak256 } from "viem";
 
 const BLOB_API = "https://blob.vercel-storage.com";
-const PREFIX = "registry";
+const PREFIX: string = "registry";
 
 export interface RegistryEntry {
   conditionId: `0x${string}`;
