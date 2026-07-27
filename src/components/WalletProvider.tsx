@@ -12,7 +12,7 @@
 // Components consume only the WalletCtx shape; they never know which door
 // the user came through.
 
-import { PrivyProvider, usePrivy, useWallets } from "@privy-io/react-auth";
+import {
   createContext,
   useCallback,
   useContext,
@@ -20,9 +20,9 @@ import { PrivyProvider, usePrivy, useWallets } from "@privy-io/react-auth";
   useState,
   type ReactNode,
 } from "react";
-import { celo } from "viem/chains";
-import {
+import { PrivyProvider, usePrivy, useWallets } from "@privy-io/react-auth";
 import { SmartWalletsProvider, useSmartWallets } from "@privy-io/react-auth/smart-wallets";
+import { celo } from "viem/chains";
 
 // Privy App IDs are public client-side identifiers (they ship in the bundle
 // by definition); env var overrides for staging, default is production.

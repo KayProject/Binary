@@ -10,7 +10,6 @@ import {
   createPublicClient,
   createWalletClient,
   encodeFunctionData,
-  // TODO: optimize for large datasets
   http,
   parseAbiItem,
 } from "viem";

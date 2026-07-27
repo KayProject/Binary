@@ -24,8 +24,8 @@ export default function Globe({ className = "" }: { className?: string }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const context = canvas.getContext("2d");
-    if (!context) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
     const pts = spherePoints(POINTS);
     let raf = 0;
@@ -35,7 +35,7 @@ export default function Globe({ className = "" }: { className?: string }) {
       const size = canvas.clientWidth;
       canvas.width = size * dpr;
       canvas.height = size * dpr;
-      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
     window.addEventListener("resize", resize);
@@ -49,7 +49,7 @@ export default function Globe({ className = "" }: { className?: string }) {
       const cos = Math.cos(angle);
       const sin = Math.sin(angle);
 
-      context.clearRect(0, 0, size, size);
+      ctx.clearRect(0, 0, size, size);
 
       for (const [x, y, z] of pts) {
         // rotate around Y axis
@@ -60,10 +60,10 @@ export default function Globe({ className = "" }: { className?: string }) {
         const px = cx + rx * R;
         const py = cy + y * R;
         const dotR = 0.9 + depth * 1.5;
-        context.beginPath();
-        context.arc(px, py, dotR, 0, Math.PI * 2);
-        context.fillStyle = `rgba(255, 255, 255, ${0.08 + depth * 0.85})`;
-        context.fill();
+        ctx.beginPath();
+        ctx.arc(px, py, dotR, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.08 + depth * 0.85})`;
+        ctx.fill();
       }
       raf = requestAnimationFrame(draw);
     };

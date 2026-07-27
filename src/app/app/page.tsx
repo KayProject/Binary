@@ -525,7 +525,7 @@ export default function AppHome() {
     setTxBusy("claim");
     try {
       await sendTx(FAUCET_CONTRACT, claimData());
-      setMoment({ t: "claimed", amount: faucet?.dripUsd ?? 1 });
+      setMoment({ t: 'claimed', amount: faucet?.dripUsd ?? 1 });
       setTimeout(refreshPlayer, 3_000);
     } catch {
       setTxError("Claim didn’t go through — try again.");
