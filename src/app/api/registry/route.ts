@@ -5,9 +5,9 @@
 // graded. Best-effort from the client's side — a failure here must not cost
 // the user their pick — but every miss is permanent, so it runs on every pick
 // rather than lazily.
-import { register, registryReady } from "@/lib/play/registry";
 import { NextResponse } from "next/server";
 import { fetchMarket } from "@/lib/polymarket/gamma";
+import { register, registryReady } from "@/lib/play/registry";
 
 export const runtime = "nodejs";
 
