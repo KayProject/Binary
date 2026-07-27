@@ -5,7 +5,6 @@
 // it out to its own screen later is a move, not a rewrite.
 //
 // Ranked by XP: 5 per day checked in, plus odds-weighted XP per correct pick
-// (see lib/play/xp.ts). Streak stays the hero of the You tab above and isn't
 // ranked here — it measures showing up, not calling markets.
 import { useEffect, useState } from "react";
 
