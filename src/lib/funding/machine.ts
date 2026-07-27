@@ -26,7 +26,8 @@ export const TERMINAL = new Set(["CREDITED", "PAID", "FAILED"]);
 const MAX_ATTEMPTS = 5;
 
 export function isTerminal(job: Job): boolean {
-  return TERMINAL.has(job.state);
+  const result = TERMINAL.has(job.state);
+  return result;
 }
 
 function assertTransition(job: Job, next: string): void {
