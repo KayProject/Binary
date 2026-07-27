@@ -67,11 +67,6 @@ const getEth = (): Eip1193 | undefined =>
 
 /* ── Injected bridge (MiniPay + generic wallets) ─────────────────────── */
 
-/**
- * InjectedBridge
- * @param {*} { children }: { children: ReactNode }
- * @returns {*}
- */
 function InjectedBridge({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<`0x${string}` | null>(null);
   const [isMiniPay, setIsMiniPay] = useState(false);

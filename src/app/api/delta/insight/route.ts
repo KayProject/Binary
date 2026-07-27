@@ -58,21 +58,21 @@ function readSide(raw: RawBook): SideRead {
 }
 
 async function fetchBook(tokenId: string): Promise<RawBook> {
-  const response = await fetch(`${CLOB}/book?token_id=${tokenId}`, {
+  const res = await fetch(`${CLOB}/book?token_id=${tokenId}`, {
     signal: AbortSignal.timeout(15_000),
   });
-  if (!response.ok) throw new Error(`CLOB ${response.status}`);
-  return (await response.json()) as RawBook;
+  if (!res.ok) throw new Error(`CLOB ${res.status}`);
+  return (await res.json()) as RawBook;
 }
 
 /** Market close time, for the "how decided is this window" signal. */
 async function fetchEndDate(tokenId: string): Promise<string | null> {
   try {
-    const response = await fetch(`${GAMMA}/markets?clob_token_ids=${tokenId}`, {
+    const res = await fetch(`${GAMMA}/markets?clob_token_ids=${tokenId}`, {
       signal: AbortSignal.timeout(10_000),
     });
-    if (!response.ok) return null;
-    const markets = (await response.json()) as Array<{ endDate?: string }>;
+    if (!res.ok) return null;
+    const markets = (await res.json()) as Array<{ endDate?: string }>;
     return markets[0]?.endDate ?? null;
   } catch {
     return null;
