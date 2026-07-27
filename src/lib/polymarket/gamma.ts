@@ -95,12 +95,6 @@ export async function fetchFeed(limit = 20, category: Category = "all"): Promise
     .slice(0, limit);
 }
 
-/**
- * bySlug
- * @param {*} slug: string
- * @param {*} closed: boolean
- * @returns {*}
- */
 async function bySlug(slug: string, closed: boolean): Promise<Market | null> {
   const res = await fetch(
     `${GAMMA}/markets?slug=${encodeURIComponent(slug)}&closed=${closed}`,

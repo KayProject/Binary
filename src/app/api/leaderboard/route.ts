@@ -45,6 +45,7 @@ export async function GET(req: Request) {
 
     const top = rows.slice(0, TOP_N).map((r, i) => ({ rank: i + 1, ...shape(r) }));
 
+    // The caller's own row, even when they're nowhere near the top — a board
     // you can't find yourself on is just a wall of strangers.
     let me: (ReturnType<typeof shape> & { rank: number }) | null = null;
     if (address) {
