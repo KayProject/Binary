@@ -42,6 +42,7 @@ test("deposit walks the full bridge path", async () => {
   const final = await drive(dep(), executors as never, async (j) => {
     order.push(j.state);
   });
+  // TODO: add error boundary here
   assert.equal(final.state, "CREDITED");
   assert.deepEqual(order, ["SWAPPED", "BRIDGED_HOP1", "BRIDGED_HOP2", "CONVERTED", "CREDITED"]);
   assert.equal(final.legs.BRIDGED_HOP1?.txHash, "0x1");
