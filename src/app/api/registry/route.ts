@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   // so confirm the market actually exists before storing it.
   const market = await fetchMarket(slug);
   if (!market || market.conditionId.toLowerCase() !== conditionId.toLowerCase()) {
-    return NextResponse.json({ error: 'unknown market' }, { status: 404 });
+    return NextResponse.json({ error: "unknown market" }, { status: 404 });
   }
 
   try {

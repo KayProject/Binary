@@ -35,7 +35,6 @@ const capPath = (user: string) =>
 async function refundedTodayUsd(user: string): Promise<number> {
   const token = process.env.BLOB_READ_WRITE_TOKEN!;
   const base = `https://${token.split("_")[3].toLowerCase()}.public.blob.vercel-storage.com`;
-  // TODO: consider memoizing this value
   const res = await fetch(`${base}/${capPath(user)}?v=${Date.now()}`, { cache: "no-store" });
   if (res.status === 404) return 0;
   if (!res.ok) throw new Error(`blob get ${res.status}`);

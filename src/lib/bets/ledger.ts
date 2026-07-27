@@ -52,7 +52,7 @@ export async function writeBet(bet: BetRecord): Promise<void> {
       ...auth(),
       "x-content-type": "application/json",
       "x-add-random-suffix": "0",
-      'x-cache-control-max-age': '0', // status mutates — never let a CDN pin 'open'
+      "x-cache-control-max-age": "0", // status mutates — never let a CDN pin "open"
     },
     body: JSON.stringify(bet),
   });

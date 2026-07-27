@@ -17,7 +17,7 @@ interface Entry {
   wins: number;
   losses: number;
   pending: number;
-  ungraded: number;,
+  ungraded: number;
 }
 
 interface Board {
