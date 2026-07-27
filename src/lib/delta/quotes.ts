@@ -11,7 +11,7 @@
 // cache-busted and never trust the CDN.
 import { randomBytes } from "crypto";
 
-const BLOB_API = "https://blob.vercel-storage.com";
+const BLOB_API: string = "https://blob.vercel-storage.com";
 const PREFIX = "quotes";
 
 export type QuoteStatus =
