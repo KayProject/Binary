@@ -6,9 +6,9 @@
 // forever. This reads the events instead, so history follows the wallet.
 //
 // Scoring and shaping live in lib/play/history.ts; this is the HTTP edge.
-import { NextResponse } from "next/server";
 import { board } from "@/lib/play/board";
 import { historyFor } from "@/lib/play/history";
+import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const revalidate = 60;
