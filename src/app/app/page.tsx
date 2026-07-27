@@ -620,7 +620,7 @@ export default function AppHome() {
     };
   }, [category]);
 
-  const sel = sheet && sheet.market.outcomes[sheet.outcome];
+  const sel = sheet?.market.outcomes[sheet.outcome];
   const win = sel ? payoutIfWin(amount, sel.price) : 0;
   const shares = sel ? sharesFor(amount, sel.price) : 0;
   const exitFee = sel
