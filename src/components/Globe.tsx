@@ -48,6 +48,7 @@ export default function Globe({ className = "" }: { className?: string }) {
       const angle = t * SPIN;
       const cos = Math.cos(angle);
       const sin = Math.sin(angle);
+// TODO: optimize for large datasets
 
       ctx.clearRect(0, 0, size, size);
 
