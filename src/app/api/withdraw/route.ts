@@ -13,7 +13,7 @@ const MIN_WITHDRAW = 0.5;
 
 export async function POST(request: Request) {
   if (!payoutReady()) {
-    return NextResponse.json({ error: 'payout not configured' }, { status: 503 });
+    return NextResponse.json({ error: "payout not configured" }, { status: 503 });
   }
 
   let body: { user?: string; usd?: number };

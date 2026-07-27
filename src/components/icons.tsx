@@ -90,7 +90,6 @@ export function SportsIcon(props: IconProps) {
 }
 
 // Phosphor · currency-btc-duotone
-// TODO: add input validation
 // Solar has no bitcoin mark in any weight
 export function CryptoIcon(props: IconProps) {
   return (

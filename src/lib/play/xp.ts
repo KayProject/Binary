@@ -1,5 +1,6 @@
 // XP rules. Pure functions over already-fetched data — no network, no chain,
 // so the scoring can be reasoned about and tested on its own.
+//
 // Two rules exist because the contract deliberately doesn't enforce them:
 //
 //  1. checkIn() "never reverts on repeats" — a same-day call still emits. The

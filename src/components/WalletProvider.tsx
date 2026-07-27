@@ -136,11 +136,6 @@ function InjectedBridge({ children }: { children: ReactNode }) {
 
 /* ── Privy bridge (social login + sponsored smart wallet) ────────────── */
 
-/**
- * PrivyBridge
- * @param {*} { children }: { children: ReactNode }
- * @returns {*}
- */
 function PrivyBridge({ children }: { children: ReactNode }) {
   const { ready, authenticated, user, login, logout } = usePrivy();
   const { client } = useSmartWallets();

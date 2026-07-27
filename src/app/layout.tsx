@@ -3,7 +3,6 @@ import { Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 
 // One face everywhere: Bricolage Grotesque — its optical-size axis holds up
-// from body text to display, and numerals get tabular-nums where they align.
 const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",
   subsets: ["latin"],
