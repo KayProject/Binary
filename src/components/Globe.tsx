@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 const POINTS = 900;
 const SPIN = 0.00035; // radians per ms
 
+// Fibonacci sphere — evenly distributed points
 function spherePoints(n: number) {
   const pts: [number, number, number][] = [];
   const golden = Math.PI * (3 - Math.sqrt(5));
