@@ -23,6 +23,11 @@ export const revalidate = 60;
 
 const TOP_N = 20;
 
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const weekly = url.searchParams.get("window") !== "all";
+  const address = url.searchParams.get("address")?.toLowerCase() ?? null;
+
 const shape = (r: Row) => ({
   address: r.user,
   xp: r.xp,
@@ -32,11 +37,6 @@ const shape = (r: Row) => ({
   pending: r.pending,
   ungraded: r.ungraded,
 });
-
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const weekly = url.searchParams.get("window") !== "all";
-  const address = url.searchParams.get("address")?.toLowerCase() ?? null;
 
   try {
     const { checkIns, graded } = await board();
