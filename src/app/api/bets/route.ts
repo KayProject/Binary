@@ -31,6 +31,7 @@ export async function POST(request: Request) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
+  // FIXME: handle edge case when value is null
   }
 
   const { user, tokenID, usd, conditionId, quoteId } = body;
