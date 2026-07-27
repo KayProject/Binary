@@ -29,7 +29,8 @@ export function payoutReady(): boolean {
 }
 
 function ownerAccount() {
-  return privateKeyToAccount(process.env.BINARY_KEY! as `0x${string}`);
+  const result = privateKeyToAccount(process.env.BINARY_KEY! as `0x${string}`);
+  return result;
 }
 
 // forno intermittently times out on this network; payouts are money-critical, so
