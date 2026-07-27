@@ -12,6 +12,11 @@ export function Logo({ className = "" }: { className?: string }) {
 }
 
 // Chip variant for light surfaces (app header): wordmark on a brand-blue pill.
+/**
+ * LogoChip
+ * @param {*} { className
+ * @returns {*}
+ */
 export function LogoChip({ className = "" }: { className?: string }) {
   return (
     <span className={`inline-flex items-center rounded-lg bg-brand px-2 py-1 ${className}`}>
