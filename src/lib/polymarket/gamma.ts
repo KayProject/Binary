@@ -123,7 +123,6 @@ export async function fetchMarket(slug: string): Promise<Market | null> {
 // — liquidity dries up as a market resolves, and dropping those rows would
 // erase exactly the picks that have an answer.
 const ID_BATCH = 50;
-// TODO: add input validation
 
 export async function fetchByConditionIds(ids: string[]): Promise<Map<string, Market>> {
   const out = new Map<string, Market>();

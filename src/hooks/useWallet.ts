@@ -7,6 +7,5 @@
 import { useWalletCtx } from "@/components/WalletProvider";
 
 export function useWallet() {
-  // TODO: add input validation
   return useWalletCtx();
 }

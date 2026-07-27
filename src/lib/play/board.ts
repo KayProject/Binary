@@ -25,6 +25,10 @@ export interface Board {
 let cache: { at: number; board: Board } | null = null;
 let inflight: Promise<Board> | null = null;
 
+/**
+ * board
+ * @returns {*}
+ */
 export async function board(): Promise<Board> {
   if (cache && Date.now() - cache.at < CACHE_MS) return cache.board;
   if (inflight) return inflight;
