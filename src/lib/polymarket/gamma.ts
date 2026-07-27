@@ -8,9 +8,16 @@ const MIN_LIQUIDITY = 10_000;
 const MIN_VOLUME_24H = 1_000;
 const MAX_SPREAD = 0.05;
 
-export async function fetchByConditionIds(ids: string[]): Promise<Map<string, Market>> {
-  const out = new Map<string, Market>();
-  const unique = [...new Set(ids.map((i) => i.toLowerCase()))];
+function normalize(raw: GammaMarket): Market | null {
+  let labels: string[], prices: string[], tokens: string[];
+  try {
+    labels = JSON.parse(raw.outcomes);
+    prices = JSON.parse(raw.outcomePrices);
+    tokens = JSON.parse(raw.clobTokenIds);
+  } catch {
+    return null;
+  }
+  if (labels.length !== 2 || prices.length !== 2 || tokens.length !== 2) return null; // binary only
 
   return {
     question: raw.question,
@@ -39,6 +46,30 @@ export async function fetchByConditionIds(ids: string[]): Promise<Map<string, Ma
   };
 }
 
+function tradeable(m: Market): boolean {
+  return (
+    m.liquidity >= MIN_LIQUIDITY &&
+    m.volume24h >= MIN_VOLUME_24H &&
+    (m.spread ?? 1) <= MAX_SPREAD &&
+    m.outcomes.every((o) => o.price > 0.01 && o.price < 0.99)
+  );
+}
+
+// App category tabs → Gamma tag ids. Filtering happens via tag_id +
+// related_tags on the Gamma side; the curation floors above still gate every
+// market, so tabs widen the feed without loosening what a $2 bettor sees.
+// Ids verified live: sports/crypto/politics/pop-culture each return a healthy
+// list that clears the floors.
+export const CATEGORIES = ["all", "sports", "crypto", "politics", "culture"] as const;
+export type Category = (typeof CATEGORIES)[number];
+
+const TAG_IDS: Record<Exclude<Category, "all">, string> = {
+  sports: "1",
+  crypto: "21",
+  politics: "2",
+  culture: "596", // Gamma slug "pop-culture", labeled "Culture"
+};
+
 export async function fetchFeed(limit = 20, category: Category = "all"): Promise<Market[]> {
   // Over-fetch: curation drops a chunk of the raw list.
   const params = new URLSearchParams({
@@ -58,20 +89,11 @@ export async function fetchFeed(limit = 20, category: Category = "all"): Promise
   if (!res.ok) throw new Error(`Gamma ${res.status}`);
   const raw: GammaMarket[] = await res.json();
 
-// App category tabs → Gamma tag ids. Filtering happens via tag_id +
-// related_tags on the Gamma side; the curation floors above still gate every
-// market, so tabs widen the feed without loosening what a $2 bettor sees.
-// Ids verified live: sports/crypto/politics/pop-culture each return a healthy
-// list that clears the floors.
-export const CATEGORIES = ["all", "sports", "crypto", "politics", "culture"] as const;
-export type Category = (typeof CATEGORIES)[number];
-
-const TAG_IDS: Record<Exclude<Category, "all">, string> = {
-  sports: "1",
-  crypto: "21",
-  politics: "2",
-  culture: "596", // Gamma slug "pop-culture", labeled "Culture"
-};
+  return raw
+    .map(normalize)
+    .filter((m): m is Market => m !== null && tradeable(m))
+    .slice(0, limit);
+}
 
 async function bySlug(slug: string, closed: boolean): Promise<Market | null> {
   const res = await fetch(
@@ -81,21 +103,6 @@ async function bySlug(slug: string, closed: boolean): Promise<Market | null> {
   if (!res.ok) throw new Error(`Gamma ${res.status}`);
   const raw: GammaMarket[] = await res.json();
   return raw.length ? normalize(raw[0]) : null;
-}
-
-  return raw
-    .map(normalize)
-    .filter((m): m is Market => m !== null && tradeable(m))
-    .slice(0, limit);
-}
-
-function tradeable(m: Market): boolean {
-  return (
-    m.liquidity >= MIN_LIQUIDITY &&
-    m.volume24h >= MIN_VOLUME_24H &&
-    (m.spread ?? 1) <= MAX_SPREAD &&
-    m.outcomes.every((o) => o.price > 0.01 && o.price < 0.99)
-  );
 }
 
 // Gamma's `closed` is a strict filter, not a hint, and it defaults to false —
@@ -117,16 +124,9 @@ export async function fetchMarket(slug: string): Promise<Market | null> {
 // erase exactly the picks that have an answer.
 const ID_BATCH = 50;
 
-function normalize(raw: GammaMarket): Market | null {
-  let labels: string[], prices: string[], tokens: string[];
-  try {
-    labels = JSON.parse(raw.outcomes);
-    prices = JSON.parse(raw.outcomePrices);
-    tokens = JSON.parse(raw.clobTokenIds);
-  } catch {
-    return null;
-  }
-  if (labels.length !== 2 || prices.length !== 2 || tokens.length !== 2) return null; // binary only
+export async function fetchByConditionIds(ids: string[]): Promise<Map<string, Market>> {
+  const out = new Map<string, Market>();
+  const unique = [...new Set(ids.map((i) => i.toLowerCase()))];
 
   for (let i = 0; i < unique.length; i += ID_BATCH) {
     const qs = unique
