@@ -11,6 +11,11 @@ interface RawBook {
   asks?: { price: string; size: string }[];
 }
 
+/**
+ * GET
+ * @param {*} request: Request
+ * @returns {*}
+ */
 export async function GET(request: Request) {
   const tokenId = new URL(request.url).searchParams.get("token_id");
   if (!tokenId || !/^\d+$/.test(tokenId)) {
