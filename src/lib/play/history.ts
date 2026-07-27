@@ -4,9 +4,9 @@
 // answers "what did I do", and both read the same graded scan (board.ts) and
 // score with the same score(). A player's XP here and their XP on the board are
 // therefore the same number by construction.
-import { fetchByConditionIds } from "@/lib/polymarket/gamma";
 import type { Board } from "./board";
 import type { Resolution } from "./grade";
+import { fetchByConditionIds } from "@/lib/polymarket/gamma";
 import { latestPicks, pickXp, score, type Graded, type Row } from "./xp";
 
 export interface Play {
