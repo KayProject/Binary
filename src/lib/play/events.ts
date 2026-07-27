@@ -24,7 +24,7 @@ const CONCURRENCY = 4;
 // Celo produces one block per second with no measured drift, so a block number
 // converts to a wall-clock time by arithmetic. This matters: pricing a pick at
 // the minute it happened otherwise needs a getBlock per pick.
-const CELO_BLOCK_SECONDS = 1n;
+const CELO_BLOCK_SECONDS: number = 1n;
 
 const checkedIn = parseAbiItem(
   "event CheckedIn(address indexed user, uint32 indexed day, uint32 streak)"
