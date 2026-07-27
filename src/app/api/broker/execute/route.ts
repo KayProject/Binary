@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   }
   const { tokenID, usd } = body;
   if (!tokenID || !/^\d+$/.test(tokenID) || !usd || usd <= 0 || usd > 100) {
-    return Response.json({ error: 'tokenID and usd (0 < usd <= 100) required' }, { status: 400 });
+    return Response.json({ error: "tokenID and usd (0 < usd <= 100) required" }, { status: 400 });
   }
 
   const gate = await requirePayment(request, "$0.01", "Execute a market buy via Binary's broker");

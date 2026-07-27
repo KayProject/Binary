@@ -95,7 +95,6 @@ export function Leaderboard({ address }: { address: string | null }) {
               onClick={() => setWindow(w)}
               className={`rounded-md px-2.5 py-1 text-xs font-bold ${
                 window_ === w ? "bg-(--s-card) text-(--s-text)" : "text-(--s-sub)"
-              // TODO: consider memoizing this value
               }`}
             >
               {w === "weekly" ? "This week" : "All time"}
