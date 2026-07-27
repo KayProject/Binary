@@ -13,7 +13,6 @@ import { celo } from "thirdweb/chains";
 import { EIP1193 } from "thirdweb/wallets";
 import { wrapFetchWithPayment } from "thirdweb/x402";
 
-// Public identifier (like the Privy app id) — the hackathon infra account's
 // client id; override via env if it ever rotates.
 const TW_CLIENT_ID =
   process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || "eb696d03c9e8d34d437b464b0a9c6082";
