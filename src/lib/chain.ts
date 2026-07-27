@@ -15,8 +15,8 @@ import { celo } from "viem/chains";
 // untagged, so this constant must stay exactly as issued.
 const ATTRIBUTION_TAG = toDataSuffix("celo_22480bd47654");
 
-/** Append the attribution suffix to encoded calldata. */
-const tagged = (data: `0x${string}`) => concat([data, ATTRIBUTION_TAG]);
+export const depositData = (amount: bigint) =>
+  tagged(encodeFunctionData({ abi: depositsAbi, functionName: "deposit", args: [amount] }));
 
 export const PLAY_CONTRACT = "0x1CfbEa228F37A139cD805f15291D19f7DBBF7426" as const;
 export const DEPOSIT_CONTRACT = "0xE75A70597501453Fb0DFBa9B34eA2b9495d67600" as const;
@@ -117,11 +117,18 @@ export const publicClient = createPublicClient({
   transport: http("https://forno.celo.org"),
 });
 
-/** On-chain market id: keccak of the Polymarket condition id bytes. */
-export const marketIdFor = (conditionId: string) => keccak256(conditionId as `0x${string}`);
+export async function fetchFaucetState(user: `0x${string}`): Promise<FaucetState> {
+  const faucet = { address: FAUCET_CONTRACT, abi: faucetAbi } as const;
+  const [claimable, claimed, drip] = await Promise.all([
+    publicClient.readContract({ ...faucet, functionName: "claimable", args: [user] }),
+    publicClient.readContract({ ...faucet, functionName: "claimed", args: [user] }),
+    publicClient.readContract({ ...faucet, functionName: "dripAmount" }),
+  ]);
+  return { claimable, claimed, dripUsd: Number(drip) / 1e18 };
+}
 
-export const checkInData = () =>
-  tagged(encodeFunctionData({ abi: playAbi, functionName: "checkIn" }));
+export const claimData = () =>
+  tagged(encodeFunctionData({ abi: faucetAbi, functionName: "claim" }));
 
 export const pickData = (conditionId: string, outcome: 0 | 1) =>
   tagged(
@@ -139,17 +146,11 @@ export const pickData = (conditionId: string, outcome: 0 | 1) =>
 /** $ → USDm wei (18 dec), cent precision. */
 export const usdToWei = (usd: number) => BigInt(Math.round(usd * 100)) * 10n ** 16n;
 
-export const approveUsdmData = (amount: bigint) =>
-  tagged(
-    encodeFunctionData({
-      abi: erc20Abi,
-      functionName: "approve",
-      args: [DEPOSIT_CONTRACT, amount],
-    })
-  );
+export const checkInData = () =>
+  tagged(encodeFunctionData({ abi: playAbi, functionName: "checkIn" }));
 
-export const depositData = (amount: bigint) =>
-  tagged(encodeFunctionData({ abi: depositsAbi, functionName: "deposit", args: [amount] }));
+/** On-chain market id: keccak of the Polymarket condition id bytes. */
+export const marketIdFor = (conditionId: string) => keccak256(conditionId as `0x${string}`);
 
 // ── Faucet promo: one free USDm drip per wallet, straight to the wallet.
 // The pot is owner-funded; while it's empty claimable() is false for everyone
@@ -180,25 +181,6 @@ const faucetAbi = [
   },
 ] as const;
 
-export const claimData = () =>
-  tagged(encodeFunctionData({ abi: faucetAbi, functionName: "claim" }));
-
-export interface FaucetState {
-  claimable: boolean;
-  claimed: boolean;
-  dripUsd: number;
-}
-
-export async function fetchFaucetState(user: `0x${string}`): Promise<FaucetState> {
-  const faucet = { address: FAUCET_CONTRACT, abi: faucetAbi } as const;
-  const [claimable, claimed, drip] = await Promise.all([
-    publicClient.readContract({ ...faucet, functionName: "claimable", args: [user] }),
-    publicClient.readContract({ ...faucet, functionName: "claimed", args: [user] }),
-    publicClient.readContract({ ...faucet, functionName: "dripAmount" }),
-  ]);
-  return { claimable, claimed, dripUsd: Number(drip) / 1e18 };
-}
-
 export async function usdmAllowance(owner: `0x${string}`): Promise<bigint> {
   return publicClient.readContract({
     address: USDM,
@@ -208,14 +190,10 @@ export async function usdmAllowance(owner: `0x${string}`): Promise<bigint> {
   });
 }
 
-export interface PlayerState {
-  streak: number;
-  longestStreak: number;
-  checkInCount: number;
-  pickCount: number;
-  checkedInToday: boolean;
-  depositedUsd: number; // net USDm through the deposit contract
-  paidOutUsd: number; // cumulative payouts — a rise means a withdrawal landed
+export interface FaucetState {
+  claimable: boolean;
+  claimed: boolean;
+  dripUsd: number;
 }
 
 export async function fetchPlayerState(address: `0x${string}`): Promise<PlayerState> {
@@ -258,3 +236,26 @@ export async function fetchPlayerState(address: `0x${string}`): Promise<PlayerSt
     paidOutUsd: Number(paidOut) / 1e18,
   };
 }
+
+
+export const approveUsdmData = (amount: bigint) =>
+  tagged(
+    encodeFunctionData({
+      abi: erc20Abi,
+      functionName: "approve",
+      args: [DEPOSIT_CONTRACT, amount],
+    })
+  );
+
+export interface PlayerState {
+  streak: number;
+  longestStreak: number;
+  checkInCount: number;
+  pickCount: number;
+  checkedInToday: boolean;
+  depositedUsd: number; // net USDm through the deposit contract
+  paidOutUsd: number; // cumulative payouts — a rise means a withdrawal landed
+}
+
+/** Append the attribution suffix to encoded calldata. */
+const tagged = (data: `0x${string}`) => concat([data, ATTRIBUTION_TAG]);
