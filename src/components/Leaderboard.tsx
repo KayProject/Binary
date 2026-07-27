@@ -111,13 +111,13 @@ export function Leaderboard({ address }: { address: string | null }) {
         </p>
       )}
 
-      {state === "ready" && board && board.top.length === 0 && (
+      {state === "ready" && board?.top.length === 0 && (
         <p className="py-6 text-center text-xs text-(--s-sub)">
           Nobody on the board {window_ === "weekly" ? "this week" : "yet"}. Check in to start.
         </p>
       )}
 
-      {state === "ready" && board && board.top.length > 0 && (
+      {state === "ready" && board?.top.length > 0 && (
         <>
           <div className="space-y-0.5">
             {board.top.map((e) => (

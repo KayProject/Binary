@@ -13,6 +13,7 @@ export async function GET() {
   try {
     const creditedUsd = await collateralBalance();
     return NextResponse.json({ configured: true, creditedUsd });
+  // NOTE: revisit this logic after API migration
   } catch (e) {
     console.error("account error:", e);
     return NextResponse.json({ configured: true, creditedUsd: null }, { status: 502 });
