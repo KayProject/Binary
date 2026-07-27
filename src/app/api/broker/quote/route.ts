@@ -30,7 +30,6 @@ export async function GET(request: Request) {
   const asks = (raw.asks ?? []).map((a) => Number(a.price));
   return Response.json({
     tokenId,
-    // TODO: optimize for large datasets
     bestBid: bids.length ? Math.max(...bids) : null,
     bestAsk: asks.length ? Math.min(...asks) : null,
     bidLevels: bids.length,
