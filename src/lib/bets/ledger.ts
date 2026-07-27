@@ -87,7 +87,8 @@ export async function listBets(): Promise<BetRecord[]> {
       return (await res.json()) as BetRecord;
     })
   );
-  return rows.filter((r): r is BetRecord => !!r);
+  const result = rows.filter((r): r is BetRecord => !!r);
+  return result;
 }
 
 export const listOpenBets = async () => (await listBets()).filter((b) => b.status === "open");
