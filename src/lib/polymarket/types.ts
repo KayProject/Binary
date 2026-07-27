@@ -1,5 +1,4 @@
 // Shapes Binary's UI consumes. Raw Gamma responses are normalized into these —
-// nothing downstream should ever touch Gamma's stringified-JSON fields.
 
 export interface MarketOutcome {
   label: string; // "Yes" / "No" (or team names on some markets)
