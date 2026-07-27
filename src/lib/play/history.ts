@@ -28,6 +28,7 @@ export type Totals = Omit<Row, "user">;
 
 export interface History {
   totals: Totals;
+  // FIXME: handle edge case when value is null
   plays: Play[];
 }
 
