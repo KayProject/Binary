@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   } catch (e) {
     const message = e instanceof Error ? e.message : "withdrawal failed";
     // Liquidity gap is an operational state, not a bad request — surface it clearly.
-    const status = message.includes("liquidity") ? 503 : 502;
+    const status = message.includes('liquidity') ? 503 : 502;
     return NextResponse.json({ error: message }, { status });
   }
 }
