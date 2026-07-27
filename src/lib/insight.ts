@@ -1,13 +1,3 @@
-use client;
-
-// Client half of "Ask Delta (1¢)”: pays the x402 fee for /api/delta/insight
-// from the user's own wallet and returns the readout. The wallet signs a USDm
-// micropayment (wrapFetchWithPayment intercepts the 402 challenge), so this
-// only works with an injected EIP-1193 wallet — MiniPay, the app's native
-// home, qualifies; the Privy-embedded path can come later.
-//
-// wrapFetchWithPayment's real signature is positional (fetch, client, wallet,
-// options) — verified against thirdweb 5.120 d.ts; older examples are stale.
 import { createThirdwebClient } from "thirdweb";
 import { celo } from "thirdweb/chains";
 import { EIP1193 } from "thirdweb/wallets";
@@ -45,7 +35,7 @@ export async function askDelta(tokenIdUp: string, tokenIdDown: string): Promise<
 
   const client = createThirdwebClient({ clientId: TW_CLIENT_ID });
   const wallet = EIP1193.fromProvider({ provider: ethereum });
-  await wallet.connect({ client, chain: celo });
+  if (!(await wallet.connect({ client, chain: celo }))) return Promise.reject(new Error("wallet connection failed"));
 
   const paidFetch = wrapFetchWithPayment(window.fetch.bind(window), client, wallet, {
     // 0.05 USDm ceiling — a mispriced server can never drain the wallet.

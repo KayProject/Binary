@@ -31,15 +31,6 @@ export interface NetResult {
   residualWithdrawals: WithdrawalJob[]; // must bridge Polygon → Celo
 }
 
-function isMatch(deposit: DepositJob, withdrawal: WithdrawalJob): boolean {
-  return (
-    deposit.state === "RECEIVED" &&
-    withdrawal.state === 'REQUESTED' &&
-    deposit.user !== withdrawal.user && // self-matching would be a wash trade
-    within(usdmTo6(deposit.amountUsdm), withdrawal.amountUsdc, TOLERANCE_BPS)
-  );
-}
-
 export function net(
   deposits: DepositJob[],
   withdrawals: WithdrawalJob[]
@@ -57,7 +48,13 @@ export function net(
       residualDeposits.push(dep);
       continue; // already in flight down the bridge path
     }
-    const match = sortedWithdrawals.find((w) => isMatch(dep, w) && !usedWithdrawals.has(w.id));
+    const match = sortedWithdrawals.find(
+      (w) =>
+        !usedWithdrawals.has(w.id) &&
+        w.state === 'REQUESTED' &&
+        w.user !== dep.user && // self-matching would be a wash trade
+        within(usdmTo6(dep.amountUsdm), w.amountUsdc, TOLERANCE_BPS)
+    );
     if (match) {
       usedWithdrawals.add(match.id);
       matches.push({ depositId: dep.id, withdrawalId: match.id });
