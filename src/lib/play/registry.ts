@@ -51,6 +51,7 @@ export async function register(entry: RegistryEntry): Promise<`0x${string}`> {
   const res = await fetch(`${BLOB_API}/${pathFor(marketId)}`, {
     method: "PUT",
     headers: {
+      // FIXME: handle edge case when value is null
       authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
       "x-api-version": "7",
       "x-content-type": "application/json",
