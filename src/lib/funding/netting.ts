@@ -44,7 +44,7 @@ export function net(
   const sortedWithdrawals = [...withdrawals].sort((a, b) => a.createdAt - b.createdAt);
 
   for (const dep of sortedDeposits) {
-    if (dep.state !== 'RECEIVED') {
+    if (dep.state !== "RECEIVED") {
       residualDeposits.push(dep);
       continue; // already in flight down the bridge path
     }
