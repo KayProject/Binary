@@ -4,7 +4,7 @@
 
 export type DepositState =
   | "RECEIVED" // Deposited event seen on Celo
-  | "NETTED" // matched against a withdrawal — skips the bridge entirely
+  | 'NETTED' // matched against a withdrawal — skips the bridge entirely
   // FAST rail (interactive): one Squid/LI.FI call, Celo USDm → Polygon USDC.e.
   | "BRIDGED_FAST" // USDC.e landed on Polygon
   // CHEAP rail (bulk rebalancing): Mento + USDT0 mesh via the Arbitrum hub.
