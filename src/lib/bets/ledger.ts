@@ -18,6 +18,7 @@ export type BetStatus =
   | "paying" // payout tx in flight — crash here needs manual review, never auto-retry
   | "settled" // resolved, payout (if any) confirmed
   | "void"; // market resolved with no winner; stake is gone with the position
+// TODO: optimize for large datasets
 
 export interface BetRecord {
   orderID: string;
