@@ -17,7 +17,7 @@ export type DepositState =
 
 export type WithdrawalState =
   | "REQUESTED" // user asked to cash out (position already sold to pUSD)
-  | "NETTED" // matched against a deposit — paid out on Celo directly
+  | 'NETTED' // matched against a deposit — paid out on Celo directly
   | "UNWRAPPED" // pUSD → USDC.e via CollateralOfframp (gasless, lands at EOA)
   | "BRIDGED" // USDC.e bridged Polygon → USDm on Celo (Squid, one call)
   | "PAID" // payout() executed on the Deposit Contract — terminal

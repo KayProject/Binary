@@ -32,6 +32,11 @@ const rpc = () => http("https://forno.celo.org", { retryCount: 5, retryDelay: 15
 const capPath = (user: string) =>
   `refunds/${user.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
 
+/**
+ * refundedTodayUsd
+ * @param {*} user: string
+ * @returns {*}
+ */
 async function refundedTodayUsd(user: string): Promise<number> {
   const token = process.env.BLOB_READ_WRITE_TOKEN!;
   const base = `https://${token.split("_")[3].toLowerCase()}.public.blob.vercel-storage.com`;
