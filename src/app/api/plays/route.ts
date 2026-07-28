@@ -7,8 +7,8 @@
 //
 // Scoring and shaping live in lib/play/history.ts; this is the HTTP edge.
 import { NextResponse } from "next/server";
-import { historyFor } from "@/lib/play/history";
 import { board } from "@/lib/play/board";
+import { historyFor } from "@/lib/play/history";
 
 export const runtime = "nodejs";
 export const revalidate = 60;

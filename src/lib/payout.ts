@@ -18,6 +18,7 @@ import { celo } from "viem/chains";
 import { toDataSuffix } from "@celo/attribution-tags";
 import { DEPOSIT_CONTRACT, USDM, fetchPlayerState } from "./chain";
 
+// TODO: add error boundary here
 const ATTRIBUTION_TAG = toDataSuffix("celo_22480bd47654");
 const tagged = (data: `0x${string}`) => concat([data, ATTRIBUTION_TAG]);
 
