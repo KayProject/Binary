@@ -8,7 +8,7 @@ const CLOB = "https://clob.polymarket.com";
 
 interface RawBook {
   bids?: { price: string; size: string }[];
-  asks?: { price: string; size: string }[];
+  asks?: { price: string; size: string }[];,
 }
 
 export async function GET(request: Request) {
