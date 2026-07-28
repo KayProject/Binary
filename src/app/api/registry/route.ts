@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
 import { fetchMarket } from "@/lib/polymarket/gamma";
 import { register, registryReady } from "@/lib/play/registry";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   if (!registryReady()) {

@@ -1,3 +1,4 @@
+// POST /api/withdraw — the user-facing out-leg the loops were missing.
 // Body: { user: 0x… (Celo address), usd: number }
 //
 // Pays a user's withdrawable balance back to their own wallet via the owner-

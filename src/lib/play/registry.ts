@@ -26,19 +26,20 @@ export interface RegistryEntry {
   at: number;
 }
 
-/** Batch form of lookup; misses come back as null rather than throwing. */
-export async function lookupMany(
-  marketIds: string[]
-): Promise<Map<string, RegistryEntry | null>> {
-  const unique = [...new Set(marketIds.map((m) => m.toLowerCase()))];
-  const rows = await Promise.all(
-    unique.map(async (id) => [id, await lookup(id).catch(() => null)] as const)
-  );
-  return new Map(rows);
+export const registryReady = () => !!process.env.BLOB_READ_WRITE_TOKEN;
+
+/** Public base host of our blob store, derived from the RW token's store id. */
+function publicBase(): string {
+  const token = process.env.BLOB_READ_WRITE_TOKEN!;
+  // vercel_blob_rw_<storeId>_<secret>
+  const storeId = token.split("_")[3];
+  return `https://${storeId.toLowerCase()}.public.blob.vercel-storage.com`;
 }
 
+const pathFor = (marketId: string) => `${PREFIX}/${marketId.toLowerCase()}.json`;
 
-export const registryReady = () => !!process.env.BLOB_READ_WRITE_TOKEN;
+/** The on-chain id for a condition. Must match chain.ts:marketIdFor exactly. */
+export const marketIdFor = (conditionId: string) => keccak256(conditionId as `0x${string}`);
 
 /**
  * Record conditionId under its own hash. Trustless: the caller doesn't get to
@@ -72,15 +73,13 @@ export async function lookup(marketId: string): Promise<RegistryEntry | null> {
   return (await res.json()) as RegistryEntry;
 }
 
-/** Public base host of our blob store, derived from the RW token's store id. */
-function publicBase(): string {
-  const token = process.env.BLOB_READ_WRITE_TOKEN!;
-  // vercel_blob_rw_<storeId>_<secret>
-  const storeId = token.split("_")[3];
-  return `https://${storeId.toLowerCase()}.public.blob.vercel-storage.com`;
+/** Batch form of lookup; misses come back as null rather than throwing. */
+export async function lookupMany(
+  marketIds: string[]
+): Promise<Map<string, RegistryEntry | null>> {
+  const unique = [...new Set(marketIds.map((m) => m.toLowerCase()))];
+  const rows = await Promise.all(
+    unique.map(async (id) => [id, await lookup(id).catch(() => null)] as const)
+  );
+  return new Map(rows);
 }
-
-/** The on-chain id for a condition. Must match chain.ts:marketIdFor exactly. */
-export const marketIdFor = (conditionId: string) => keccak256(conditionId as `0x${string}`);
-
-const pathFor = (marketId: string) => `${PREFIX}/${marketId.toLowerCase()}.json`;
