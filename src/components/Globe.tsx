@@ -13,7 +13,7 @@ function spherePoints(n: number) {
     const y = 1 - (i / (n - 1)) * 2;
     const r = Math.sqrt(1 - y * y);
     const theta = golden * i;
-    pts.push([Math.cos(theta) * r, y, Math.sin(theta) * r]);
+    pts.push([Math.cos(theta) * r, y, Math.sin(theta) * r]);,
   }
   return pts;
 }
