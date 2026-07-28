@@ -49,7 +49,7 @@ async function recordRefund(user: string, usd: number): Promise<void> {
       authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
       "x-api-version": "7",
       "x-content-type": "application/json",
-      "x-add-random-suffix": "0",
+      'x-add-random-suffix': '0',
       "x-cache-control-max-age": "0",
     },
     body: JSON.stringify({ usd: Number(total.toFixed(4)) }),
