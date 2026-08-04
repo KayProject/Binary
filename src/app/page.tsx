@@ -1,4 +1,5 @@
-import Globe from "@/components/Globe";
+import RippleGrid from "@/components/RippleGrid";
+import WorldMap from "@/components/WorldMap";
 import { Logo } from "@/components/Logo";
 
 const demoMarkets = [
@@ -40,8 +41,12 @@ export default function Home() {
       </header>
 
       {/* Hero */}
-      <section className="relative flex flex-col items-center pt-6 text-center lg:pt-16">
-        <Globe className="pointer-events-none absolute -top-4 left-1/2 max-w-sm -translate-x-1/2 opacity-40 lg:max-w-lg" />
+      <section className="relative flex flex-col items-center overflow-hidden pt-6 text-center lg:pt-16">
+        {/* z-0, not a negative z — body::before is a fixed backdrop at z-index:-1
+            and would paint over anything sitting behind it. */}
+        <div className="pointer-events-none absolute inset-0 z-0">
+          <RippleGrid />
+        </div>
         <h1 className="relative mt-10 text-6xl font-extrabold leading-none tracking-tight sm:text-8xl">
           Every question
           <br />
@@ -98,6 +103,22 @@ export default function Home() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Global reach */}
+      <section className="mt-20 text-center lg:mt-32">
+        <h2 className="font-mono text-xs tracking-[0.25em] text-white/60">
+          GLOBAL LIQUIDITY
+        </h2>
+        <p className="mx-auto mt-4 max-w-2xl text-3xl font-extrabold leading-tight lg:text-5xl">
+          One world. Two sides.{" "}
+          <span className="text-win">Live odds.</span>
+        </p>
+        <p className="mx-auto mt-4 max-w-md text-white/80 lg:max-w-xl">
+          Your picks route into the deepest prediction markets on earth —
+          Polymarket liquidity, priced in USDm, settled on Celo.
+        </p>
+        <WorldMap className="mt-10" />
       </section>
 
       {/* How it works */}
