@@ -1,4 +1,4 @@
-use client;
+"use client";
 
 // Client half of "Ask Delta (1¢)”: pays the x402 fee for /api/delta/insight
 // from the user's own wallet and returns the readout. The wallet signs a USDm
