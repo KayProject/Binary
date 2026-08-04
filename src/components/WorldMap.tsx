@@ -8,7 +8,7 @@ const CELLS = landCells();
 const BASE_RGB = "255, 255, 255";
 const BASE_ALPHA = 0.2;
 const LIT_RGB = "49, 211, 162"; // --color-win
-const GLOW_RADIUS = 0.11; // fraction of map width
+const GLOW_RADIUS = 0.055; // fraction of map width
 const SWEEP_PERIOD = 14000; // ms for one idle pass across the map
 
 export default function WorldMap({ className = "" }: { className?: string }) {

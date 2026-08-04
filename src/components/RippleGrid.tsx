@@ -8,6 +8,8 @@ type RippleGridProps = {
   rippleIntensity?: number;
   gridSize?: number;
   gridThickness?: number;
+  /** Multiplier on the shader clock — scales the ripple and the line breathing. */
+  speed?: number;
   fadeDistance?: number;
   vignetteStrength?: number;
   glowIntensity?: number;
@@ -122,8 +124,10 @@ export default function RippleGrid({
   // own blue ground to read at these opacities.
   gridColor = "#7aa2ff",
   rippleIntensity = 0.03,
-  gridSize = 8,
+  // Lower gridSize = fewer, larger cells.
+  gridSize = 4.5,
   gridThickness = 20,
+  speed = 0.4,
   fadeDistance = 1.5,
   vignetteStrength = 1.8,
   glowIntensity = 0.2,
@@ -136,6 +140,9 @@ export default function RippleGrid({
   const mouseRef = useRef({ x: 0.5, y: 0.5 });
   const targetMouseRef = useRef({ x: 0.5, y: 0.5 });
   const influenceRef = useRef(0);
+  // The render loop is created once, so it reads speed through a ref, which
+  // the prop-sync effect below keeps current.
+  const speedRef = useRef(speed);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -204,7 +211,7 @@ export default function RippleGrid({
     let raf = 0;
     const render = (t: number) => {
       // Freeze the clock under reduced-motion so the grid renders statically.
-      uniforms.iTime.value = reduceMotion ? 0 : t * 0.001;
+      uniforms.iTime.value = reduceMotion ? 0 : t * 0.001 * speedRef.current;
 
       mouseRef.current.x += (targetMouseRef.current.x - mouseRef.current.x) * 0.1;
       mouseRef.current.y += (targetMouseRef.current.y - mouseRef.current.y) * 0.1;
@@ -231,6 +238,7 @@ export default function RippleGrid({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    speedRef.current = speed;
     const u = uniformsRef.current;
     if (!u) return;
     u.gridColor.value = hexToRgb(gridColor);
@@ -248,6 +256,7 @@ export default function RippleGrid({
     rippleIntensity,
     gridSize,
     gridThickness,
+    speed,
     fadeDistance,
     vignetteStrength,
     glowIntensity,
