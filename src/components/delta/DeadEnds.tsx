@@ -49,7 +49,10 @@ const ENDS = [
 ];
 
 const AUTO_MS = 5000;
-const STEP = 10.6; // rem between card centres — cards nearly touch
+// Spacing is a percentage of the card's own width (translateX % is relative to
+// the element), so the row stays packed at every breakpoint without a rem
+// constant that has to chase the card size.
+const STEP_PCT = 106;
 const VISIBLE = 2; // cards either side of centre
 
 export default function DeadEnds() {
@@ -89,7 +92,7 @@ export default function DeadEnds() {
         />
 
         <div
-          className="relative h-[24rem]"
+          className="relative h-[24rem] sm:h-[27rem] lg:h-[30rem]"
           style={{ perspective: "1500px", transformStyle: "preserve-3d" }}
         >
           <Wing side="left" end={current} />
@@ -104,9 +107,11 @@ export default function DeadEnds() {
                 onClick={() => setActive(i)}
                 aria-label={e.title}
                 aria-current={d === 0}
-                className="absolute left-1/2 top-1/2 w-[10rem] focus:outline-none"
+                className="absolute left-1/2 top-1/2 w-[13rem] focus:outline-none sm:w-[15rem] lg:w-[17rem]"
                 style={{
-                  transform: `translate(-50%,-50%) translateX(${d * STEP}rem) scale(${d === 0 ? 1.06 : 0.94}) rotateY(${d * -4}deg)`,
+                  // Pure X-axis travel. The earlier per-card rotateY made the
+                  // row look like it wasn't sliding along one axis.
+                  transform: `translate(-50%,-50%) translateX(${d * STEP_PCT}%) scale(${d === 0 ? 1.06 : 0.94})`,
                   opacity: abs > VISIBLE ? 0 : 1 - abs * 0.14,
                   zIndex: 20 - abs,
                   transition:
@@ -179,7 +184,10 @@ function Wing({ side, end }: { side: "left" | "right"; end: (typeof ENDS)[number
     <div
       aria-hidden
       className={cn(
-        "absolute top-1/2 h-[19rem] w-[21rem] -translate-y-1/2 overflow-hidden rounded-[1.25rem]",
+        // Hidden on mobile: at phone widths the wings overlap the centre, and
+        // inside preserve-3d the rotated panels depth-sort IN FRONT of the flat
+        // cards regardless of z-index — which blanked the active card out.
+        "absolute top-1/2 hidden h-[19rem] w-[21rem] -translate-y-1/2 overflow-hidden rounded-[1.25rem] lg:block",
         isLeft ? "left-[-3rem]" : "right-[-3rem]",
       )}
       style={{
@@ -231,11 +239,11 @@ function Card({ end, active }: { end: (typeof ENDS)[number]; active: boolean }) 
         className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/45 to-transparent"
       />
 
-      <div className="relative flex h-full flex-col p-4">
+      <div className="relative flex h-full flex-col p-4 sm:p-5">
         <div className="flex items-start justify-between">
           <span
             className={cn(
-              "font-mono text-xl font-black italic transition-colors duration-500",
+              "font-mono text-xl font-black italic transition-colors duration-500 sm:text-2xl",
               active ? "text-ice" : "text-white/35",
             )}
           >
@@ -245,7 +253,7 @@ function Card({ end, active }: { end: (typeof ENDS)[number]; active: boolean }) 
             dead
           </span>
         </div>
-        <h3 className="mt-auto text-[0.95rem] font-bold leading-snug tracking-tight text-ice">
+        <h3 className="mt-auto text-[0.95rem] font-bold leading-snug tracking-tight text-ice sm:text-lg lg:text-xl">
           {end.title}
         </h3>
         <span
