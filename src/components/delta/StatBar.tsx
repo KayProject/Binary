@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import AnimatedNumber from "./AnimatedNumber";
+import { cn } from "@/lib/cn";
 
 const POLL_MS = 30_000;
 
@@ -11,16 +12,11 @@ interface Stats {
   taggedTxs: number;
   taggedVolumeUsd: number;
   volumeShare: number;
-  totalVolumeUsd: number;
-  runnerUpVolumeUsd: number | null;
   fetchedAt: number;
-  stale?: boolean;
 }
 
-const usd0 = (n: number) =>
-  `$${Math.round(n).toLocaleString("en-US")}`;
+const usd0 = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const int0 = (n: number) => Math.round(n).toLocaleString("en-US");
-const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
 
 export default function StatBar() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -30,27 +26,25 @@ export default function StatBar() {
 
   useEffect(() => {
     let alive = true;
-
     const load = async () => {
       try {
         const res = await fetch("/api/delta/stats");
         if (!res.ok) throw new Error(String(res.status));
         const data = (await res.json()) as Stats;
         if (!alive) return;
-        // Flash the row only when the underlying count actually moved, so a
-        // poll that returns identical numbers stays visually silent.
+        // Flash only when the count actually moved — an identical poll should
+        // be visually silent, or the effect becomes noise.
         if (lastTxsRef.current !== null && data.taggedTxs !== lastTxsRef.current) {
           setPulse(true);
-          setTimeout(() => alive && setPulse(false), 1200);
+          setTimeout(() => alive && setPulse(false), 1400);
         }
         lastTxsRef.current = data.taggedTxs;
         setStats(data);
         setError(false);
       } catch {
-        if (alive && !lastTxsRef.current) setError(true);
+        if (alive && lastTxsRef.current === null) setError(true);
       }
     };
-
     load();
     const id = setInterval(load, POLL_MS);
     return () => {
@@ -59,75 +53,87 @@ export default function StatBar() {
     };
   }, []);
 
-  const cells: Array<{ label: string; node: React.ReactNode; sub?: string }> = [
-    {
-      label: "Tagged volume",
-      node: (
-        <AnimatedNumber value={stats?.taggedVolumeUsd ?? null} format={usd0} />
-      ),
-      sub: stats ? `${pct(stats.volumeShare)} of the whole board` : undefined,
-    },
-    {
-      label: "Tagged transactions",
-      node: <AnimatedNumber value={stats?.taggedTxs ?? null} format={int0} />,
-      sub: "every one carries celo_22480bd47654",
-    },
-    {
-      label: "Leaderboard rank",
-      node: (
-        <span className="tabular-nums">
-          {stats ? `#${stats.rank}` : "—"}
-          {stats && (
-            <span className="text-fog text-xl font-normal">
-              {" "}/ {stats.participants}
-            </span>
-          )}
-        </span>
-      ),
-      sub: "Celo agentic attribution",
-    },
-    {
-      label: "Wallets Δ has paid",
-      node: <span className="tabular-nums">150+</span>,
-      sub: "settled on Celo mainnet",
-    },
-  ];
+  const share = stats ? `${(stats.volumeShare * 100).toFixed(1)}%` : "—";
 
   return (
-    <div
-      className={`rounded-3xl border transition-colors duration-700 ${
-        pulse ? "border-act/60 bg-act/[0.07]" : "border-mid-3 bg-mid-2/40"
-      }`}
-    >
-      <div className="grid gap-px overflow-hidden rounded-3xl sm:grid-cols-2 lg:grid-cols-4">
-        {cells.map((c) => (
-          <div key={c.label} className="px-6 py-7">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-fog">
-              {c.label}
-            </p>
-            <p className="mt-3 text-4xl font-extrabold leading-none text-ice lg:text-5xl">
-              {c.node}
-            </p>
-            {c.sub && <p className="mt-2 text-sm text-fog">{c.sub}</p>}
-          </div>
-        ))}
+    <div className="relative">
+      <div
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-x-0 -top-px h-px transition-opacity duration-700",
+          "bg-gradient-to-r from-transparent via-act to-transparent",
+          pulse ? "opacity-100" : "opacity-30",
+        )}
+      />
+      <div className="grid divide-y divide-white/[0.06] sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x lg:divide-white/[0.06]">
+        <Cell
+          label="Tagged volume"
+          value={<AnimatedNumber value={stats?.taggedVolumeUsd ?? null} format={usd0} />}
+          foot={stats ? `${share} of every tagged dollar` : " "}
+          emphasis
+        />
+        <Cell
+          label="Transactions"
+          value={<AnimatedNumber value={stats?.taggedTxs ?? null} format={int0} />}
+          foot="each carrying celo_22480bd47654"
+        />
+        <Cell
+          label="Rank"
+          value={
+            <span className="tabular-nums">
+              {stats ? `#${stats.rank}` : "—"}
+              {stats && <span className="text-fog"> / {stats.participants}</span>}
+            </span>
+          }
+          foot="Celo agentic attribution"
+        />
+        <Cell label="Wallets paid" value={<span>150+</span>} foot="settled, on mainnet" />
       </div>
 
-      <div className="flex items-center justify-between border-t border-mid-3 px-6 py-3 font-mono text-[11px] text-fog">
-        <span className="flex items-center gap-2">
-          <span
-            className={`h-1.5 w-1.5 rounded-full transition-colors duration-500 ${
-              error ? "bg-lose" : stats ? "bg-win" : "bg-fog"
-            }`}
-          />
-          {error
-            ? "leaderboard unreachable"
-            : stats
-              ? `verified on Dune · refreshed ${new Date(stats.fetchedAt).toLocaleTimeString("en-US", { hour12: false })}`
-              : "reading the chain…"}
-        </span>
-        <span>polls every 30s</span>
+      <div className="mt-8 flex items-center justify-center gap-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-fog">
+        <span
+          className={cn(
+            "h-1.5 w-1.5 rounded-full transition-colors duration-500",
+            error ? "bg-lose" : stats ? "bg-win" : "bg-fog",
+          )}
+        />
+        {error
+          ? "leaderboard unreachable"
+          : stats
+            ? `verified on Dune · live · refreshed ${new Date(stats.fetchedAt).toLocaleTimeString("en-US", { hour12: false })}`
+            : "reading…"}
       </div>
+    </div>
+  );
+}
+
+function Cell({
+  label,
+  value,
+  foot,
+  emphasis = false,
+}: {
+  label: string;
+  value: React.ReactNode;
+  foot: string;
+  emphasis?: boolean;
+}) {
+  return (
+    <div className="px-2 py-8 text-center lg:px-8">
+      <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-fog">
+        {label}
+      </p>
+      <p
+        className={cn(
+          "mt-4 font-extrabold leading-none tracking-[-0.03em] tabular-nums",
+          emphasis
+            ? "bg-gradient-to-b from-ice to-act-soft bg-clip-text text-5xl text-transparent lg:text-6xl"
+            : "text-ice text-4xl lg:text-5xl",
+        )}
+      >
+        {value}
+      </p>
+      <p className="mt-3 text-xs text-fog">{foot}</p>
     </div>
   );
 }

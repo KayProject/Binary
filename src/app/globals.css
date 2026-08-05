@@ -29,6 +29,23 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Radix accordion open/close — it exposes the measured height as a custom
+   property, which is the only way to transition to `auto`. */
+@keyframes acc-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+@keyframes acc-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+.animate-acc-down { animation: acc-down 320ms cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-acc-up { animation: acc-up 260ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-acc-down, .animate-acc-up { animation-duration: 1ms; }
+}
+
 body {
   background: #0044bb;
   color: #ffffff;

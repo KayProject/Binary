@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Panel } from "./ui";
 
 // The trap the whole spec exists to avoid: at a fair price, win rate is a dial
 // you can turn to any number you like and it buys you nothing. Buying at price
@@ -27,7 +28,7 @@ export default function FavouriteTrap() {
   };
 
   return (
-    <div className="rounded-3xl border border-mid-3 bg-mid-2/40 p-6 lg:p-10">
+    <Panel className="p-6 lg:p-12">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-fog">
@@ -89,9 +90,9 @@ export default function FavouriteTrap() {
       <p className="mt-6 max-w-2xl text-ice/80">
         Win rate is a <strong className="text-ice">dial, not a score</strong>. An
         agent told to maximise it will find 95¢ favourites, win almost always,
-        and bleed rails costs behind a beautiful dashboard. Δ is not measured on
-        how often it is right.
+        and bleed rails costs behind a beautiful dashboard. Delta is not
+        measured on how often it is right.
       </p>
-    </div>
+    </Panel>
   );
 }
