@@ -4,14 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * Mirror carousel: a row of frosted cards that carousels through the four
- * recorded dead ends, flanked by two angled panels holding a live mirrored
- * copy of that same row — so the reflections travel with it rather than
- * sitting there as decoration.
+ * Mirror carousel: a tightly packed row of small portrait cards that carousels
+ * through the four recorded dead ends, flanked by two large angled wings
+ * showing the active card's artwork enlarged and mirrored — the wings are the
+ * mirror, the row is what they reflect.
  *
- * Each card carries its own generated artwork. There are no photographic
- * assets in this project, and stock imagery would fight the palette, so the
- * art is a gradient mesh per card, tinted to that card's accent.
+ * Each card carries generated artwork: there are no photographic assets in
+ * this project and stock imagery would fight the palette, so the art is a
+ * gradient mesh tinted to that card's own accent.
  */
 const ENDS = [
   {
@@ -49,7 +49,8 @@ const ENDS = [
 ];
 
 const AUTO_MS = 5000;
-const STEP = 21; // rem between card centres
+const STEP = 10.6; // rem between card centres — cards nearly touch
+const VISIBLE = 2; // cards either side of centre
 
 export default function DeadEnds() {
   const [active, setActive] = useState(0);
@@ -66,23 +67,34 @@ export default function DeadEnds() {
     return () => clearInterval(id);
   }, [paused, go]);
 
+  const current = ENDS[active];
+  const [c1, c2, c3] = current.art;
+
   return (
     <div
       className="relative"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div
-        className="relative h-[26rem] overflow-hidden rounded-[2rem]"
-        style={{ perspective: "1500px" }}
-      >
-        {/* Angled mirror walls. Each holds the same row, flipped, blurred and
-            dimmed, so it tracks the carousel in real time. */}
-        <MirrorWall side="left" active={active} />
-        <MirrorWall side="right" active={active} />
+      {/* Section container carries the active card's artwork and the grain, so
+          the stage is tinted by whatever is currently on it. */}
+      <div className="grain relative overflow-hidden rounded-[2rem] ring-1 ring-inset ring-white/[0.08]">
+        <div
+          className="absolute inset-0 transition-[background] duration-1000"
+          style={{
+            background: `radial-gradient(75% 60% at 50% 0%, ${c1}22 0%, transparent 65%),
+                         radial-gradient(60% 50% at 12% 100%, ${c2}18 0%, transparent 70%),
+                         linear-gradient(160deg, ${c3}aa 0%, rgba(11,15,26,0.94) 60%)`,
+          }}
+        />
 
-        {/* The row itself */}
-        <div className="absolute inset-0">
+        <div
+          className="relative h-[24rem]"
+          style={{ perspective: "1500px", transformStyle: "preserve-3d" }}
+        >
+          <Wing side="left" end={current} />
+          <Wing side="right" end={current} />
+
           {ENDS.map((e, i) => {
             const d = offset(i, active);
             const abs = Math.abs(d);
@@ -92,14 +104,14 @@ export default function DeadEnds() {
                 onClick={() => setActive(i)}
                 aria-label={e.title}
                 aria-current={d === 0}
-                className="absolute left-1/2 top-1/2 w-[17rem] focus:outline-none"
+                className="absolute left-1/2 top-1/2 w-[10rem] focus:outline-none"
                 style={{
-                  transform: `translate(-50%,-50%) translateX(${d * STEP}rem) scale(${d === 0 ? 1 : 0.88})`,
-                  opacity: abs > 1 ? 0 : 1,
-                  zIndex: 10 - abs,
+                  transform: `translate(-50%,-50%) translateX(${d * STEP}rem) scale(${d === 0 ? 1.06 : 0.94}) rotateY(${d * -4}deg)`,
+                  opacity: abs > VISIBLE ? 0 : 1 - abs * 0.14,
+                  zIndex: 20 - abs,
                   transition:
                     "transform 800ms cubic-bezier(0.16,1,0.3,1), opacity 800ms ease",
-                  pointerEvents: abs > 1 ? "none" : "auto",
+                  pointerEvents: abs > VISIBLE ? "none" : "auto",
                 }}
               >
                 <Card end={e} active={d === 0} />
@@ -107,29 +119,27 @@ export default function DeadEnds() {
             );
           })}
         </div>
+
+        {/* Copy sits over the base of the stage, as in the reference */}
+        <div className="relative z-30 mx-auto -mt-6 max-w-lg px-8 pb-10 text-center">
+          {ENDS.map((e, i) => (
+            <div
+              key={e.id}
+              className={cn(
+                "transition-all duration-500",
+                i === active
+                  ? "relative opacity-100"
+                  : "pointer-events-none absolute inset-0 opacity-0",
+              )}
+            >
+              <p className="text-lg font-bold text-ice">{e.verdict}</p>
+              <p className="mt-2 text-sm leading-relaxed text-ice/65">{e.why}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Copy for the active card sits under the row, as in the reference */}
-      <div className="relative mx-auto mt-8 max-w-xl text-center">
-        {ENDS.map((e, i) => (
-          <p
-            key={e.id}
-            className={cn(
-              "transition-all duration-500",
-              i === active
-                ? "relative opacity-100"
-                : "pointer-events-none absolute inset-0 opacity-0",
-            )}
-          >
-            <span className="block text-lg font-bold text-ice">{e.verdict}</span>
-            <span className="mt-2 block text-sm leading-relaxed text-ice/65">
-              {e.why}
-            </span>
-          </p>
-        ))}
-      </div>
-
-      <div className="relative z-20 mt-8 flex items-center justify-center gap-6">
+      <div className="relative z-20 mt-7 flex items-center justify-center gap-6">
         <Arrow dir={-1} onClick={() => go(-1)} />
         <div className="flex items-center gap-2">
           {ENDS.map((e, i) => (
@@ -158,100 +168,88 @@ function offset(i: number, active: number) {
   return d;
 }
 
-function MirrorWall({ side, active }: { side: "left" | "right"; active: number }) {
+/**
+ * The large angled panel either side. It shows the active card's artwork blown
+ * up and mirrored — big and legible as a surface, not a faint ghost.
+ */
+function Wing({ side, end }: { side: "left" | "right"; end: (typeof ENDS)[number] }) {
   const isLeft = side === "left";
+  const [a, b, base] = end.art;
   return (
     <div
       aria-hidden
       className={cn(
-        "absolute top-0 h-full w-[34rem] overflow-hidden",
-        isLeft ? "left-0" : "right-0",
+        "absolute top-1/2 h-[19rem] w-[21rem] -translate-y-1/2 overflow-hidden rounded-[1.25rem]",
+        isLeft ? "left-[-3rem]" : "right-[-3rem]",
       )}
       style={{
-        // Angled inward like a wall, pulled forward in Z so the foreshortening
-        // does not shrink it to nothing, and only lightly veiled.
-        transform: `perspective(1400px) rotateY(${isLeft ? 46 : -46}deg) translateZ(-60px) scale(1.3)`,
+        transform: `translateY(-50%) rotateY(${isLeft ? 42 : -42}deg) scale(1.02)`,
         transformOrigin: isLeft ? "left center" : "right center",
-        maskImage: `linear-gradient(to ${isLeft ? "left" : "right"}, black 0%, rgba(0,0,0,0.55) 45%, transparent 92%)`,
-        WebkitMaskImage: `linear-gradient(to ${isLeft ? "left" : "right"}, black 0%, rgba(0,0,0,0.55) 45%, transparent 92%)`,
+        maskImage: `linear-gradient(to ${isLeft ? "left" : "right"}, black 12%, transparent 96%)`,
+        WebkitMaskImage: `linear-gradient(to ${isLeft ? "left" : "right"}, black 12%, transparent 96%)`,
+        zIndex: 5,
       }}
     >
       <div
-        // Blurred past legibility on purpose: reversed text that can almost be
-        // read looks like a bug, where a soft reflection reads as glass.
-        className="absolute inset-0 opacity-[0.62] blur-[4px]"
-        style={{ transform: "scaleX(-1)" }}
-      >
-        {ENDS.map((e, i) => {
-          const d = offset(i, active);
-          return (
-            <div
-              key={e.id}
-              className="absolute left-1/2 top-1/2 w-[17rem]"
-              style={{
-                transform: `translate(-50%,-50%) translateX(${d * STEP}rem) scale(${d === 0 ? 1 : 0.88})`,
-                opacity: Math.abs(d) > 1 ? 0 : 1,
-                transition:
-                  "transform 800ms cubic-bezier(0.16,1,0.3,1), opacity 800ms ease",
-              }}
-            >
-              <Card end={e} active={false} />
-            </div>
-          );
-        })}
-      </div>
+        className="absolute inset-0 transition-[background] duration-1000"
+        style={{
+          transform: isLeft ? "scaleX(-1)" : undefined,
+          background: `radial-gradient(110% 90% at 22% 8%, ${a}88 0%, transparent 66%),
+                       radial-gradient(85% 75% at 88% 24%, ${b}77 0%, transparent 62%),
+                       linear-gradient(170deg, ${base}ee 0%, rgba(11,15,26,0.92) 78%)`,
+        }}
+      />
+      <div className="grain absolute inset-0" />
     </div>
   );
 }
 
 function Card({ end, active }: { end: (typeof ENDS)[number]; active: boolean }) {
-  const [a, b] = end.art;
+  const [a, b, base] = end.art;
   return (
     <div
       className={cn(
-        "grain relative h-[20rem] overflow-hidden rounded-[1.5rem] text-left",
-        // Frosted: a genuinely translucent fill over heavy blur, a bright
-        // inset hairline, and grain on top — not a flat white tint.
+        "grain relative aspect-[3/4] overflow-hidden rounded-[1.1rem] text-left",
+        // Frosted: translucent fill over heavy blur, bright inset hairline.
         "bg-white/[0.055] backdrop-blur-2xl",
         "ring-1 ring-inset transition-all duration-700",
         active
-          ? "shadow-[0_45px_90px_-45px_rgba(61,116,255,0.85)] ring-white/[0.18]"
-          : "shadow-[0_25px_60px_-40px_rgba(0,0,0,0.9)] ring-white/[0.09]",
+          ? "shadow-[0_35px_70px_-30px_rgba(61,116,255,0.9)] ring-white/25"
+          : "shadow-[0_18px_44px_-28px_rgba(0,0,0,0.9)] ring-white/[0.09]",
       )}
     >
-      {/* Generated artwork — a gradient mesh in the card's own accent */}
       <div
-        className="absolute inset-x-0 top-0 h-40"
+        className="absolute inset-0"
         style={{
-          background: `radial-gradient(120% 100% at 18% 0%, ${a}66 0%, transparent 62%),
-                       radial-gradient(90% 80% at 92% 18%, ${b}55 0%, transparent 60%),
-                       linear-gradient(180deg, ${end.art[2]}cc 0%, transparent 100%)`,
+          background: `radial-gradient(120% 85% at 20% 0%, ${a}77 0%, transparent 60%),
+                       radial-gradient(95% 70% at 92% 14%, ${b}66 0%, transparent 58%),
+                       linear-gradient(180deg, ${base}bb 0%, transparent 78%)`,
         }}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"
+        className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/45 to-transparent"
       />
 
-      <div className="relative flex h-full flex-col p-6">
+      <div className="relative flex h-full flex-col p-4">
         <div className="flex items-start justify-between">
           <span
             className={cn(
-              "font-mono text-3xl font-black italic transition-colors duration-500",
-              active ? "text-ice" : "text-white/30",
+              "font-mono text-xl font-black italic transition-colors duration-500",
+              active ? "text-ice" : "text-white/35",
             )}
           >
             {end.n}
           </span>
-          <span className="rounded-full bg-lose/15 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.18em] text-lose/90 ring-1 ring-inset ring-lose/20">
+          <span className="rounded-full bg-lose/15 px-2 py-0.5 font-mono text-[8px] uppercase tracking-[0.16em] text-lose/90 ring-1 ring-inset ring-lose/25">
             dead
           </span>
         </div>
-        <h3 className="mt-auto text-[1.4rem] font-bold leading-tight tracking-tight text-ice">
+        <h3 className="mt-auto text-[0.95rem] font-bold leading-snug tracking-tight text-ice">
           {end.title}
         </h3>
-        <p
-          className="mt-3 h-px w-full"
+        <span
+          className="mt-2 block h-px w-full"
           style={{ background: `linear-gradient(to right, ${a}, transparent)` }}
         />
       </div>
