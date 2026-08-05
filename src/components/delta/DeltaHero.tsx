@@ -14,8 +14,18 @@ export default function DeltaHero() {
     <section className="relative -mx-6 overflow-hidden px-6 pb-28 pt-20 lg:-mx-10 lg:px-10 lg:pb-44 lg:pt-32">
       {/* Depth stack: ripple grid, then an arc of light above the fold, then a
           floor wash so the section resolves into the page instead of ending. */}
+      {/* Finer mesh spread over a much wider radius — the coarse grid read as
+          a handful of huge boxes crowding the headline. */}
       <div className="pointer-events-none absolute inset-0 z-0 opacity-70">
-        <RippleGrid gridSize={4} opacity={0.4} speed={0.32} />
+        <RippleGrid
+          gridSize={11}
+          gridThickness={26}
+          fadeDistance={2.8}
+          vignetteStrength={3.2}
+          glowIntensity={0.14}
+          opacity={0.5}
+          speed={0.3}
+        />
       </div>
       <div
         aria-hidden
@@ -34,22 +44,10 @@ export default function DeltaHero() {
         animate="show"
         variants={{ show: { transition: { staggerChildren: 0.09 } } }}
       >
-        <motion.div variants={rise} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
-          <span className="inline-flex items-center gap-2.5 rounded-full bg-white/[0.05] py-2 pl-2.5 pr-4 ring-1 ring-inset ring-white/10 backdrop-blur-sm">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-win opacity-70" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-win" />
-            </span>
-            <span className="font-mono text-[11px] tracking-[0.14em] text-ice/80">
-              LIVE ON CELO MAINNET
-            </span>
-          </span>
-        </motion.div>
-
         <motion.h1
           variants={rise}
           transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-9 text-[2.9rem] font-extrabold leading-[0.96] tracking-[-0.04em] sm:text-6xl lg:text-[5.4rem]"
+          className="text-[2.9rem] font-extrabold leading-[0.96] tracking-[-0.04em] sm:text-6xl lg:text-[5.4rem]"
         >
           Delta moved half
           <br />

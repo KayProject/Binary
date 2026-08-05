@@ -59,18 +59,10 @@ export default function Bento() {
 
       <Reveal delay={0.1}>
         <Panel interactive className="h-full p-8">
-          <div className="flex h-16 items-end gap-1.5">
-            {[38, 52, 30, 64, 46, 78, 41, 88, 57].map((h, i) => (
-              <span
-                key={i}
-                className="flex-1 rounded-t-sm bg-gradient-to-t from-act/25 to-act"
-                style={{ height: `${h}%` }}
-              />
-            ))}
-          </div>
+          <EvChart />
           <h3 className="mt-5 text-xl font-bold text-ice">Measured, not argued</h3>
           <p className="mt-2 text-sm text-ice/70">
-            Four strategies were killed by measurement before this one survived.
+            Win rate climbs with the price. Expected value never leaves zero.
           </p>
         </Panel>
       </Reveal>
@@ -126,6 +118,59 @@ function BatchVisual() {
           {packed ? "1 deposit" : "25 stakes"}
         </span>
         <span className="h-px flex-1 bg-white/10" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The two curves that make the whole argument, plotted from the real maths
+ * rather than invented bars: win rate rises linearly with the price you pay,
+ * while expected value sits flat on zero at every one of those prices.
+ */
+function EvChart() {
+  const W = 260;
+  const H = 64;
+  const pts = Array.from({ length: 46 }, (_, i) => 0.5 + (i / 45) * 0.45);
+
+  const winPath = pts
+    .map((p, i) => {
+      const x = (i / (pts.length - 1)) * W;
+      const y = H - p * H;
+      return `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
+    })
+    .join(" ");
+
+  // EV of buying at p: p·(1/p − 1) − (1 − p) = 0, for every p.
+  const evY = H - 0 * H - 1;
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-16 w-full overflow-visible">
+        <defs>
+          <linearGradient id="winline" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#3d74ff" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#7aa2ff" />
+          </linearGradient>
+        </defs>
+        <path d={winPath} fill="none" stroke="url(#winline)" strokeWidth="2" />
+        <line
+          x1="0"
+          y1={evY}
+          x2={W}
+          y2={evY}
+          stroke="#31d3a2"
+          strokeWidth="1.5"
+          strokeDasharray="3 4"
+        />
+      </svg>
+      <div className="mt-3 flex items-center gap-4 font-mono text-[9px] uppercase tracking-[0.14em] text-fog">
+        <span className="flex items-center gap-1.5">
+          <span className="h-px w-3 bg-act-soft" /> win rate
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-px w-3 bg-win" /> expected value
+        </span>
       </div>
     </div>
   );

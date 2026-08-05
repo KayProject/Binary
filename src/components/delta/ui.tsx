@@ -50,15 +50,44 @@ export function Panel({
   );
 }
 
-/** Section label. A dot, not an icon — it reads as a marker, not decoration. */
-export function Eyebrow({ children }: { children: ReactNode }) {
+/**
+ * Delta's wordmark, built the same way Binary's is — italic, black weight,
+ * split across two colours — so the two read as siblings rather than as two
+ * unrelated products.
+ */
+export function DeltaMark({ className = "" }: { className?: string }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.04] py-1.5 pl-2.5 pr-3.5 ring-1 ring-inset ring-white/[0.08]">
-      <span className="h-1.5 w-1.5 rounded-full bg-act shadow-[0_0_10px_2px_rgba(61,116,255,0.7)]" />
-      <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-fog">
+    <span
+      className={cn(
+        "select-none text-lg font-black italic leading-none tracking-tight",
+        className,
+      )}
+    >
+      <span className="text-act">DEL</span>
+      <span className="text-ice">TA</span>
+    </span>
+  );
+}
+
+/**
+ * Section marker: an index numeral against a rule that fades out. Editorial
+ * rather than a chip — the pill treatment was reading as stock UI.
+ */
+export function SectionLabel({
+  index,
+  children,
+}: {
+  index: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-5">
+      <span className="font-mono text-xs font-bold text-act">{index}</span>
+      <span className="h-px w-14 bg-gradient-to-r from-act/70 to-transparent" />
+      <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-fog">
         {children}
       </span>
-    </span>
+    </div>
   );
 }
 

@@ -123,12 +123,14 @@ function Cell({
       <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-fog">
         {label}
       </p>
+      {/* Sized to fit the widest real value ($388,777) inside a quarter-width
+          cell — the larger display size was clipping it. */}
       <p
         className={cn(
-          "mt-4 font-extrabold leading-none tracking-[-0.03em] tabular-nums",
+          "mt-4 font-extrabold leading-none tracking-[-0.035em] tabular-nums",
           emphasis
-            ? "bg-gradient-to-b from-ice to-act-soft bg-clip-text text-5xl text-transparent lg:text-6xl"
-            : "text-ice text-4xl lg:text-5xl",
+            ? "bg-gradient-to-b from-ice to-act-soft bg-clip-text text-[2.1rem] text-transparent lg:text-[2.75rem]"
+            : "text-ice text-[2rem] lg:text-[2.6rem]",
         )}
       >
         {value}

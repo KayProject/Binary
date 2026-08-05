@@ -5,7 +5,7 @@ import FavouriteTrap from "@/components/delta/FavouriteTrap";
 import Bento from "@/components/delta/Bento";
 import Handshake from "@/components/delta/Handshake";
 import DeadEnds from "@/components/delta/DeadEnds";
-import { Eyebrow, Panel, Reveal } from "@/components/delta/ui";
+import { DeltaMark, Panel, Reveal, SectionLabel } from "@/components/delta/ui";
 
 // Spacing is deliberately uneven. The thesis and the trap get the most air
 // because they carry the argument; the proof band is tight and dense so it
@@ -15,14 +15,7 @@ export default function DeltaPage() {
   return (
     <main className="mx-auto w-full max-w-md px-6 sm:max-w-2xl lg:max-w-6xl lg:px-10">
       <header className="relative z-20 flex items-center justify-between py-6">
-        <span className="flex items-center gap-2.5">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-act/15 text-sm font-black text-act-soft ring-1 ring-inset ring-act/25">
-            Δ
-          </span>
-          <span className="text-[15px] font-bold tracking-tight text-ice">
-            Delta
-          </span>
-        </span>
+        <DeltaMark />
         <Link
           href="/"
           className="rounded-full px-4 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-fog transition-colors hover:bg-white/[0.05] hover:text-ice"
@@ -41,7 +34,7 @@ export default function DeltaPage() {
       {/* Thesis — the most air on the page */}
       <section id="thesis" className="pt-32 lg:pt-52">
         <Reveal>
-          <Eyebrow>The trap most agents fall into</Eyebrow>
+          <SectionLabel index="01">The trap most agents fall into</SectionLabel>
         </Reveal>
         <Reveal delay={0.06}>
           <h2 className="mt-7 max-w-3xl text-4xl font-extrabold leading-[1.03] tracking-[-0.035em] lg:text-[4.2rem]">
@@ -68,7 +61,7 @@ export default function DeltaPage() {
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
             <Reveal>
-              <Eyebrow>What Delta optimises instead</Eyebrow>
+              <SectionLabel index="02">What Delta optimises instead</SectionLabel>
             </Reveal>
             <Reveal delay={0.06}>
               <h2 className="mt-7 max-w-2xl text-4xl font-extrabold leading-[1.05] tracking-[-0.035em] lg:text-6xl">
@@ -91,7 +84,7 @@ export default function DeltaPage() {
       {/* x402 — sequence */}
       <section className="pt-28 lg:pt-40">
         <Reveal>
-          <Eyebrow>Why this is DeFAI and not a chatbot</Eyebrow>
+          <SectionLabel index="03">Why this is DeFAI and not a chatbot</SectionLabel>
         </Reveal>
         <Reveal delay={0.06}>
           <h2 className="mt-7 max-w-3xl text-4xl font-extrabold leading-[1.05] tracking-[-0.035em] lg:text-6xl">
@@ -107,7 +100,7 @@ export default function DeltaPage() {
       {/* Graveyard */}
       <section className="pt-28 lg:pt-40">
         <Reveal>
-          <Eyebrow>Four strategies that did not survive</Eyebrow>
+          <SectionLabel index="04">Four strategies that did not survive</SectionLabel>
         </Reveal>
         <Reveal delay={0.06}>
           <h2 className="mt-7 max-w-2xl text-4xl font-extrabold leading-[1.05] tracking-[-0.035em] lg:text-6xl">
