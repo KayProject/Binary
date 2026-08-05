@@ -26,9 +26,11 @@ export function Panel({
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-[1.75rem]",
-        "bg-gradient-to-b from-mid-2/90 to-mid-2/40",
-        "ring-1 ring-inset ring-white/[0.07]",
+        "grain group relative overflow-hidden rounded-[1.75rem]",
+        // A diagonal fill rather than a flat one, plus grain, so the surface
+        // has a direction and a texture instead of reading as a grey box.
+        "bg-[linear-gradient(145deg,rgba(255,255,255,0.075)_0%,rgba(20,27,46,0.75)_38%,rgba(11,15,26,0.6)_100%)]",
+        "ring-1 ring-inset ring-white/[0.09]",
         interactive &&
           "transition-[transform,box-shadow] duration-500 hover:-translate-y-1 hover:shadow-[0_24px_70px_-30px_rgba(61,116,255,0.55)]",
         className,

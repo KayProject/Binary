@@ -13,33 +13,45 @@ import { Panel } from "./ui";
 const STEPS = [
   {
     tag: "REQUEST",
-    dir: "out" as const,
+    accent: "act" as const,
     title: "Delta asks for a read",
     line: "POST /api/delta/insight",
     body: "No key, no account, no prior relationship.",
   },
   {
     tag: "402",
-    dir: "in" as const,
+    accent: "gold" as const,
     title: "The endpoint quotes it",
     line: "402 Payment Required · $0.01 USDC",
     body: "A price, not a login screen.",
   },
   {
     tag: "SIGN",
-    dir: "out" as const,
+    accent: "violet" as const,
     title: "Delta pays itself in",
     line: "transferWithAuthorization · ERC-3009",
     body: "Gasless, signed by the agent's own key on Celo.",
   },
   {
     tag: "200",
-    dir: "in" as const,
+    accent: "win" as const,
     title: "It gets served",
     line: "spread · depth · vig · implied probability",
     body: "Measurements of the live book — never the position.",
   },
 ];
+
+/** Each leg of the exchange gets its own quiet colour: the request, the price,
+ *  the signature and the payload should not all read as the same event. */
+const ACCENT = {
+  act: { badge: "bg-act/20 text-act-soft ring-act/25", line: "text-act-soft/90" },
+  gold: { badge: "bg-gold/15 text-gold ring-gold/25", line: "text-gold/85" },
+  violet: {
+    badge: "bg-[#a78bfa]/15 text-[#c4b5fd] ring-[#a78bfa]/25",
+    line: "text-[#c4b5fd]/85",
+  },
+  win: { badge: "bg-win/15 text-win ring-win/25", line: "text-win/85" },
+} as const;
 
 export default function Handshake() {
   const ref = useRef<HTMLDivElement>(null);
@@ -72,21 +84,15 @@ export default function Handshake() {
                 style={{ transitionDelay: `${i * 60}ms` }}
               >
                 <span
-                  className={`mt-1 shrink-0 self-start rounded-md px-2 py-1 font-mono text-[10px] font-bold leading-none tracking-wider transition-colors duration-500 ${
-                    s.dir === "out"
-                      ? on
-                        ? "bg-act/20 text-act-soft"
-                        : "bg-mid-3 text-fog"
-                      : on
-                        ? "bg-win/15 text-win"
-                        : "bg-mid-3 text-fog"
+                  className={`mt-1 shrink-0 self-start rounded-md px-2 py-1 font-mono text-[10px] font-bold leading-none tracking-wider ring-1 ring-inset transition-colors duration-500 ${
+                    on ? ACCENT[s.accent].badge : "bg-mid-3 text-fog ring-transparent"
                   }`}
                 >
                   {s.tag}
                 </span>
                 <div className="min-w-0">
                   <p className="font-semibold text-ice">{s.title}</p>
-                  <p className="mt-1 truncate font-mono text-xs text-act-soft/80">
+                  <p className={`mt-1 truncate font-mono text-xs transition-colors duration-500 ${on ? ACCENT[s.accent].line : "text-fog/60"}`}>
                     {s.line}
                   </p>
                   <p className="mt-1.5 text-sm text-ice/60">{s.body}</p>

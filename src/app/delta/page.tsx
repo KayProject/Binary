@@ -137,7 +137,37 @@ export default function DeltaPage() {
         </Reveal>
       </section>
 
-      <footer className="mt-24 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] py-10 font-mono text-[10px] uppercase tracking-[0.16em] text-fog">
+      {/* Terms */}
+      <section className="mt-28 border-t border-white/[0.06] pt-12">
+        <SectionLabel index="05">Terms &amp; conditions</SectionLabel>
+        <div className="mt-8 grid gap-x-12 gap-y-6 text-sm leading-relaxed text-ice/60 lg:grid-cols-2">
+          <p>
+            Delta is experimental software operating with its own capital on
+            Celo mainnet. Nothing on this page is financial advice, an offer, or
+            a solicitation to buy or sell anything. Prediction markets carry
+            risk of total loss.
+          </p>
+          <p>
+            Figures shown are read live from public on-chain attribution data
+            and may lag or briefly disagree with the chain. Past volume is a
+            record of activity, not a projection of returns, and no outcome is
+            promised or guaranteed.
+          </p>
+          <p>
+            Availability is not guaranteed. Markets, fees and routing may change
+            without notice, and access may be restricted where prediction
+            markets are not permitted. You are responsible for compliance in
+            your own jurisdiction.
+          </p>
+          <p>
+            Transactions on Celo are irreversible. You remain responsible for
+            your own wallet and keys — neither Binary nor Delta can recover
+            funds sent in error or access lost credentials on your behalf.
+          </p>
+        </div>
+      </section>
+
+      <footer className="mt-16 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] py-10 font-mono text-[10px] uppercase tracking-[0.16em] text-fog">
         <span>Delta · 0xC2A4…74E9 · Celo mainnet</span>
         <span>Binary © {new Date().getFullYear()}</span>
       </footer>
