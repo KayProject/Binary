@@ -243,7 +243,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         appId={PRIVY_APP_ID!}
         config={{
           loginMethods: ["google", "twitter", "email", "wallet"],
-          appearance: { theme: "dark", accentColor: "#3d74ff" },
+          appearance: { theme: "dark", accentColor: "#6fe3e0" },
           embeddedWallets: { ethereum: { createOnLogin: "users-without-wallets" } },
           defaultChain: celo,
           supportedChains: [celo],

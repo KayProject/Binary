@@ -163,13 +163,15 @@ function PlayRow({ play }: { play: Play }) {
 }
 
 function useTheme(): [Theme, () => void] {
-  const [theme, setTheme] = useState<Theme>("light");
+  // Dark is the ground this product sits on, so it is what a first visit gets. A saved
+  // choice still wins, and so does an explicit system preference for light.
+  const [theme, setTheme] = useState<Theme>("dark");
   useEffect(() => {
     const id = requestAnimationFrame(() => {
       try {
         const saved = localStorage.getItem("binary.theme") as Theme | null;
         if (saved === "light" || saved === "dark") setTheme(saved);
-        else if (window.matchMedia("(prefers-color-scheme: dark)").matches) setTheme("dark");
+        else if (window.matchMedia("(prefers-color-scheme: light)").matches) setTheme("light");
       } catch {}
     });
     return () => cancelAnimationFrame(id);
