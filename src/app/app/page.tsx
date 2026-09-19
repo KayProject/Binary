@@ -18,6 +18,7 @@ import {
   PickIcon,
 } from "@/components/icons";
 import { Leaderboard } from "@/components/Leaderboard";
+import { MarketCard } from "@/components/app/MarketCard";
 import { MomentScreen, type Moment } from "@/components/moments";
 import type { History, Play } from "@/lib/play/history";
 import { payoutIfWin, sharesFor, takerFee } from "@/lib/polymarket/fees";
@@ -653,6 +654,12 @@ export default function AppHome() {
 
   const playCount = (history?.plays.length ?? 0) + confirming.length;
 
+  // Rails exist to hold a record. With no address there is no record, so they do not.
+  const railed = address !== null;
+  const shell = railed
+    ? "md:mx-auto md:grid md:w-full md:max-w-[980px] md:grid-cols-[minmax(0,1fr)_280px] md:gap-7 md:px-6 lg:max-w-[1440px] lg:grid-cols-[240px_minmax(0,1fr)_280px] lg:gap-8 lg:px-8 xl:grid-cols-[300px_minmax(0,1fr)_340px] xl:gap-10 xl:px-10"
+    : "mx-auto w-full max-w-2xl";
+
   return (
     <main
       className={`${theme === "dark" ? "app-dark" : "app-light"} mx-auto w-full min-w-0 min-h-dvh max-w-md bg-(--s-bg) pb-24 text-(--s-text) lg:max-w-none lg:pb-0`}
@@ -661,15 +668,10 @@ export default function AppHome() {
           height at lg is what the sticky rails offset against (lg:top-16). */}
       <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-(--s-line) bg-(--s-bg-blur) px-5 py-3.5 backdrop-blur lg:h-16 lg:px-8 lg:py-0">
         <Logo />
+        {/* Signed out, a balance of $0.00 and a streak of 0 are not status — they are two
+            pieces of furniture announcing that nothing has happened yet. They arrive with
+            the account they describe. */}
         <div className="flex items-center gap-2">
-          {!address && !isMiniPay && (
-            <button
-              onClick={connect}
-              className="rounded-full bg-(--s-act) px-4 py-1.5 text-sm font-semibold text-(--s-act-contrast)"
-            >
-              Sign in
-            </button>
-          )}
           <button
             onClick={toggleTheme}
             aria-label="Toggle theme"
@@ -677,39 +679,63 @@ export default function AppHome() {
           >
             {theme === "dark" ? <SunIcon className="h-[18px] w-[18px]" /> : <MoonIcon className="h-[18px] w-[18px]" />}
           </button>
-          <button
-            onClick={() => setTab("you")}
-            className="flex items-center gap-1.5 rounded-full bg-(--s-gold-tint) px-3 py-1.5 text-sm font-semibold tabular-nums text-(--s-gold)"
-          >
-            <StreakIcon className="h-4 w-4" />
-            {streak}
-          </button>
-          <button
-            onClick={() => (fundingUsd !== null ? setMoment({ t: "pending", step: 2, usd: fundingUsd }) : setTopUp(true))}
-            className="rounded-full bg-(--s-card) px-3.5 py-1.5 text-sm font-semibold tabular-nums"
-          >
-            {fundingUsd !== null ? (
-              <span className="moment-step-active text-(--s-act-soft)">
-                +${fundingUsd.toFixed(2)}…
-              </span>
-            ) : (
-              `$${balance.toFixed(2)}`
-            )}
-          </button>
+
+          {address ? (
+            <>
+              {streak > 0 && (
+                <button
+                  onClick={() => setTab("you")}
+                  className="flex items-center gap-1.5 rounded-full bg-(--s-gold-tint) px-3 py-1.5 text-sm font-semibold tabular-nums text-(--s-gold)"
+                >
+                  <StreakIcon className="h-4 w-4" />
+                  {streak}
+                </button>
+              )}
+              <button
+                onClick={() => (fundingUsd !== null ? setMoment({ t: "pending", step: 2, usd: fundingUsd }) : setTopUp(true))}
+                className="rounded-full bg-(--s-card) px-3.5 py-1.5 text-sm font-semibold tabular-nums"
+              >
+                {fundingUsd !== null ? (
+                  <span className="moment-step-active text-(--s-act)">
+                    +${fundingUsd.toFixed(2)}…
+                  </span>
+                ) : (
+                  `$${balance.toFixed(2)}`
+                )}
+              </button>
+            </>
+          ) : (
+            !isMiniPay && (
+              <button
+                onClick={connect}
+                className="rounded-full bg-(--s-text) px-4 py-1.5 text-sm font-semibold text-(--s-bg)"
+              >
+                Sign in
+              </button>
+            )
+          )}
         </div>
       </header>
 
       {/* ── Shell ─────────────────────────────────────────────────
-          Below lg the tab bar shows one region at a time, exactly as before.
-          At lg the tabs dissolve: every region is mounted and placed as a
-          column — You left, Markets centre, Portfolio right — so balance and
-          open picks stay visible while browsing. The centre column is the
-          only one that grows; the rails are fixed so the feed never gets
-          narrower than it is on a phone. */}
-      <div className="lg:mx-auto lg:grid lg:w-full lg:max-w-[1440px] lg:grid-cols-[240px_minmax(0,1fr)_260px] lg:gap-8 lg:px-8 xl:grid-cols-[300px_minmax(0,1fr)_340px] xl:gap-10 xl:px-10">
+          Three registers, and which one you get depends on whether there is
+          anything to put in the rails.
+
+          Signed out, there is not: the rails held a signed-in player's
+          furniture and rendered it as a wall of zeros — `0 picks on-chain`,
+          `0 longest streak`, `$0.00`, `Counting…` — which is two thirds of a
+          first visit spent on nothing. So the feed runs alone down the middle
+          at a readable measure, at every width.
+
+          Signed in, the tabs dissolve as the screen earns them: at md the
+          portfolio comes alongside the feed, and at lg the record joins on the
+          left. The centre column is the only one that grows. */}
+      <div className={shell}>
         {/* ── Markets ───────────────────────────────────────────── */}
         <section
-          className={`${tab === "markets" ? "block" : "hidden"} lg:col-start-2 lg:row-start-1 lg:block`}
+          className={`${tab === "markets" ? "block" : "hidden"} ${
+            railed ? "md:col-start-1 md:row-start-1 md:block lg:col-start-2" : "block"
+          }`}
         >
           <div
             className="flex gap-2 overflow-x-auto px-5 pt-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:px-0"
@@ -729,7 +755,7 @@ export default function AppHome() {
                   setError(false);
                 }}
                 className={`flex shrink-0 items-center gap-1.5 rounded-full py-1.5 pl-2.5 pr-3.5 text-sm font-semibold transition active:scale-95 ${
-                  id === category ? "bg-(--s-act) text-(--s-act-contrast)" : "bg-(--s-card) text-(--s-sub)"
+                  id === category ? "bg-(--s-text) text-(--s-bg)" : "bg-(--s-card) text-(--s-sub)"
                 }`}
               >
                 <Icon className="h-[18px] w-[18px]" />
@@ -738,7 +764,7 @@ export default function AppHome() {
             ))}
           </div>
           {!address && (
-            <div className="mx-5 mt-4 rounded-[22px] border border-(--s-act) bg-(--s-act-tint) p-5 lg:mx-0">
+            <div className="mx-5 mt-4 rounded-[22px] border border-(--s-line) bg-(--s-card) p-5 lg:mx-0">
               <p className="text-[15px] font-bold">Play free. Win real cash.</p>
               <p className="mt-1 text-sm text-(--s-sub)">
                 Pick a side on real Polymarket markets — free picks build your streak,
@@ -747,14 +773,14 @@ export default function AppHome() {
               {hasWallet ? (
                 <button
                   onClick={connect}
-                  className="mt-3 w-full rounded-full bg-(--s-act) py-3 text-sm font-bold text-(--s-act-contrast) active:scale-[0.98]"
+                  className="mt-3 w-full rounded-full bg-(--s-text) py-3 text-sm font-semibold text-(--s-bg) active:scale-[0.98]"
                 >
                   Sign in to start
                 </button>
               ) : (
                 <a
                   href="https://www.opera.com/products/minipay"
-                  className="mt-3 block w-full rounded-full bg-(--s-act) py-3 text-center text-sm font-bold text-(--s-act-contrast) active:scale-[0.98]"
+                  className="mt-3 block w-full rounded-full bg-(--s-text) py-3 text-center text-sm font-semibold text-(--s-bg) active:scale-[0.98]"
                 >
                   Get MiniPay to start
                 </a>
@@ -778,7 +804,7 @@ export default function AppHome() {
                 <button
                   onClick={doClaim}
                   disabled={txBusy === "claim"}
-                  className="mt-3 w-full rounded-full bg-(--s-act) py-3 text-sm font-bold text-(--s-act-contrast) active:scale-[0.98] disabled:opacity-60"
+                  className="mt-3 w-full rounded-full bg-(--s-text) py-3 text-sm font-semibold text-(--s-bg) active:scale-[0.98] disabled:opacity-60"
                 >
                   {txBusy === "claim" ? "Confirm in your wallet…" : "Claim it"}
                 </button>
@@ -795,69 +821,33 @@ export default function AppHome() {
               Nothing liquid here right now — check back soon.
             </p>
           )}
-          {/* Cards rather than hairline-divided rows: the feed is a stack of separate
-              things to decide on, and a divider line says the opposite. */}
-          <ul className="flex flex-col gap-4 px-5 pb-6 lg:px-0">
-            {markets.map((m) => (
-              <li
+          {/* Three tiers. The feed's job is to say what is worth deciding on, and a
+              grid of identical cards says everything is equally worth it. */}
+          <div className="flex flex-col gap-4 px-5 pb-6 lg:px-0">
+            {markets.map((m, i) => (
+              <MarketCard
                 key={m.slug}
-                className="rounded-[22px] border border-(--s-line) bg-(--s-card) p-5"
-              >
-                <div className="flex items-start gap-3.5">
-                  {m.image && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={m.image}
-                      alt=""
-                      className="h-12 w-12 shrink-0 rounded-2xl object-cover"
-                    />
-                  )}
-                  <p className="flex-1 text-[15px] font-semibold leading-snug">{m.question}</p>
-                  <span className="text-lg font-semibold tabular-nums text-(--s-act-soft)">
-                    {pct(m.outcomes[0].price)}
-                  </span>
-                </div>
-
-                <p className="mt-3.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-(--s-sub)">
-                  <span className="tabular-nums">
-                    ${Math.round(m.volume24h).toLocaleString()} today
-                  </span>
-                  {picks[m.slug] && (
-                    <span className="inline-flex items-center gap-1 font-semibold text-(--s-gold)">
-                      <PickIcon className="h-3.5 w-3.5" />
-                      {picks[m.slug].label}
-                    </span>
-                  )}
-                </p>
-
-                <div className="mt-4 flex gap-2.5">
-                  {([0, 1] as const).map((i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        setAmount(2);
-                        setInsight(null);
-                        setInsightError(null);
-                        setSheet({ market: m, outcome: i });
-                      }}
-                      className={`flex-1 rounded-full px-3 py-3 text-sm font-semibold tabular-nums transition active:scale-95 ${
-                        i === 0
-                          ? "bg-(--s-act-tint) text-(--s-act-soft)"
-                          : "bg-(--s-lose-tint) text-(--s-lose)"
-                      }`}
-                    >
-                      {m.outcomes[i].label} {cents(m.outcomes[i].price)}
-                    </button>
-                  ))}
-                </div>
-              </li>
+                market={m}
+                tier={i === 0 ? "hero" : i < 3 ? "medium" : "compact"}
+                picked={picks[m.slug]?.label}
+                onPick={(market, outcome) => {
+                  setAmount(2);
+                  setInsight(null);
+                  setInsightError(null);
+                  setSheet({ market, outcome });
+                }}
+              />
             ))}
-          </ul>
+          </div>
         </section>
 
         {/* ── Portfolio ─────────────────────────────────────────── */}
         <section
-          className={`${tab === "portfolio" ? "block" : "hidden"} px-5 py-6 lg:sticky lg:top-16 lg:col-start-3 lg:row-start-1 lg:block lg:max-h-[calc(100dvh-4rem)] lg:self-start lg:overflow-y-auto`}
+          className={`${tab === "portfolio" ? "block" : "hidden"} px-5 py-6 ${
+            railed
+              ? "md:sticky md:top-16 md:col-start-2 md:row-start-1 md:block md:max-h-[calc(100dvh-4rem)] md:self-start md:overflow-y-auto md:px-0 lg:col-start-3"
+              : ""
+          }`}
         >
           <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-(--s-sub)">
             Your money
@@ -869,7 +859,7 @@ export default function AppHome() {
             <p className="mt-1 text-4xl font-semibold tabular-nums tracking-[-0.03em]">${balance.toFixed(2)}</p>
             <button
               onClick={() => setTopUp(true)}
-              className="mt-3 w-full rounded-full bg-(--s-act) py-3 text-sm font-bold text-(--s-act-contrast) active:scale-[0.98]"
+              className="mt-3 w-full rounded-full bg-(--s-text) py-3 text-sm font-semibold text-(--s-bg) active:scale-[0.98]"
             >
               Top up with USDm
             </button>
@@ -949,7 +939,11 @@ export default function AppHome() {
 
         {/* ── You ───────────────────────────────────────────────── */}
         <section
-          className={`${tab === "you" ? "block" : "hidden"} px-5 py-6 lg:sticky lg:top-16 lg:col-start-1 lg:row-start-1 lg:block lg:max-h-[calc(100dvh-4rem)] lg:self-start lg:overflow-y-auto`}
+          className={`${tab === "you" ? "block" : "hidden"} px-5 py-6 ${
+            railed
+              ? "lg:sticky lg:top-16 lg:col-start-1 lg:row-start-1 lg:block lg:max-h-[calc(100dvh-4rem)] lg:self-start lg:overflow-y-auto lg:px-0"
+              : ""
+          }`}
         >
           <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-(--s-sub)">
             Your record
@@ -1083,18 +1077,44 @@ export default function AppHome() {
       {/* ── Bet sheet ─────────────────────────────────────────── */}
       {sheet && sel && (
         <div
-          className="fixed inset-0 z-20 flex items-end bg-black/50 lg:items-center lg:justify-center lg:p-6"
+          className="fixed inset-0 z-20 flex items-stretch bg-black/50 sm:items-center sm:justify-center sm:p-6"
           onClick={() => setSheet(null)}
         >
+          {/* On a phone this is the whole screen and the whole job: one question, the side
+              you took, the money. Everything else is behind it. From sm up there is room
+              to keep the feed in view, so it is a modal over it instead. */}
           <div
-            className={`${theme === "dark" ? "app-dark" : "app-light"} w-full rounded-t-3xl border-t border-(--s-line) bg-(--s-card) p-5 pb-8 text-(--s-text) lg:max-w-md lg:rounded-3xl lg:border lg:pb-5 lg:shadow-2xl`}
+            className={`${theme === "dark" ? "app-dark" : "app-light"} flex w-full flex-col overflow-y-auto bg-(--s-bg) p-5 pb-8 text-(--s-text) sm:max-h-[90dvh] sm:max-w-md sm:rounded-3xl sm:border sm:border-(--s-line) sm:bg-(--s-card) sm:pb-5 sm:shadow-2xl`}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Drag handle — a sheet affordance; the lg modal isn't draggable. */}
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-(--s-line) lg:hidden" />
-            <p className="mb-1 text-sm text-(--s-sub)">{sheet.market.question}</p>
-            <p className="mb-4 text-xl font-bold">
-              {sel.label} · <span className="tabular-nums">{cents(sel.price)}</span>
+            <div className="mb-5 flex items-start gap-4">
+              {sheet.market.image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={sheet.market.image}
+                  alt=""
+                  className="h-14 w-14 shrink-0 rounded-2xl object-cover sm:h-12 sm:w-12"
+                />
+              )}
+              <button
+                onClick={() => setSheet(null)}
+                aria-label="Close"
+                className="-mr-1 ml-auto shrink-0 rounded-full bg-(--s-card) px-3 py-1.5 text-xs font-semibold text-(--s-sub) sm:bg-transparent"
+              >
+                Close
+              </button>
+            </div>
+
+            <p className="text-[22px] font-bold leading-[1.15] tracking-[-0.02em] sm:text-lg">
+              {sheet.market.question}
+            </p>
+
+            <p
+              className={`mt-4 mb-5 text-2xl font-semibold tabular-nums ${
+                sheet.outcome === 0 ? "text-(--s-win)" : "text-(--s-lose)"
+              }`}
+            >
+              {sel.label} at {cents(sel.price)}
             </p>
 
             {funded ? (
@@ -1186,7 +1206,7 @@ export default function AppHome() {
 
                 {txError && <p className="mb-2 text-center text-xs text-(--s-lose)">{txError}</p>}
                 <button
-                  className="w-full rounded-full bg-(--s-act) py-4 text-base font-bold text-(--s-act-contrast) active:scale-[0.98] disabled:opacity-60"
+                  className="w-full rounded-full bg-(--s-text) py-4 text-base font-semibold text-(--s-bg) active:scale-[0.98] disabled:opacity-60"
                   disabled={txBusy === "bet"}
                   onClick={() => doBet(sheet.market, sheet.outcome, amount)}
                 >
@@ -1212,7 +1232,7 @@ export default function AppHome() {
 
                 {txError && <p className="mb-2 text-center text-xs text-(--s-lose)">{txError}</p>}
                 <button
-                  className="mb-2 w-full rounded-full bg-(--s-act) py-4 text-base font-bold text-(--s-act-contrast) active:scale-[0.98] disabled:opacity-60"
+                  className="mb-2 w-full rounded-full bg-(--s-text) py-4 text-base font-semibold text-(--s-bg) active:scale-[0.98] disabled:opacity-60"
                   disabled={txBusy === "pick"}
                   onClick={() => doPick(sheet.market, sheet.outcome)}
                 >
@@ -1302,7 +1322,7 @@ export default function AppHome() {
               const valid = Number.isFinite(usd) && usd >= MIN_DEPOSIT;
               return (
                 <button
-                  className="w-full rounded-full bg-(--s-act) py-4 text-base font-bold text-(--s-act-contrast) active:scale-[0.98] disabled:opacity-60"
+                  className="w-full rounded-full bg-(--s-text) py-4 text-base font-semibold text-(--s-bg) active:scale-[0.98] disabled:opacity-60"
                   disabled={!valid || txBusy === "topup"}
                   onClick={() => doTopUp(usd)}
                 >
@@ -1373,7 +1393,7 @@ export default function AppHome() {
               const valid = Number.isFinite(usd) && usd >= MIN_WITHDRAW && usd <= balance;
               return (
                 <button
-                  className="w-full rounded-full bg-(--s-act) py-4 text-base font-bold text-(--s-act-contrast) active:scale-[0.98] disabled:opacity-60"
+                  className="w-full rounded-full bg-(--s-text) py-4 text-base font-semibold text-(--s-bg) active:scale-[0.98] disabled:opacity-60"
                   disabled={!valid || txBusy === "withdraw"}
                   onClick={() => doWithdraw(usd)}
                 >

@@ -321,6 +321,7 @@ body {
   --s-gold-solid: #fab219;
   --s-gold-contrast: #0a0a0a;
   --s-win: #0ca30c;
+  --s-win-tint: rgba(12, 163, 12, 0.08);
   --s-lose: #d03b3b;
   --s-lose-tint: rgba(208, 59, 59, 0.08);
   /* Celebration takeover only. */
@@ -349,8 +350,9 @@ body {
   --s-gold-solid: #fab219;
   --s-gold-contrast: #0d0d0d;
   --s-win: #31d3a2;
+  --s-win-tint: rgba(49, 211, 162, 0.12);
   --s-lose: #ff6b5e;
-  --s-lose-tint: rgba(255, 107, 94, 0.1);
+  --s-lose-tint: rgba(255, 107, 94, 0.12);
   --s-burst-a: #1f1806;
   --s-burst-b: #3d2f0d;
   --s-burst-text: #fab219;
