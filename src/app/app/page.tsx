@@ -16,6 +16,7 @@ import {
   SunIcon,
   MoonIcon,
   PickIcon,
+  GiftIcon,
 } from "@/components/icons";
 import { Leaderboard } from "@/components/Leaderboard";
 import { MarketCard } from "@/components/app/MarketCard";
@@ -116,6 +117,41 @@ function usePlays(address: string | null, nonce: number) {
     history: result && result !== "error" ? result : null,
     state: !address ? "idle" : result === "error" ? "error" : result ? "idle" : "loading",
   } as const;
+}
+
+function Stats({
+  picks,
+  longest,
+  checkIns,
+}: {
+  picks: number;
+  longest: number;
+  checkIns: number | null;
+}) {
+  if (picks === 0 && longest === 0 && !checkIns) {
+    return (
+      <p className="mb-4 rounded-[22px] bg-(--s-card) px-4 py-3.5 text-sm text-(--s-sub)">
+        Nothing on the board yet. Take a side and this fills up.
+      </p>
+    );
+  }
+
+  const rows: [number | string, string][] = [
+    [picks, "picks on-chain"],
+    [longest, "longest streak"],
+    [checkIns ?? "—", "days checked in"],
+  ];
+
+  return (
+    <div className="mb-4 grid grid-cols-3 gap-2">
+      {rows.map(([value, label]) => (
+        <div key={label} className="rounded-[22px] bg-(--s-card) p-4">
+          <p className="text-2xl font-semibold tabular-nums">{value}</p>
+          <p className="mt-0.5 text-xs text-(--s-sub)">{label}</p>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function Chip({ tone, children }: { tone: "win" | "lose" | "sub" | "gold"; children: React.ReactNode }) {
@@ -233,6 +269,7 @@ export default function AppHome() {
   // from the scorer instead, so the tile and the board can't disagree.
   const [checkInDays, setCheckInDays] = useState<number | null>(null);
   const [faucet, setFaucet] = useState<FaucetState | null>(null);
+  const [giftOpen, setGiftOpen] = useState(false);
   const prevPlayer = useRef<PlayerState | null>(null);
   // Funding-tracker baseline: net deposits + credited pUSD when it opened.
   const pendingBase = useRef<{ net: number; credited: number | null } | null>(null);
@@ -654,11 +691,9 @@ export default function AppHome() {
 
   const playCount = (history?.plays.length ?? 0) + confirming.length;
 
-  // Rails exist to hold a record. With no address there is no record, so they do not.
-  const railed = address !== null;
-  const shell = railed
-    ? "md:mx-auto md:grid md:w-full md:max-w-[980px] md:grid-cols-[minmax(0,1fr)_280px] md:gap-7 md:px-6 lg:max-w-[1440px] lg:grid-cols-[240px_minmax(0,1fr)_280px] lg:gap-8 lg:px-8 xl:grid-cols-[300px_minmax(0,1fr)_340px] xl:gap-10 xl:px-10"
-    : "mx-auto w-full max-w-2xl";
+  // The account opens over the feed rather than flanking it.
+  const panelOpen = tab !== "markets";
+  const closePanel = () => setTab("markets");
 
   return (
     <main
@@ -680,6 +715,20 @@ export default function AppHome() {
             {theme === "dark" ? <SunIcon className="h-[18px] w-[18px]" /> : <MoonIcon className="h-[18px] w-[18px]" />}
           </button>
 
+          {/* The faucet. It was a bordered banner across the top of the feed,
+              arguing for something you can do once, above the market you came
+              to decide on. As an icon it waits to be noticed instead: it
+              wiggles every few seconds and the explanation is one tap away. */}
+          {address && faucet && !faucet.claimed && (
+            <button
+              onClick={() => setGiftOpen(true)}
+              aria-label={faucet.claimable ? "Claim your free USDm" : "About free USDm drops"}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-(--s-gold-tint) text-(--s-gold)"
+            >
+              <GiftIcon className={`h-5 w-5 ${faucet.claimable ? "gift-wiggle" : ""}`} />
+            </button>
+          )}
+
           {address ? (
             <>
               {streak > 0 && (
@@ -691,8 +740,14 @@ export default function AppHome() {
                   {streak}
                 </button>
               )}
+              {/* The balance is also the way into the account, since the rails that
+                  used to hold it are gone and the bottom nav is a phone affordance. */}
               <button
-                onClick={() => (fundingUsd !== null ? setMoment({ t: "pending", step: 2, usd: fundingUsd }) : setTopUp(true))}
+                onClick={() =>
+                  fundingUsd !== null
+                    ? setMoment({ t: "pending", step: 2, usd: fundingUsd })
+                    : setTab("portfolio")
+                }
                 className="rounded-full bg-(--s-card) px-3.5 py-1.5 text-sm font-semibold tabular-nums"
               >
                 {fundingUsd !== null ? (
@@ -718,27 +773,23 @@ export default function AppHome() {
       </header>
 
       {/* ── Shell ─────────────────────────────────────────────────
-          Three registers, and which one you get depends on whether there is
-          anything to put in the rails.
+          One column, one width, every screen.
 
-          Signed out, there is not: the rails held a signed-in player's
-          furniture and rendered it as a wall of zeros — `0 picks on-chain`,
-          `0 longest streak`, `$0.00`, `Counting…` — which is two thirds of a
-          first visit spent on nothing. So the feed runs alone down the middle
-          at a readable measure, at every width.
+          This was a three-column dashboard, and the two rails were furniture:
+          signed in with no history they read `0 picks on-chain`,
+          `0 longest streak`, `— days checked in`, `Counting…` and `$0.00`,
+          which is most of a wide screen spent on nothing while the feed — the
+          product — took the narrow middle.
 
-          Signed in, the tabs dissolve as the screen earns them: at md the
-          portfolio comes alongside the feed, and at lg the record joins on the
-          left. The centre column is the only one that grows. */}
-      <div className={shell}>
+          So the feed is the app and takes the whole column, at the same measure
+          on a phone as on a desktop. The account lives behind the header and
+          opens over the top. You check a balance occasionally and browse
+          markets constantly; the old layout had that backwards. */}
+      <div className="mx-auto w-full max-w-[46rem]">
         {/* ── Markets ───────────────────────────────────────────── */}
-        <section
-          className={`${tab === "markets" ? "block" : "hidden"} ${
-            railed ? "md:col-start-1 md:row-start-1 md:block lg:col-start-2" : "block"
-          }`}
-        >
+        <section className="block">
           <div
-            className="flex gap-2 overflow-x-auto px-5 pt-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:px-0"
+            className="flex gap-2 overflow-x-auto px-5 pt-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             role="tablist"
             aria-label="Market categories"
           >
@@ -764,7 +815,7 @@ export default function AppHome() {
             ))}
           </div>
           {!address && (
-            <div className="mx-5 mt-4 rounded-[22px] border border-(--s-line) bg-(--s-card) p-5 lg:mx-0">
+            <div className="mx-5 mt-4 rounded-[22px] border border-(--s-line) bg-(--s-card) p-5">
               <p className="text-[15px] font-bold">Play free. Win real cash.</p>
               <p className="mt-1 text-sm text-(--s-sub)">
                 Pick a side on real Polymarket markets — free picks build your streak,
@@ -787,30 +838,6 @@ export default function AppHome() {
               )}
             </div>
           )}
-          {/* Faucet promo — hidden once claimed; a teaser while the pot is dry. */}
-          {address && faucet && !faucet.claimed && (
-            <div className="mx-5 mt-4 rounded-[22px] border border-(--s-gold) bg-(--s-card) p-5 lg:mx-0">
-              <p className="text-[15px] font-bold">
-                {faucet.claimable
-                  ? `Claim your free $${faucet.dripUsd.toFixed(2)}`
-                  : "Free USDm drops are coming"}
-              </p>
-              <p className="mt-1 text-sm text-(--s-sub)">
-                {faucet.claimable
-                  ? "Real USDm, once per wallet, straight to your wallet. No strings."
-                  : "One free claim per waitlisted wallet — we’ll light this up when your wallet is approved and the pot is filled."}
-              </p>
-              {faucet.claimable && (
-                <button
-                  onClick={doClaim}
-                  disabled={txBusy === "claim"}
-                  className="mt-3 w-full rounded-full bg-(--s-text) py-3 text-sm font-semibold text-(--s-bg) active:scale-[0.98] disabled:opacity-60"
-                >
-                  {txBusy === "claim" ? "Confirm in your wallet…" : "Claim it"}
-                </button>
-              )}
-            </div>
-          )}
           {error && (
             <p className="p-6 text-center text-sm text-(--s-sub)">
               Feed unavailable — pull to retry.
@@ -823,7 +850,7 @@ export default function AppHome() {
           )}
           {/* Three tiers. The feed's job is to say what is worth deciding on, and a
               grid of identical cards says everything is equally worth it. */}
-          <div className="flex flex-col gap-4 px-5 pb-6 lg:px-0">
+          <div className="flex flex-col gap-4 px-5 pb-8">
             {markets.map((m, i) => (
               <MarketCard
                 key={m.slug}
@@ -840,14 +867,89 @@ export default function AppHome() {
             ))}
           </div>
         </section>
+      </div>
+
+      {/* ── The gift ──────────────────────────────────────────── */}
+      {giftOpen && faucet && (
+        <div
+          className="fixed inset-0 z-40 flex items-end bg-black/50 sm:items-center sm:justify-center sm:p-6"
+          onClick={() => setGiftOpen(false)}
+        >
+          <div
+            className={`${theme === "dark" ? "app-dark" : "app-light"} w-full rounded-t-3xl border-t border-(--s-line) bg-(--s-card) p-6 pb-8 text-center text-(--s-text) sm:max-w-sm sm:rounded-3xl sm:border sm:pb-6`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GiftIcon className="mx-auto h-12 w-12 text-(--s-gold)" />
+            <p className="mt-4 text-xl font-bold tracking-[-0.02em]">
+              {faucet.claimable
+                ? `Your free $${faucet.dripUsd.toFixed(2)}`
+                : "Free USDm drops are coming"}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-(--s-sub)">
+              {faucet.claimable
+                ? "Real USDm, once per wallet, straight to your wallet. No strings."
+                : "One free claim per waitlisted wallet. This lights up when your wallet is approved and the pot is filled."}
+            </p>
+            {faucet.claimable ? (
+              <button
+                onClick={doClaim}
+                disabled={txBusy === "claim"}
+                className="mt-6 w-full rounded-full bg-(--s-text) py-3.5 text-sm font-semibold text-(--s-bg) active:scale-[0.98] disabled:opacity-60"
+              >
+                {txBusy === "claim" ? "Confirm in your wallet…" : "Claim it"}
+              </button>
+            ) : (
+              <button
+                onClick={() => setGiftOpen(false)}
+                className="mt-6 w-full rounded-full border border-(--s-line) py-3.5 text-sm font-semibold text-(--s-sub)"
+              >
+                Got it
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Account ───────────────────────────────────────────────
+          Portfolio and record, over the feed rather than beside it. Full screen
+          on a phone, a panel from the right once there is room for one. */}
+      {panelOpen && (
+        <div
+          className="fixed inset-0 z-30 flex justify-end bg-black/50"
+          onClick={closePanel}
+        >
+          <aside
+            className={`${theme === "dark" ? "app-dark" : "app-light"} panel-in flex h-full w-full flex-col overflow-y-auto bg-(--s-bg) text-(--s-text) sm:max-w-[27rem] sm:border-l sm:border-(--s-line)`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-(--s-line) bg-(--s-bg-blur) px-5 py-3.5 backdrop-blur">
+              {(
+                [
+                  ["portfolio", "Portfolio"],
+                  ["you", "You"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setTab(id)}
+                  className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                    tab === id ? "bg-(--s-text) text-(--s-bg)" : "bg-(--s-card) text-(--s-sub)"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                onClick={closePanel}
+                className="ml-auto rounded-full px-3 py-1.5 text-sm font-semibold text-(--s-sub) transition-colors hover:text-(--s-text)"
+              >
+                Close
+              </button>
+            </div>
 
         {/* ── Portfolio ─────────────────────────────────────────── */}
         <section
-          className={`${tab === "portfolio" ? "block" : "hidden"} px-5 py-6 ${
-            railed
-              ? "md:sticky md:top-16 md:col-start-2 md:row-start-1 md:block md:max-h-[calc(100dvh-4rem)] md:self-start md:overflow-y-auto md:px-0 lg:col-start-3"
-              : ""
-          }`}
+          className={`${tab === "portfolio" ? "block" : "hidden"} px-5 pb-8`}
         >
           <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-(--s-sub)">
             Your money
@@ -939,23 +1041,32 @@ export default function AppHome() {
 
         {/* ── You ───────────────────────────────────────────────── */}
         <section
-          className={`${tab === "you" ? "block" : "hidden"} px-5 py-6 ${
-            railed
-              ? "lg:sticky lg:top-16 lg:col-start-1 lg:row-start-1 lg:block lg:max-h-[calc(100dvh-4rem)] lg:self-start lg:overflow-y-auto lg:px-0"
-              : ""
-          }`}
+          className={`${tab === "you" ? "block" : "hidden"} px-5 pb-8`}
         >
           <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-(--s-sub)">
             Your record
           </p>
           <h2 className="mt-2 mb-5 text-2xl font-bold tracking-[-0.03em]">You</h2>
 
-          <div className="mb-4 rounded-[22px] border border-(--s-gold-line) bg-(--s-gold-tint) p-5 text-center">
-            <StreakIcon className="mx-auto h-10 w-10 text-(--s-gold)" />
-            <p className="mt-2 text-4xl font-semibold tabular-nums text-(--s-gold)">{streak}</p>
-            <p className="text-sm text-(--s-sub)">day streak — check in daily to grow it</p>
+          {/* Gold is what a win looks like, so it waits for one. At zero this is a
+              neutral card and the figure is ordinary ink; the gold arrives with the
+              streak it describes, and the check-in stays a plain action either way. */}
+          <div className="mb-4 rounded-[22px] border border-(--s-line) bg-(--s-card) p-5 text-center">
+            <StreakIcon
+              className={`mx-auto h-9 w-9 ${streak > 0 ? "text-(--s-gold)" : "text-(--s-sub)"}`}
+            />
+            <p
+              className={`mt-2 text-4xl font-semibold tabular-nums ${
+                streak > 0 ? "text-(--s-gold)" : "text-(--s-text)"
+              }`}
+            >
+              {streak}
+            </p>
+            <p className="mt-0.5 text-sm text-(--s-sub)">
+              {streak > 0 ? "day streak — check in daily to keep it" : "check in daily to start a streak"}
+            </p>
             <button
-              className="mt-4 w-full rounded-full bg-(--s-gold-solid) py-3 text-sm font-bold text-(--s-gold-contrast) active:scale-[0.98] disabled:opacity-60"
+              className="mt-4 w-full rounded-full border border-(--s-line) py-3 text-sm font-semibold text-(--s-text) active:scale-[0.98] disabled:opacity-60"
               disabled={txBusy === "checkin" || player?.checkedInToday}
               onClick={doCheckIn}
             >
@@ -965,33 +1076,18 @@ export default function AppHome() {
                   ? "Confirming…"
                   : address
                     ? "Check in today"
-                    : "Connect & check in"}
+                    : "Connect and check in"}
             </button>
             {txError && <p className="mt-2 text-xs text-(--s-lose)">{txError}</p>}
           </div>
 
-          {/* Three across on a phone; in the 220px rail they stack into
-              number-and-label rows rather than squeezing to ~57px columns. */}
-          <div className="mb-4 grid grid-cols-3 gap-2 lg:grid-cols-1">
-            <div className="rounded-[22px] bg-(--s-card) p-4 lg:flex lg:items-baseline lg:justify-between lg:gap-2 lg:p-3">
-              <p className="font-mono text-2xl font-bold tabular-nums">
-                {player?.pickCount ?? pickList.length}
-              </p>
-              <p className="text-xs text-(--s-sub)">picks on-chain</p>
-            </div>
-            <div className="rounded-[22px] bg-(--s-card) p-4 lg:flex lg:items-baseline lg:justify-between lg:gap-2 lg:p-3">
-              <p className="font-mono text-2xl font-bold tabular-nums">
-                {player?.longestStreak ?? 0}
-              </p>
-              <p className="text-xs text-(--s-sub)">longest streak</p>
-            </div>
-            <div className="rounded-[22px] bg-(--s-card) p-4 lg:flex lg:items-baseline lg:justify-between lg:gap-2 lg:p-3">
-              <p className="font-mono text-2xl font-bold tabular-nums">
-                {checkInDays ?? "—"}
-              </p>
-              <p className="text-xs text-(--s-sub)">days checked in</p>
-            </div>
-          </div>
+          {/* A figure with nothing in it does not deserve a box of its own. Until
+              there is a record these are one line saying so. */}
+          <Stats
+            picks={player?.pickCount ?? pickList.length}
+            longest={player?.longestStreak ?? 0}
+            checkIns={checkInDays}
+          />
 
           <Leaderboard address={address} />
 
@@ -1048,7 +1144,9 @@ export default function AppHome() {
             </p>
           </div>
         </section>
-      </div>
+          </aside>
+        </div>
+      )}
 
       {/* ── Bottom nav — a mobile affordance only; at lg the tabs it drives
           are all on screen at once, so it goes away. ─────────────── */}

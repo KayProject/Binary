@@ -102,19 +102,19 @@ export function MarketCard({ market, tier, picked, onPick }: MarketCardProps) {
           /* Market art is almost always a square crest, not a photograph, so cropping it
              to a 16:9 band beheads it. The mark is contained at its own proportions and
              the same image, blurred and scaled, supplies the ground behind it. */
-          <div className="relative h-44 overflow-hidden bg-(--s-bg) sm:h-52">
+          <div className="relative flex h-40 items-center justify-center overflow-hidden bg-(--s-bg) sm:h-44">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={market.image}
               alt=""
               aria-hidden
-              className="absolute inset-0 h-full w-full scale-125 object-cover opacity-30 blur-2xl"
+              className="absolute inset-0 h-full w-full scale-150 object-cover opacity-20 blur-3xl saturate-150"
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={market.image}
               alt=""
-              className="relative mx-auto h-full w-auto max-w-[62%] object-contain py-7"
+              className="relative h-24 w-24 rounded-2xl object-contain sm:h-28 sm:w-28"
             />
           </div>
         )}

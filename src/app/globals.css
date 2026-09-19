@@ -377,6 +377,43 @@ body {
   .animate-acc-down, .animate-acc-up { animation-duration: 1ms; }
 }
 
+/**
+ * The faucet's nudge.
+ *
+ * It was a bordered banner across the top of the feed, competing with the market it sat
+ * above for something you can only do once. As an icon it can wait to be noticed: it
+ * wiggles every few seconds, and the explanation lives behind a tap.
+ */
+@keyframes gift-wiggle {
+  0%, 82%, 100% { transform: rotate(0deg) scale(1); }
+  85% { transform: rotate(-11deg) scale(1.08); }
+  88% { transform: rotate(9deg) scale(1.08); }
+  91% { transform: rotate(-7deg) scale(1.06); }
+  94% { transform: rotate(5deg) scale(1.03); }
+  97% { transform: rotate(-2deg) scale(1); }
+}
+
+.gift-wiggle {
+  animation: gift-wiggle 6s ease-in-out infinite;
+  transform-origin: 50% 65%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gift-wiggle { animation: none; }
+}
+
+/* The slide-over carrying the account. */
+@keyframes panel-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.panel-in { animation: panel-in 260ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-in { animation-duration: 1ms; }
+}
+
 /* ── Moment screens (full-screen takeovers) ─────────────────────────── */
 .moment-rise {
   animation: moment-rise 0.35s cubic-bezier(0.2, 0.9, 0.3, 1) both;
