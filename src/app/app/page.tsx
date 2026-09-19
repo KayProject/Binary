@@ -141,7 +141,7 @@ const VERDICT: Record<Play["resolution"], { label: string; tone: "win" | "lose" 
 function PlayRow({ play }: { play: Play }) {
   const v = VERDICT[play.resolution];
   return (
-    <li className="rounded-2xl bg-(--s-card) p-4">
+    <li className="rounded-[22px] bg-(--s-card) p-4">
       <div className="flex items-start gap-2">
         {play.image && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -654,7 +654,7 @@ export default function AppHome() {
           {!address && !isMiniPay && (
             <button
               onClick={connect}
-              className="rounded-full bg-(--s-act) px-3 py-1 text-sm font-bold text-white"
+              className="rounded-full bg-(--s-act) px-3 py-1 text-sm font-bold text-(--s-act-contrast)"
             >
               Sign in
             </button>
@@ -717,7 +717,7 @@ export default function AppHome() {
                   setError(false);
                 }}
                 className={`flex shrink-0 items-center gap-1.5 rounded-full py-1.5 pl-2.5 pr-3.5 text-sm font-semibold transition active:scale-95 ${
-                  id === category ? "bg-(--s-act) text-white" : "bg-(--s-card) text-(--s-sub)"
+                  id === category ? "bg-(--s-act) text-(--s-act-contrast)" : "bg-(--s-card) text-(--s-sub)"
                 }`}
               >
                 <Icon className="h-[18px] w-[18px]" />
@@ -726,7 +726,7 @@ export default function AppHome() {
             ))}
           </div>
           {!address && (
-            <div className="mx-4 mt-4 rounded-2xl border border-(--s-act) bg-(--s-act-tint) p-4">
+            <div className="mx-4 mt-4 rounded-[22px] border border-(--s-act) bg-(--s-act-tint) p-4">
               <p className="text-[15px] font-bold">Play free. Win real cash.</p>
               <p className="mt-1 text-sm text-(--s-sub)">
                 Pick a side on real Polymarket markets — free picks build your streak,
@@ -735,14 +735,14 @@ export default function AppHome() {
               {hasWallet ? (
                 <button
                   onClick={connect}
-                  className="mt-3 w-full rounded-xl bg-(--s-act) py-3 text-sm font-bold text-white active:scale-[0.98]"
+                  className="mt-3 w-full rounded-full bg-(--s-act) py-3 text-sm font-bold text-(--s-act-contrast) active:scale-[0.98]"
                 >
                   Sign in to start
                 </button>
               ) : (
                 <a
                   href="https://www.opera.com/products/minipay"
-                  className="mt-3 block w-full rounded-xl bg-(--s-act) py-3 text-center text-sm font-bold text-white active:scale-[0.98]"
+                  className="mt-3 block w-full rounded-full bg-(--s-act) py-3 text-center text-sm font-bold text-(--s-act-contrast) active:scale-[0.98]"
                 >
                   Get MiniPay to start
                 </a>
@@ -751,7 +751,7 @@ export default function AppHome() {
           )}
           {/* Faucet promo — hidden once claimed; a teaser while the pot is dry. */}
           {address && faucet && !faucet.claimed && (
-            <div className="mx-4 mt-4 rounded-2xl border border-(--s-gold) bg-(--s-card) p-4">
+            <div className="mx-4 mt-4 rounded-[22px] border border-(--s-gold) bg-(--s-card) p-4">
               <p className="text-[15px] font-bold">
                 {faucet.claimable
                   ? `Claim your free $${faucet.dripUsd.toFixed(2)}`
@@ -766,7 +766,7 @@ export default function AppHome() {
                 <button
                   onClick={doClaim}
                   disabled={txBusy === "claim"}
-                  className="mt-3 w-full rounded-xl bg-(--s-act) py-3 text-sm font-bold text-white active:scale-[0.98] disabled:opacity-60"
+                  className="mt-3 w-full rounded-full bg-(--s-act) py-3 text-sm font-bold text-(--s-act-contrast) active:scale-[0.98] disabled:opacity-60"
                 >
                   {txBusy === "claim" ? "Confirm in your wallet…" : "Claim it"}
                 </button>
@@ -814,7 +814,7 @@ export default function AppHome() {
                         setInsightError(null);
                         setSheet({ market: m, outcome: i });
                       }}
-                      className={`flex-1 rounded-2xl px-3 py-2.5 font-mono text-sm font-bold transition active:scale-95 ${
+                      className={`flex-1 rounded-full px-3 py-2.5 font-mono text-sm font-bold transition active:scale-95 ${
                         i === 0
                           ? "bg-(--s-act-tint) text-(--s-act-soft)"
                           : "bg-(--s-lose-tint) text-(--s-lose)"
@@ -835,19 +835,19 @@ export default function AppHome() {
         >
           <h2 className="mb-4 text-xl font-bold">Portfolio</h2>
 
-          <div className="mb-5 rounded-2xl bg-(--s-card) p-4">
+          <div className="mb-5 rounded-[22px] bg-(--s-card) p-4">
             <p className="text-sm text-(--s-sub)">Cash balance</p>
             <p className="font-mono text-3xl font-bold tabular-nums">${balance.toFixed(2)}</p>
             <button
               onClick={() => setTopUp(true)}
-              className="mt-3 w-full rounded-xl bg-(--s-act) py-3 text-sm font-bold text-white active:scale-[0.98]"
+              className="mt-3 w-full rounded-full bg-(--s-act) py-3 text-sm font-bold text-(--s-act-contrast) active:scale-[0.98]"
             >
               Top up with USDm
             </button>
             {balance >= MIN_WITHDRAW && (
               <button
                 onClick={() => setWithdraw(true)}
-                className="mt-2 w-full rounded-xl border border-(--s-line) py-3 text-sm font-bold text-(--s-sub) active:scale-[0.98]"
+                className="mt-2 w-full rounded-full border border-(--s-line) py-3 text-sm font-bold text-(--s-sub) active:scale-[0.98]"
               >
                 Withdraw
               </button>
@@ -877,26 +877,26 @@ export default function AppHome() {
           )}
 
           {!address ? (
-            <p className="rounded-2xl bg-(--s-card) p-4 text-sm text-(--s-sub)">
+            <p className="rounded-[22px] bg-(--s-card) p-4 text-sm text-(--s-sub)">
               Sign in to see every pick you&apos;ve made — your history lives on Celo, not on
               this device.
             </p>
           ) : playsState === "loading" && !history ? (
-            <p className="rounded-2xl bg-(--s-card) p-4 text-sm text-(--s-sub)">
+            <p className="rounded-[22px] bg-(--s-card) p-4 text-sm text-(--s-sub)">
               Reading your picks off the chain…
             </p>
           ) : playsState === "error" && !history ? (
-            <p className="rounded-2xl bg-(--s-card) p-4 text-sm text-(--s-sub)">
+            <p className="rounded-[22px] bg-(--s-card) p-4 text-sm text-(--s-sub)">
               Couldn&apos;t load your history — it&apos;s safe on-chain, try again shortly.
             </p>
           ) : playCount === 0 ? (
-            <p className="rounded-2xl bg-(--s-card) p-4 text-sm text-(--s-sub)">
+            <p className="rounded-[22px] bg-(--s-card) p-4 text-sm text-(--s-sub)">
               No picks yet. Tap any market to lock in a free pick and start your streak.
             </p>
           ) : (
             <ul className="space-y-2">
               {confirming.map(([slug, p]) => (
-                <li key={`pending-${slug}`} className="rounded-2xl bg-(--s-card) p-4 opacity-70">
+                <li key={`pending-${slug}`} className="rounded-[22px] bg-(--s-card) p-4 opacity-70">
                   <div className="flex items-start gap-2">
                     <p className="flex-1 text-sm font-semibold leading-snug">{p.question}</p>
                     <Chip tone="sub">CONFIRMING</Chip>
@@ -920,12 +920,12 @@ export default function AppHome() {
         >
           <h2 className="mb-4 text-xl font-bold">You</h2>
 
-          <div className="mb-4 rounded-2xl border border-(--s-gold-line) bg-(--s-gold-tint) p-5 text-center">
+          <div className="mb-4 rounded-[22px] border border-(--s-gold-line) bg-(--s-gold-tint) p-5 text-center">
             <p className="text-5xl">🔥</p>
             <p className="mt-1 font-mono text-3xl font-bold text-(--s-gold)">{streak}</p>
             <p className="text-sm text-(--s-sub)">day streak — check in daily to grow it</p>
             <button
-              className="mt-4 w-full rounded-xl bg-(--s-gold-solid) py-3 text-sm font-bold text-(--s-gold-contrast) active:scale-[0.98] disabled:opacity-60"
+              className="mt-4 w-full rounded-full bg-(--s-gold-solid) py-3 text-sm font-bold text-(--s-gold-contrast) active:scale-[0.98] disabled:opacity-60"
               disabled={txBusy === "checkin" || player?.checkedInToday}
               onClick={doCheckIn}
             >
@@ -943,19 +943,19 @@ export default function AppHome() {
           {/* Three across on a phone; in the 220px rail they stack into
               number-and-label rows rather than squeezing to ~57px columns. */}
           <div className="mb-4 grid grid-cols-3 gap-2 lg:grid-cols-1">
-            <div className="rounded-2xl bg-(--s-card) p-4 lg:flex lg:items-baseline lg:justify-between lg:gap-2 lg:p-3">
+            <div className="rounded-[22px] bg-(--s-card) p-4 lg:flex lg:items-baseline lg:justify-between lg:gap-2 lg:p-3">
               <p className="font-mono text-2xl font-bold tabular-nums">
                 {player?.pickCount ?? pickList.length}
               </p>
               <p className="text-xs text-(--s-sub)">picks on-chain</p>
             </div>
-            <div className="rounded-2xl bg-(--s-card) p-4 lg:flex lg:items-baseline lg:justify-between lg:gap-2 lg:p-3">
+            <div className="rounded-[22px] bg-(--s-card) p-4 lg:flex lg:items-baseline lg:justify-between lg:gap-2 lg:p-3">
               <p className="font-mono text-2xl font-bold tabular-nums">
                 {player?.longestStreak ?? 0}
               </p>
               <p className="text-xs text-(--s-sub)">longest streak</p>
             </div>
-            <div className="rounded-2xl bg-(--s-card) p-4 lg:flex lg:items-baseline lg:justify-between lg:gap-2 lg:p-3">
+            <div className="rounded-[22px] bg-(--s-card) p-4 lg:flex lg:items-baseline lg:justify-between lg:gap-2 lg:p-3">
               <p className="font-mono text-2xl font-bold tabular-nums">
                 {checkInDays ?? "—"}
               </p>
@@ -966,7 +966,7 @@ export default function AppHome() {
           <Leaderboard address={address} />
 
           {address ? (
-            <div className="mb-4 rounded-2xl bg-(--s-card) p-4">
+            <div className="mb-4 rounded-[22px] bg-(--s-card) p-4">
               <p className="break-all font-mono text-xs text-(--s-sub)">
                 {isMiniPay ? "MiniPay wallet" : userLabel ? `Signed in · ${userLabel}` : "Wallet"}
                 <br />
@@ -975,7 +975,7 @@ export default function AppHome() {
               {logout && (
                 <button
                   onClick={logout}
-                  className="mt-3 w-full rounded-xl border border-(--s-line) py-2 text-xs font-bold text-(--s-sub) active:scale-[0.98]"
+                  className="mt-3 w-full rounded-full border border-(--s-line) py-2 text-xs font-bold text-(--s-sub) active:scale-[0.98]"
                 >
                   Sign out
                 </button>
@@ -984,14 +984,14 @@ export default function AppHome() {
           ) : (
             <button
               onClick={connect}
-              className="mb-4 w-full rounded-2xl border border-(--s-act) py-3 text-sm font-bold text-(--s-act-soft) active:scale-[0.98]"
+              className="mb-4 w-full rounded-full border border-(--s-act) py-3 text-sm font-bold text-(--s-act-soft) active:scale-[0.98]"
             >
               {hasWallet ? "Sign in" : "Open in MiniPay to play"}
             </button>
           )}
 
           <button
-            className="mb-4 w-full rounded-2xl border border-(--s-gold-line) bg-(--s-gold-tint) py-3 text-sm font-bold text-(--s-gold) active:scale-[0.98]"
+            className="mb-4 w-full rounded-full border border-(--s-gold-line) bg-(--s-gold-tint) py-3 text-sm font-bold text-(--s-gold) active:scale-[0.98]"
             onClick={() => {
               // Chain-scored, same as the Portfolio and the board. The local
               // cache is only the fallback for a player who isn't signed in.
@@ -1010,7 +1010,7 @@ export default function AppHome() {
             Your week on Binary →
           </button>
 
-          <div className="rounded-2xl bg-(--s-card) p-4 text-sm">
+          <div className="rounded-[22px] bg-(--s-card) p-4 text-sm">
             <p className="font-semibold">How Binary works</p>
             <p className="mt-1 leading-relaxed text-(--s-sub)">
               Your bets are real orders in Polymarket&apos;s book, settled in USDm on Celo.
@@ -1068,7 +1068,7 @@ export default function AppHome() {
                     <button
                       key={v}
                       onClick={() => setAmount(v)}
-                      className={`flex-1 rounded-xl border py-2 font-mono text-sm font-bold ${
+                      className={`flex-1 rounded-full border py-2 font-mono text-sm font-bold ${
                         amount === v
                           ? "border-(--s-act) bg-(--s-act-tint) text-(--s-act-soft)"
                           : "border-(--s-line) text-(--s-sub)"
@@ -1079,7 +1079,7 @@ export default function AppHome() {
                   ))}
                 </div>
 
-                <div className="mb-4 rounded-2xl bg-(--s-bg) p-4 text-sm">
+                <div className="mb-4 rounded-[22px] bg-(--s-bg) p-4 text-sm">
                   <div className="flex justify-between">
                     <span className="text-(--s-sub)">Your bet</span>
                     <span className="font-mono font-bold tabular-nums">${amount.toFixed(2)}</span>
@@ -1098,7 +1098,7 @@ export default function AppHome() {
 
                 {/* Ask Delta — paid meta-intelligence, straight off the live book. */}
                 {insight ? (
-                  <div className="mb-4 rounded-2xl border border-(--s-line) bg-(--s-bg) p-4 text-sm">
+                  <div className="mb-4 rounded-[22px] border border-(--s-line) bg-(--s-bg) p-4 text-sm">
                     <p className="mb-2 font-bold">Δ Delta’s read</p>
                     {(() => {
                       const side = sheet.outcome === 0 ? insight.up : insight.down;
@@ -1137,7 +1137,7 @@ export default function AppHome() {
                   </div>
                 ) : (
                   <button
-                    className="mb-4 w-full rounded-xl border border-(--s-line) py-2.5 text-sm font-bold text-(--s-sub) active:scale-[0.98] disabled:opacity-60"
+                    className="mb-4 w-full rounded-full border border-(--s-line) py-2.5 text-sm font-bold text-(--s-sub) active:scale-[0.98] disabled:opacity-60"
                     disabled={insightBusy}
                     onClick={() => doAskDelta(sheet.market)}
                   >
@@ -1150,7 +1150,7 @@ export default function AppHome() {
 
                 {txError && <p className="mb-2 text-center text-xs text-(--s-lose)">{txError}</p>}
                 <button
-                  className="w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98] disabled:opacity-60"
+                  className="w-full rounded-full bg-(--s-act) py-4 text-base font-bold text-(--s-act-contrast) active:scale-[0.98] disabled:opacity-60"
                   disabled={txBusy === "bet"}
                   onClick={() => doBet(sheet.market, sheet.outcome, amount)}
                 >
@@ -1159,7 +1159,7 @@ export default function AppHome() {
               </>
             ) : (
               <>
-                <div className="mb-4 rounded-2xl border border-(--s-gold-line) bg-(--s-gold-tint) p-4 text-sm">
+                <div className="mb-4 rounded-[22px] border border-(--s-gold-line) bg-(--s-gold-tint) p-4 text-sm">
                   <p className="font-bold text-(--s-gold)">⚡ Playing for XP</p>
                   <p className="mt-1 leading-relaxed text-(--s-sub)">
                     Lock in your free pick and grow your streak. Add money to win cash — this
@@ -1173,7 +1173,7 @@ export default function AppHome() {
 
                 {txError && <p className="mb-2 text-center text-xs text-(--s-lose)">{txError}</p>}
                 <button
-                  className="mb-2 w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98] disabled:opacity-60"
+                  className="mb-2 w-full rounded-full bg-(--s-act) py-4 text-base font-bold text-(--s-act-contrast) active:scale-[0.98] disabled:opacity-60"
                   disabled={txBusy === "pick"}
                   onClick={() => doPick(sheet.market, sheet.outcome)}
                 >
@@ -1184,7 +1184,7 @@ export default function AppHome() {
                       : `Connect & pick ${sel.label} ⚡`}
                 </button>
                 <button
-                  className="w-full rounded-2xl border border-(--s-act) py-3.5 text-base font-bold text-(--s-act-soft) active:scale-[0.98]"
+                  className="w-full rounded-full border border-(--s-act) py-3.5 text-base font-bold text-(--s-act-soft) active:scale-[0.98]"
                   onClick={() => {
                     setSheet(null);
                     setTopUp(true);
@@ -1215,7 +1215,7 @@ export default function AppHome() {
               Your USDm becomes betting power in about 2 minutes. Any amount from ${MIN_DEPOSIT}.
             </p>
 
-            <div className="mb-3 flex items-center gap-2 rounded-2xl bg-(--s-bg) p-4">
+            <div className="mb-3 flex items-center gap-2 rounded-[22px] bg-(--s-bg) p-4">
               <span className="font-mono text-2xl font-bold text-(--s-sub)">$</span>
               <input
                 type="text"
@@ -1236,7 +1236,7 @@ export default function AppHome() {
                 <button
                   key={v}
                   onClick={() => setDepositUsd(String(v))}
-                  className={`flex-1 rounded-xl border py-2 font-mono text-sm font-bold ${
+                  className={`flex-1 rounded-full border py-2 font-mono text-sm font-bold ${
                     depositUsd === String(v)
                       ? "border-(--s-act) bg-(--s-act-tint) text-(--s-act-soft)"
                       : "border-(--s-line) text-(--s-sub)"
@@ -1263,7 +1263,7 @@ export default function AppHome() {
               const valid = Number.isFinite(usd) && usd >= MIN_DEPOSIT;
               return (
                 <button
-                  className="w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98] disabled:opacity-60"
+                  className="w-full rounded-full bg-(--s-act) py-4 text-base font-bold text-(--s-act-contrast) active:scale-[0.98] disabled:opacity-60"
                   disabled={!valid || txBusy === "topup"}
                   onClick={() => doTopUp(usd)}
                 >
@@ -1299,7 +1299,7 @@ export default function AppHome() {
               amount from ${MIN_WITHDRAW}, up to ${balance.toFixed(2)}.
             </p>
 
-            <div className="mb-3 flex items-center gap-2 rounded-2xl bg-(--s-bg) p-4">
+            <div className="mb-3 flex items-center gap-2 rounded-[22px] bg-(--s-bg) p-4">
               <span className="font-mono text-2xl font-bold text-(--s-sub)">$</span>
               <input
                 type="text"
@@ -1318,7 +1318,7 @@ export default function AppHome() {
             <div className="mb-4 flex gap-2">
               <button
                 onClick={() => setWithdrawUsd(balance.toFixed(2))}
-                className={`flex-1 rounded-xl border py-2 font-mono text-sm font-bold ${
+                className={`flex-1 rounded-full border py-2 font-mono text-sm font-bold ${
                   withdrawUsd === balance.toFixed(2)
                     ? "border-(--s-act) bg-(--s-act-tint) text-(--s-act-soft)"
                     : "border-(--s-line) text-(--s-sub)"
@@ -1334,7 +1334,7 @@ export default function AppHome() {
               const valid = Number.isFinite(usd) && usd >= MIN_WITHDRAW && usd <= balance;
               return (
                 <button
-                  className="w-full rounded-2xl bg-(--s-act) py-4 text-base font-bold text-white active:scale-[0.98] disabled:opacity-60"
+                  className="w-full rounded-full bg-(--s-act) py-4 text-base font-bold text-(--s-act-contrast) active:scale-[0.98] disabled:opacity-60"
                   disabled={!valid || txBusy === "withdraw"}
                   onClick={() => doWithdraw(usd)}
                 >

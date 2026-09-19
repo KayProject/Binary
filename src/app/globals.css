@@ -254,6 +254,7 @@ body {
   --s-sub: #5c5c5c;
   --s-act: #4b3df5;
   --s-act-soft: #4b3df5;
+  --s-act-contrast: #ffffff;
   --s-act-tint: rgba(75, 61, 245, 0.08);
   --s-gold: #8a5a00;
   --s-gold-tint: rgba(250, 178, 25, 0.14);
@@ -280,6 +281,8 @@ body {
   --s-sub: #898781;
   --s-act: #6fe3e0;
   --s-act-soft: #6fe3e0;
+  /* The dark accent is a light cyan. Type on it has to be the ground, not white. */
+  --s-act-contrast: #0d0d0d;
   --s-act-tint: rgba(111, 227, 224, 0.12);
   --s-gold: #fab219;
   --s-gold-tint: rgba(250, 178, 25, 0.1);
