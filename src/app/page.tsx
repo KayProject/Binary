@@ -63,7 +63,7 @@ function Hero({ markets }: { markets: Market[] }) {
       // on a phone and the lower tiles land on whatever follows. `overflow-hidden` below
       // lg because two tiles bleed past the edge on purpose, and a bleed that extends the
       // document scrolls the whole page sideways on a phone.
-      className="relative mx-auto min-h-[42rem] w-full max-w-7xl overflow-hidden px-6 pb-28 pt-6 sm:min-h-[40rem] sm:px-10 sm:pb-36 lg:min-h-[44rem] lg:overflow-visible lg:pb-44"
+      className="relative mx-auto min-h-[42rem] w-full max-w-7xl overflow-hidden px-6 pb-32 pt-28 sm:min-h-[40rem] sm:px-10 sm:pb-36 sm:pt-6 lg:min-h-[44rem] lg:overflow-visible lg:pb-44"
     >
       <MarketTiles markets={markets} />
 
