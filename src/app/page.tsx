@@ -1,3 +1,4 @@
+import Image from "next/image";
 import WorldMap from "@/components/WorldMap";
 import { LandingNav } from "@/components/site/nav";
 import { MarketTiles } from "@/components/site/market-tiles";
@@ -62,7 +63,7 @@ function Hero({ markets }: { markets: Market[] }) {
       // on a phone and the lower tiles land on whatever follows. `overflow-hidden` below
       // lg because two tiles bleed past the edge on purpose, and a bleed that extends the
       // document scrolls the whole page sideways on a phone.
-      className="relative mx-auto min-h-[38rem] w-full max-w-7xl overflow-hidden px-6 pb-24 pt-4 sm:min-h-[36rem] sm:px-10 sm:pb-32 lg:min-h-[40rem] lg:overflow-visible lg:pb-40"
+      className="relative mx-auto min-h-[42rem] w-full max-w-7xl overflow-hidden px-6 pb-28 pt-6 sm:min-h-[40rem] sm:px-10 sm:pb-36 lg:min-h-[44rem] lg:overflow-visible lg:pb-44"
     >
       <MarketTiles markets={markets} />
 
@@ -153,11 +154,15 @@ function Markets({ markets }: { markets: Market[] }) {
 }
 
 /**
- * A card, and the panel is the data.
+ * A card, and the panel is the market.
  *
- * The bar across the bottom of the panel is the market's own YES share, drawn at full
- * width. The figure sits in the body rather than over the bar, because a number laid on
- * a boundary that moves with the price is legible at some prices and not at others.
+ * The panel was a flat colour with a bar on it, which is a card with nothing in it. It
+ * carries the market's own artwork now, under a tint in the card's colour so the three
+ * still read as one set rather than as three unrelated pictures.
+ *
+ * The bar across the bottom is the market's YES share. The figure sits in the body rather
+ * than over the bar, because a number laid on a boundary that moves with the price is
+ * legible at some prices and not at others.
  */
 function MarketCard({ market, ground }: { market: Market; ground: string }) {
   const yes = Math.round(market.outcomes[0].price * 100);
@@ -168,8 +173,18 @@ function MarketCard({ market, ground }: { market: Market; ground: string }) {
       className="group flex flex-col overflow-hidden rounded-[22px] border border-rule bg-surface transition-colors hover:border-edge"
     >
       <div className={`relative aspect-[16/10] ${ground}`}>
-        <div className="absolute inset-x-6 bottom-6 h-2.5 rounded-full bg-[#0a0a0a]/15">
-          <div className="h-full rounded-full bg-[#0a0a0a]/85" style={{ width: `${yes}%` }} />
+        {market.image && (
+          <Image
+            src={market.image}
+            alt=""
+            fill
+            sizes="(min-width: 1024px) 420px, 100vw"
+            className="object-cover opacity-90 mix-blend-luminosity transition-opacity group-hover:opacity-100"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
+        <div className="absolute inset-x-6 bottom-6 h-2.5 rounded-full bg-black/25">
+          <div className="h-full rounded-full bg-white/90" style={{ width: `${yes}%` }} />
         </div>
       </div>
 

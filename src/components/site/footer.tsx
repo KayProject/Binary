@@ -1,54 +1,106 @@
+import Link from "next/link";
+
 /**
- * One rounded container on the dark ground, three columns of small uppercase type.
+ * Four columns, a giant fading wordmark, and a base bar.
  *
- * The previous footer was a single line of two spans, which left the legal and routing
- * facts — who settles, what the token is, where the terms live — nowhere on the page.
+ * The first version was three columns of small uppercase type in a rounded box, which
+ * said the right things and gave the page nothing to end on. The mark behind the columns
+ * is the close: set large enough to run the width, clipped to a gradient and masked so it
+ * fades into the ground rather than sitting on it as a slab of text.
  */
+const COLUMNS = [
+  {
+    title: "Product",
+    links: [
+      { label: "Open the app", href: "/app" },
+      { label: "Markets", href: "/#markets" },
+      { label: "How it works", href: "/#how" },
+    ],
+  },
+  {
+    title: "Build",
+    links: [
+      { label: "Delta", href: "/delta" },
+      { label: "Terms", href: "/delta/terms" },
+      { label: "Liquidity", href: "/#liquidity" },
+    ],
+  },
+  {
+    title: "Protocol",
+    links: [
+      { label: "Celo", href: "https://celo.org" },
+      { label: "Mento", href: "https://mento.org" },
+      { label: "Polymarket", href: "https://polymarket.com" },
+    ],
+  },
+];
+
 export function SiteFooter() {
-  const year = new Date().getFullYear();
-
   return (
-    <footer className="px-6 pb-10 sm:px-10">
-      <div className="mx-auto w-full max-w-7xl rounded-[28px] border border-rule bg-surface p-8 sm:p-12">
-        <div className="grid gap-10 sm:grid-cols-3">
-          <Column title={`Binary © ${year}`}>
-            <Line href="/delta/terms">Terms</Line>
-            <Line href="/app">Open the app</Line>
-            <Line href="/delta">Delta</Line>
-          </Column>
+    <footer className="relative overflow-hidden pt-16">
+      <div className="mx-auto w-full max-w-7xl px-6 sm:px-10">
+        <div className="relative z-2 grid gap-8 py-7 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
+          <div>
+            <p className="select-none text-2xl font-bold italic leading-none tracking-[-0.04em]">
+              <span className="text-ink">BI</span>
+              <span className="text-ink-3">NARY</span>
+            </p>
+            <p className="mt-3.5 max-w-[34ch] text-sm leading-relaxed text-ink-2">
+              The prediction market built for the Mento Dollar. Binary routes your order
+              into the deepest books on earth and never takes the other side of it.
+            </p>
+          </div>
 
-          <Column title="Settlement">
-            <p>Priced in USDm</p>
-            <p>Settled on Celo</p>
-            <p>Liquidity by Polymarket</p>
-          </Column>
+          {COLUMNS.map((column) => (
+            <div key={column.title}>
+              <h3 className="mb-3 flex items-center gap-2 text-[15px] font-semibold text-ink">
+                <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
+                {column.title}
+              </h3>
+              {column.links.map((link) =>
+                link.href.startsWith("http") ? (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block py-1 text-[14.5px] text-ink-2 transition-colors hover:text-accent"
+                  >
+                    {link.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={link.label}
+                    href={link.href}
+                    className="block py-1 text-[14.5px] text-ink-2 transition-colors hover:text-accent"
+                  >
+                    {link.label}
+                  </Link>
+                ),
+              )}
+            </div>
+          ))}
+        </div>
 
-          <Column title="Standing">
-            <p>Binary routes your order. It never takes the other side of it.</p>
-          </Column>
+        <div aria-hidden className="footer-mark-wrap">
+          <div className="footer-mark">Binary</div>
+        </div>
+
+        <div className="relative z-2 flex flex-wrap items-center justify-between gap-3 border-t border-rule py-6 text-[13.5px] text-ink-2">
+          <span>© {new Date().getFullYear()} Binary. Priced in USDm, settled on Celo.</span>
+          <div className="flex items-center gap-3.5">
+            <Link href="/delta/terms" className="transition-colors hover:text-ink">
+              Terms &amp; Conditions
+            </Link>
+            <span aria-hidden className="opacity-40">
+              |
+            </span>
+            <Link href="/delta/terms" className="transition-colors hover:text-ink">
+              Privacy Policy
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
-  );
-}
-
-function Column({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-3">{title}</p>
-      <div className="mt-4 space-y-2 text-[11px] uppercase tracking-[0.14em] text-ink-2">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function Line({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <p>
-      <a href={href} className="transition-colors hover:text-ink">
-        {children}
-      </a>
-    </p>
   );
 }

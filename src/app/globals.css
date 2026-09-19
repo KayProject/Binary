@@ -102,7 +102,9 @@
   --color-tile-bone: var(--tile-bone);
 
   --font-sans: var(--font-general-sans), system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* One face. `font-mono` is kept as a name so the tracked uppercase labels that use it
+     keep working, but it resolves to the same family; figures align on tabular-nums. */
+  --font-mono: var(--font-general-sans), system-ui, sans-serif;
 }
 
 /* /delta still runs on its own Midnight palette and is not part of this pass.
@@ -218,27 +220,74 @@ body {
   transform: rotate(0deg) !important;
 }
 
-/* Phone. Positive coordinates only, so nothing bleeds into the headline column. */
-.hero-tile-1 { top: 2%;  left: 2%;  width: clamp(58px, 15vw, 70px);    height: clamp(58px, 15vw, 70px); transform: rotate(-3deg); }
-.hero-tile-2 { top: 27%; left: 1%;  width: clamp(78px, 20.5vw, 96px);  height: clamp(78px, 20.5vw, 96px); transform: rotate(3deg); }
-.hero-tile-3 { top: 67%; left: 2%;  width: clamp(88px, 23.5vw, 110px); height: clamp(88px, 23.5vw, 110px); transform: rotate(-2deg); }
-.hero-tile-4 { top: 4%;  right: 2%; width: clamp(66px, 17.5vw, 82px);  height: clamp(66px, 17.5vw, 82px); transform: rotate(4deg); }
-.hero-tile-5 { top: 50%; right: 1%; width: clamp(110px, 29vw, 138px);  height: clamp(110px, 29vw, 138px); transform: rotate(-3deg); }
+/* Phone. Positive coordinates only, so nothing bleeds into the headline column. The two
+   smallest carry a price alone; below roughly 80px a question is two truncated words. */
+.hero-tile-1 { top: 1%;  left: 1%;  width: clamp(68px, 17.5vw, 82px);   height: clamp(68px, 17.5vw, 82px); transform: rotate(-3deg); }
+.hero-tile-2 { top: 26%; left: 0%;  width: clamp(90px, 23.5vw, 110px);  height: clamp(90px, 23.5vw, 110px); transform: rotate(3deg); }
+.hero-tile-3 { top: 68%; left: 1%;  width: clamp(102px, 27vw, 126px);   height: clamp(102px, 27vw, 126px); transform: rotate(-2deg); }
+.hero-tile-4 { top: 3%;  right: 1%; width: clamp(76px, 20vw, 94px);     height: clamp(76px, 20vw, 94px); transform: rotate(4deg); }
+.hero-tile-5 { top: 51%; right: 0%; width: clamp(126px, 33vw, 158px);   height: clamp(126px, 33vw, 158px); transform: rotate(-3deg); }
 
 @media (min-width: 768px) {
-  .hero-tile-1 { top: 4%;  left: 3%;  width: 82px;  height: 82px; }
-  .hero-tile-2 { top: 28%; left: 1%;  width: 114px; height: 114px; }
-  .hero-tile-3 { top: 65%; left: 4%;  width: 132px; height: 132px; }
-  .hero-tile-4 { top: 6%;  right: 3%; width: 94px;  height: 94px; }
-  .hero-tile-5 { top: 48%; right: 1%; width: 168px; height: 168px; }
+  .hero-tile-1 { top: 3%;  left: 2%;   width: 96px;  height: 96px; }
+  .hero-tile-2 { top: 27%; left: 0%;   width: 132px; height: 132px; }
+  .hero-tile-3 { top: 66%; left: 2.5%; width: 152px; height: 152px; }
+  .hero-tile-4 { top: 5%;  right: 2%;  width: 108px; height: 108px; }
+  .hero-tile-5 { top: 49%; right: 0%;  width: 194px; height: 194px; }
 }
 
 @media (min-width: 1024px) {
-  .hero-tile-1 { top: 4%;   left: 5%;    width: clamp(96px, 7.5vw, 112px);   height: clamp(96px, 7.5vw, 112px); }
-  .hero-tile-2 { top: 29%;  left: 2%;    width: clamp(128px, 10.5vw, 160px); height: clamp(128px, 10.5vw, 160px); }
-  .hero-tile-3 { top: 65%;  left: 6%;    width: clamp(144px, 12.5vw, 185px); height: clamp(144px, 12.5vw, 185px); }
-  .hero-tile-4 { top: 7%;   right: 5%;   width: clamp(106px, 8.5vw, 130px);  height: clamp(106px, 8.5vw, 130px); }
-  .hero-tile-5 { top: 48%;  right: 1.5%; width: clamp(170px, 16vw, 235px);   height: clamp(170px, 16vw, 235px); }
+  .hero-tile-1 { top: 3%;   left: 3.5%; width: clamp(112px, 8.6vw, 130px);  height: clamp(112px, 8.6vw, 130px); }
+  .hero-tile-2 { top: 28%;  left: 0.5%; width: clamp(148px, 12vw, 184px);   height: clamp(148px, 12vw, 184px); }
+  .hero-tile-3 { top: 66%;  left: 4.5%; width: clamp(166px, 14.4vw, 213px); height: clamp(166px, 14.4vw, 213px); }
+  .hero-tile-4 { top: 6%;   right: 3.5%; width: clamp(122px, 9.8vw, 150px); height: clamp(122px, 9.8vw, 150px); }
+  .hero-tile-5 { top: 49%;  right: 0.5%; width: clamp(196px, 18.4vw, 270px); height: clamp(196px, 18.4vw, 270px); }
+}
+
+/**
+ * The footer's closing mark.
+ *
+ * Text clipped to a gradient and then masked, so the wordmark fades out downward instead
+ * of ending on a hard baseline. Both are needed: the gradient sets how dark it starts,
+ * the mask is what actually dissolves it into the ground.
+ */
+.footer-mark-wrap {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  margin-top: 48px;
+  margin-bottom: -18px;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.footer-mark {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font-size: clamp(90px, 22vw, 280px);
+  font-weight: 700;
+  font-style: italic;
+  line-height: 0.82;
+  letter-spacing: -0.045em;
+  text-align: center;
+  text-transform: uppercase;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ink) 16%, transparent) 0%,
+    color-mix(in srgb, var(--ink) 5%, transparent) 50%,
+    transparent 92%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.35) 55%, rgba(0, 0, 0, 0) 98%);
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.35) 55%, rgba(0, 0, 0, 0) 98%);
 }
 
 /* ── App shell ──────────────────────────────────────────────────────────

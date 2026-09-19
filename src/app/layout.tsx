@@ -1,19 +1,16 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 /**
- * Two families.
+ * One face, everywhere.
  *
- * General Sans carries the display type: a wide geometric grotesque with a double-storey
- * `a`, which holds its shape at the sizes the headline runs at. Self-hosted rather than
- * pulled at runtime, so the page owes nothing to a third party to render its own
- * headline. See `src/fonts/LICENSE.md`.
+ * General Sans is a wide geometric grotesque with a double-storey `a`, and it holds its
+ * shape from label sizes up to the headline. Self-hosted rather than pulled at runtime,
+ * so the page owes nothing to a third party to render its own headline. See
+ * `src/fonts/LICENSE.md`.
  *
- * JetBrains Mono is here for one job: prices and payouts, where a column of figures that
- * does not align is a bug. The previous build pointed --font-mono at the sans face, so
- * every "mono" figure on the site was proportional.
+ * Figures align through `tabular-nums` rather than through a second, monospaced family.
  */
 const generalSans = localFont({
   variable: "--font-general-sans",
@@ -24,13 +21,6 @@ const generalSans = localFont({
     { path: "../fonts/GeneralSans-600.woff2", weight: "600", style: "normal" },
     { path: "../fonts/GeneralSans-700.woff2", weight: "700", style: "normal" },
   ],
-});
-
-const mono = JetBrains_Mono({
-  variable: "--font-jetbrains",
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -55,7 +45,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${generalSans.variable} ${mono.variable} h-full antialiased`}
+      className={`${generalSans.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-plane text-ink">{children}</body>
     </html>
