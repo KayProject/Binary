@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Market } from "@/lib/polymarket/types";
-import { LogoChip } from "@/components/Logo";
+import { Logo } from "@/components/Logo";
 import {
   AllIcon,
   CryptoIcon,
@@ -12,6 +12,10 @@ import {
   PortfolioIcon,
   SportsIcon,
   YouIcon,
+  StreakIcon,
+  SunIcon,
+  MoonIcon,
+  PickIcon,
 } from "@/components/icons";
 import { Leaderboard } from "@/components/Leaderboard";
 import { MomentScreen, type Moment } from "@/components/moments";
@@ -121,7 +125,7 @@ function Chip({ tone, children }: { tone: "win" | "lose" | "sub" | "gold"; child
     gold: "bg-(--s-gold-tint) text-(--s-gold)",
   };
   return (
-    <span className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold ${tones[tone]}`}>
+    <span className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums ${tones[tone]}`}>
       {children}
     </span>
   );
@@ -152,8 +156,13 @@ function PlayRow({ play }: { play: Play }) {
         </p>
         <Chip tone={v.tone}>{v.label}</Chip>
       </div>
-      <p className="mt-1 font-mono text-xs text-(--s-sub)">
-        {play.label && <span className="font-bold text-(--s-gold)">⚡ {play.label}</span>}
+      <p className="mt-1 font-mono text-xs tabular-nums text-(--s-sub)">
+        {play.label && (
+          <span className="inline-flex items-center gap-1 font-semibold text-(--s-gold)">
+            <PickIcon className="h-3.5 w-3.5" />
+            {play.label}
+          </span>
+        )}
         {play.priceAtPick !== null && ` at ${cents(play.priceAtPick)}`}
         {play.currentPrice !== null && ` · now ${cents(play.currentPrice)}`}
         {play.xp > 0 && <span className="ml-2 font-bold text-(--s-gold)">+{play.xp} XP</span>}
@@ -650,13 +659,13 @@ export default function AppHome() {
     >
       {/* Header — the only chrome that spans the full width at lg. Its 4rem
           height at lg is what the sticky rails offset against (lg:top-16). */}
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-(--s-line) bg-(--s-bg-blur) px-4 py-3 backdrop-blur lg:h-16 lg:px-6 lg:py-0">
-        <LogoChip />
+      <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-(--s-line) bg-(--s-bg-blur) px-5 py-3.5 backdrop-blur lg:h-16 lg:px-8 lg:py-0">
+        <Logo />
         <div className="flex items-center gap-2">
           {!address && !isMiniPay && (
             <button
               onClick={connect}
-              className="rounded-full bg-(--s-act) px-3 py-1 text-sm font-bold text-(--s-act-contrast)"
+              className="rounded-full bg-(--s-act) px-4 py-1.5 text-sm font-semibold text-(--s-act-contrast)"
             >
               Sign in
             </button>
@@ -664,19 +673,20 @@ export default function AppHome() {
           <button
             onClick={toggleTheme}
             aria-label="Toggle theme"
-            className="rounded-full bg-(--s-card) px-2.5 py-1 text-sm"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-(--s-sub) transition-colors hover:text-(--s-text)"
           >
-            {theme === "dark" ? "☀" : "☾"}
+            {theme === "dark" ? <SunIcon className="h-[18px] w-[18px]" /> : <MoonIcon className="h-[18px] w-[18px]" />}
           </button>
           <button
             onClick={() => setTab("you")}
-            className="flex items-center gap-1 rounded-full bg-(--s-gold-tint) px-3 py-1 font-mono text-sm font-bold text-(--s-gold)"
+            className="flex items-center gap-1.5 rounded-full bg-(--s-gold-tint) px-3 py-1.5 text-sm font-semibold tabular-nums text-(--s-gold)"
           >
-            🔥 {streak}
+            <StreakIcon className="h-4 w-4" />
+            {streak}
           </button>
           <button
             onClick={() => (fundingUsd !== null ? setMoment({ t: "pending", step: 2, usd: fundingUsd }) : setTopUp(true))}
-            className="rounded-full bg-(--s-card) px-3 py-1 font-mono text-sm font-semibold"
+            className="rounded-full bg-(--s-card) px-3.5 py-1.5 text-sm font-semibold tabular-nums"
           >
             {fundingUsd !== null ? (
               <span className="moment-step-active text-(--s-act-soft)">
@@ -696,13 +706,13 @@ export default function AppHome() {
           open picks stay visible while browsing. The centre column is the
           only one that grows; the rails are fixed so the feed never gets
           narrower than it is on a phone. */}
-      <div className="lg:mx-auto lg:grid lg:w-full lg:max-w-[1440px] lg:grid-cols-[220px_minmax(0,1fr)_240px] lg:gap-4 lg:px-4 xl:grid-cols-[280px_minmax(0,1fr)_320px] xl:gap-6 xl:px-6">
+      <div className="lg:mx-auto lg:grid lg:w-full lg:max-w-[1440px] lg:grid-cols-[240px_minmax(0,1fr)_260px] lg:gap-8 lg:px-8 xl:grid-cols-[300px_minmax(0,1fr)_340px] xl:gap-10 xl:px-10">
         {/* ── Markets ───────────────────────────────────────────── */}
         <section
           className={`${tab === "markets" ? "block" : "hidden"} lg:col-start-2 lg:row-start-1 lg:block`}
         >
           <div
-            className="flex gap-2 overflow-x-auto px-4 pt-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex gap-2 overflow-x-auto px-5 pt-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:px-0"
             role="tablist"
             aria-label="Market categories"
           >
@@ -728,7 +738,7 @@ export default function AppHome() {
             ))}
           </div>
           {!address && (
-            <div className="mx-4 mt-4 rounded-[22px] border border-(--s-act) bg-(--s-act-tint) p-4">
+            <div className="mx-5 mt-4 rounded-[22px] border border-(--s-act) bg-(--s-act-tint) p-5 lg:mx-0">
               <p className="text-[15px] font-bold">Play free. Win real cash.</p>
               <p className="mt-1 text-sm text-(--s-sub)">
                 Pick a side on real Polymarket markets — free picks build your streak,
@@ -753,7 +763,7 @@ export default function AppHome() {
           )}
           {/* Faucet promo — hidden once claimed; a teaser while the pot is dry. */}
           {address && faucet && !faucet.claimed && (
-            <div className="mx-4 mt-4 rounded-[22px] border border-(--s-gold) bg-(--s-card) p-4">
+            <div className="mx-5 mt-4 rounded-[22px] border border-(--s-gold) bg-(--s-card) p-5 lg:mx-0">
               <p className="text-[15px] font-bold">
                 {faucet.claimable
                   ? `Claim your free $${faucet.dripUsd.toFixed(2)}`
@@ -785,28 +795,42 @@ export default function AppHome() {
               Nothing liquid here right now — check back soon.
             </p>
           )}
-          <ul className="divide-y divide-(--s-line)">
+          {/* Cards rather than hairline-divided rows: the feed is a stack of separate
+              things to decide on, and a divider line says the opposite. */}
+          <ul className="flex flex-col gap-4 px-5 pb-6 lg:px-0">
             {markets.map((m) => (
-              <li key={m.slug} className="px-4 py-4">
-                <div className="mb-1 flex items-start gap-3">
+              <li
+                key={m.slug}
+                className="rounded-[22px] border border-(--s-line) bg-(--s-card) p-5"
+              >
+                <div className="flex items-start gap-3.5">
                   {m.image && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={m.image} alt="" className="h-10 w-10 rounded-xl object-cover" />
+                    <img
+                      src={m.image}
+                      alt=""
+                      className="h-12 w-12 shrink-0 rounded-2xl object-cover"
+                    />
                   )}
                   <p className="flex-1 text-[15px] font-semibold leading-snug">{m.question}</p>
-                  <span className="font-mono text-lg font-bold tabular-nums text-(--s-act-soft)">
+                  <span className="text-lg font-semibold tabular-nums text-(--s-act-soft)">
                     {pct(m.outcomes[0].price)}
                   </span>
                 </div>
-                <p className="mb-3 pl-[52px] font-mono text-xs text-(--s-sub)">
-                  ${Math.round(m.volume24h).toLocaleString()} today
+
+                <p className="mt-3.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-(--s-sub)">
+                  <span className="tabular-nums">
+                    ${Math.round(m.volume24h).toLocaleString()} today
+                  </span>
                   {picks[m.slug] && (
-                    <span className="ml-2 font-semibold text-(--s-gold)">
-                      ⚡ {picks[m.slug].label}
+                    <span className="inline-flex items-center gap-1 font-semibold text-(--s-gold)">
+                      <PickIcon className="h-3.5 w-3.5" />
+                      {picks[m.slug].label}
                     </span>
                   )}
                 </p>
-                <div className="flex gap-2">
+
+                <div className="mt-4 flex gap-2.5">
                   {([0, 1] as const).map((i) => (
                     <button
                       key={i}
@@ -816,7 +840,7 @@ export default function AppHome() {
                         setInsightError(null);
                         setSheet({ market: m, outcome: i });
                       }}
-                      className={`flex-1 rounded-full px-3 py-2.5 font-mono text-sm font-bold transition active:scale-95 ${
+                      className={`flex-1 rounded-full px-3 py-3 text-sm font-semibold tabular-nums transition active:scale-95 ${
                         i === 0
                           ? "bg-(--s-act-tint) text-(--s-act-soft)"
                           : "bg-(--s-lose-tint) text-(--s-lose)"
@@ -833,13 +857,16 @@ export default function AppHome() {
 
         {/* ── Portfolio ─────────────────────────────────────────── */}
         <section
-          className={`${tab === "portfolio" ? "block" : "hidden"} px-4 py-5 lg:sticky lg:top-16 lg:col-start-3 lg:row-start-1 lg:block lg:max-h-[calc(100dvh-4rem)] lg:self-start lg:overflow-y-auto`}
+          className={`${tab === "portfolio" ? "block" : "hidden"} px-5 py-6 lg:sticky lg:top-16 lg:col-start-3 lg:row-start-1 lg:block lg:max-h-[calc(100dvh-4rem)] lg:self-start lg:overflow-y-auto`}
         >
-          <h2 className="mb-4 text-xl font-bold">Portfolio</h2>
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-(--s-sub)">
+            Your money
+          </p>
+          <h2 className="mt-2 mb-5 text-2xl font-bold tracking-[-0.03em]">Portfolio</h2>
 
-          <div className="mb-5 rounded-[22px] bg-(--s-card) p-4">
-            <p className="text-sm text-(--s-sub)">Cash balance</p>
-            <p className="font-mono text-3xl font-bold tabular-nums">${balance.toFixed(2)}</p>
+          <div className="mb-5 rounded-[22px] border border-(--s-line) bg-(--s-card) p-5">
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-(--s-sub)">Cash balance</p>
+            <p className="mt-1 text-4xl font-semibold tabular-nums tracking-[-0.03em]">${balance.toFixed(2)}</p>
             <button
               onClick={() => setTopUp(true)}
               className="mt-3 w-full rounded-full bg-(--s-act) py-3 text-sm font-bold text-(--s-act-contrast) active:scale-[0.98]"
@@ -856,12 +883,12 @@ export default function AppHome() {
             )}
           </div>
 
-          <h3 className="mb-2 text-sm font-semibold text-(--s-sub)">
+          <h3 className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.2em] text-(--s-sub)">
             Your plays {playCount > 0 && `· ${playCount}`}
           </h3>
 
           {history && (history.totals.wins > 0 || history.totals.losses > 0 || history.totals.pending > 0) && (
-            <div className="mb-2 flex gap-2 font-mono text-xs">
+            <div className="mb-2 flex gap-2 font-mono text-xs tabular-nums">
               <span className="rounded-full bg-(--s-gold-tint) px-2.5 py-1 font-bold text-(--s-gold)">
                 {history.totals.xp} XP
               </span>
@@ -903,8 +930,12 @@ export default function AppHome() {
                     <p className="flex-1 text-sm font-semibold leading-snug">{p.question}</p>
                     <Chip tone="sub">CONFIRMING</Chip>
                   </div>
-                  <p className="mt-1 font-mono text-xs text-(--s-sub)">
-                    <span className="font-bold text-(--s-gold)">⚡ {p.label}</span> at{" "}
+                  <p className="mt-1 font-mono text-xs tabular-nums text-(--s-sub)">
+                    <span className="inline-flex items-center gap-1 font-semibold text-(--s-gold)">
+                      <PickIcon className="h-3.5 w-3.5" />
+                      {p.label}
+                    </span>{" "}
+                    at{" "}
                     {cents(p.price)}
                   </p>
                 </li>
@@ -918,13 +949,16 @@ export default function AppHome() {
 
         {/* ── You ───────────────────────────────────────────────── */}
         <section
-          className={`${tab === "you" ? "block" : "hidden"} px-4 py-5 lg:sticky lg:top-16 lg:col-start-1 lg:row-start-1 lg:block lg:max-h-[calc(100dvh-4rem)] lg:self-start lg:overflow-y-auto`}
+          className={`${tab === "you" ? "block" : "hidden"} px-5 py-6 lg:sticky lg:top-16 lg:col-start-1 lg:row-start-1 lg:block lg:max-h-[calc(100dvh-4rem)] lg:self-start lg:overflow-y-auto`}
         >
-          <h2 className="mb-4 text-xl font-bold">You</h2>
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-(--s-sub)">
+            Your record
+          </p>
+          <h2 className="mt-2 mb-5 text-2xl font-bold tracking-[-0.03em]">You</h2>
 
           <div className="mb-4 rounded-[22px] border border-(--s-gold-line) bg-(--s-gold-tint) p-5 text-center">
-            <p className="text-5xl">🔥</p>
-            <p className="mt-1 font-mono text-3xl font-bold text-(--s-gold)">{streak}</p>
+            <StreakIcon className="mx-auto h-10 w-10 text-(--s-gold)" />
+            <p className="mt-2 text-4xl font-semibold tabular-nums text-(--s-gold)">{streak}</p>
             <p className="text-sm text-(--s-sub)">day streak — check in daily to grow it</p>
             <button
               className="mt-4 w-full rounded-full bg-(--s-gold-solid) py-3 text-sm font-bold text-(--s-gold-contrast) active:scale-[0.98] disabled:opacity-60"
@@ -932,7 +966,7 @@ export default function AppHome() {
               onClick={doCheckIn}
             >
               {player?.checkedInToday
-                ? "Checked in ✓ — back tomorrow"
+                ? "Checked in — back tomorrow"
                 : txBusy === "checkin"
                   ? "Confirming…"
                   : address
@@ -969,7 +1003,7 @@ export default function AppHome() {
 
           {address ? (
             <div className="mb-4 rounded-[22px] bg-(--s-card) p-4">
-              <p className="break-all font-mono text-xs text-(--s-sub)">
+              <p className="break-all font-mono text-xs tabular-nums text-(--s-sub)">
                 {isMiniPay ? "MiniPay wallet" : userLabel ? `Signed in · ${userLabel}` : "Wallet"}
                 <br />
                 {address}
@@ -1009,7 +1043,7 @@ export default function AppHome() {
               });
             }}
           >
-            Your week on Binary →
+            Your week on Binary
           </button>
 
           <div className="rounded-[22px] bg-(--s-card) p-4 text-sm">
@@ -1060,7 +1094,7 @@ export default function AppHome() {
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-(--s-line) lg:hidden" />
             <p className="mb-1 text-sm text-(--s-sub)">{sheet.market.question}</p>
             <p className="mb-4 text-xl font-bold">
-              {sel.label} · <span className="font-mono">{cents(sel.price)}</span>
+              {sel.label} · <span className="tabular-nums">{cents(sel.price)}</span>
             </p>
 
             {funded ? (
@@ -1070,7 +1104,7 @@ export default function AppHome() {
                     <button
                       key={v}
                       onClick={() => setAmount(v)}
-                      className={`flex-1 rounded-full border py-2 font-mono text-sm font-bold ${
+                      className={`flex-1 rounded-full border py-2 text-sm font-semibold tabular-nums ${
                         amount === v
                           ? "border-(--s-act) bg-(--s-act-tint) text-(--s-act-soft)"
                           : "border-(--s-line) text-(--s-sub)"
@@ -1093,7 +1127,7 @@ export default function AppHome() {
                     </span>
                   </div>
                   <p className="mt-2 text-xs text-(--s-sub) opacity-80">
-                    ⓘ includes all fees · paid in full if {sel.label.toLowerCase()} wins; cashing
+                    Includes all fees · paid in full if {sel.label.toLowerCase()} wins; cashing
                     out early pays a ~${exitFee.toFixed(2)} market fee
                   </p>
                 </div>
@@ -1130,7 +1164,7 @@ export default function AppHome() {
                           </div>
                           {insight.sla && (
                             <p className="mt-2 text-xs text-(--s-sub) opacity-80">
-                              ⓘ price-protected: bet now and fill worse than quoted → your 1¢ back
+                              Price-protected: bet now and fill worse than quoted, and your 1¢ comes back
                             </p>
                           )}
                         </>
@@ -1162,11 +1196,14 @@ export default function AppHome() {
             ) : (
               <>
                 <div className="mb-4 rounded-[22px] border border-(--s-gold-line) bg-(--s-gold-tint) p-4 text-sm">
-                  <p className="font-bold text-(--s-gold)">⚡ Playing for XP</p>
+                  <p className="inline-flex items-center gap-1.5 font-semibold text-(--s-gold)">
+                    <PickIcon className="h-4 w-4" />
+                    Playing for XP
+                  </p>
                   <p className="mt-1 leading-relaxed text-(--s-sub)">
                     Lock in your free pick and grow your streak. Add money to win cash — this
                     pick would pay{" "}
-                    <span className="font-mono font-bold text-(--s-text)">
+                    <span className="font-semibold tabular-nums text-(--s-text)">
                       ${payoutIfWin(2, sel.price).toFixed(2)}
                     </span>{" "}
                     on a $2 bet.
@@ -1182,8 +1219,8 @@ export default function AppHome() {
                   {txBusy === "pick"
                     ? "Confirming…"
                     : address
-                      ? `Free pick · ${sel.label} ⚡`
-                      : `Connect & pick ${sel.label} ⚡`}
+                      ? `Free pick · ${sel.label}`
+                      : `Connect and pick ${sel.label}`}
                 </button>
                 <button
                   className="w-full rounded-full border border-(--s-act) py-3.5 text-base font-bold text-(--s-act-soft) active:scale-[0.98]"
@@ -1212,13 +1249,13 @@ export default function AppHome() {
           >
             {/* Drag handle — a sheet affordance; the lg modal isn't draggable. */}
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-(--s-line) lg:hidden" />
-            <h3 className="mb-1 text-xl font-bold">Top up with USDm</h3>
+            <h3 className="mb-1 text-xl font-bold tracking-[-0.02em]">Top up with USDm</h3>
             <p className="mb-4 text-sm leading-relaxed text-(--s-sub)">
               Your USDm becomes betting power in about 2 minutes. Any amount from ${MIN_DEPOSIT}.
             </p>
 
             <div className="mb-3 flex items-center gap-2 rounded-[22px] bg-(--s-bg) p-4">
-              <span className="font-mono text-2xl font-bold text-(--s-sub)">$</span>
+              <span className="text-2xl font-semibold text-(--s-sub)">$</span>
               <input
                 type="text"
                 inputMode="decimal"
@@ -1238,7 +1275,7 @@ export default function AppHome() {
                 <button
                   key={v}
                   onClick={() => setDepositUsd(String(v))}
-                  className={`flex-1 rounded-full border py-2 font-mono text-sm font-bold ${
+                  className={`flex-1 rounded-full border py-2 text-sm font-semibold tabular-nums ${
                     depositUsd === String(v)
                       ? "border-(--s-act) bg-(--s-act-tint) text-(--s-act-soft)"
                       : "border-(--s-line) text-(--s-sub)"
@@ -1295,14 +1332,14 @@ export default function AppHome() {
           >
             {/* Drag handle — a sheet affordance; the lg modal isn't draggable. */}
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-(--s-line) lg:hidden" />
-            <h3 className="mb-1 text-xl font-bold">Withdraw USDm</h3>
+            <h3 className="mb-1 text-xl font-bold tracking-[-0.02em]">Withdraw USDm</h3>
             <p className="mb-4 text-sm leading-relaxed text-(--s-sub)">
               Straight back to this wallet — the same one it came from. Any
               amount from ${MIN_WITHDRAW}, up to ${balance.toFixed(2)}.
             </p>
 
             <div className="mb-3 flex items-center gap-2 rounded-[22px] bg-(--s-bg) p-4">
-              <span className="font-mono text-2xl font-bold text-(--s-sub)">$</span>
+              <span className="text-2xl font-semibold text-(--s-sub)">$</span>
               <input
                 type="text"
                 inputMode="decimal"
@@ -1320,7 +1357,7 @@ export default function AppHome() {
             <div className="mb-4 flex gap-2">
               <button
                 onClick={() => setWithdrawUsd(balance.toFixed(2))}
-                className={`flex-1 rounded-full border py-2 font-mono text-sm font-bold ${
+                className={`flex-1 rounded-full border py-2 text-sm font-semibold tabular-nums ${
                   withdrawUsd === balance.toFixed(2)
                     ? "border-(--s-act) bg-(--s-act-tint) text-(--s-act-soft)"
                     : "border-(--s-line) text-(--s-sub)"

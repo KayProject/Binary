@@ -15,14 +15,3 @@ export function Logo({ className = "" }: { className?: string }) {
     </span>
   );
 }
-
-// Chip variant, for headers that need the mark to hold its own block.
-export function LogoChip({ className = "" }: { className?: string }) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-lg border border-rule bg-surface px-2 py-1 ${className}`}
-    >
-      <Logo />
-    </span>
-  );
-}
