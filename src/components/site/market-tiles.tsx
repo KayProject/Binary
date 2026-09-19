@@ -59,7 +59,11 @@ export function MarketTiles({ markets }: { markets: Market[] }) {
   const picked = distinct(markets, TILES.length);
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-0">
+    // Full-bleed from lg up. The hero is capped at max-w-7xl, so on a wide screen the
+    // tiles were pinned to a 1280px box while the viewport ran to 1920 — they crowded the
+    // headline with the whole margin sitting empty beside them. Breaking the layer out to
+    // the viewport puts that margin to work and is what actually opens the gap.
+    <div className="pointer-events-none absolute inset-0 z-0 lg:left-1/2 lg:w-screen lg:-translate-x-1/2">
       {TILES.map((tile, i) => {
         const market = picked[i];
         const yes = cents(market.outcomes[0].price);

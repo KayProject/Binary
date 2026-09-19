@@ -24,7 +24,7 @@ export default async function Home() {
     <>
       <LandingNav />
 
-      <div className="act-light dotgrid dotgrid-light">
+      <div className="act-light dotgrid dotgrid-light overflow-x-clip">
         <Hero markets={markets} />
       </div>
 

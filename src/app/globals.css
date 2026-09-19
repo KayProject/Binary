@@ -244,12 +244,14 @@ body {
   .hero-tile-5 { top: 49%; right: 0%;  width: 194px; height: 194px; }
 }
 
+/* Percentages here are of the VIEWPORT, not the hero — the layer is full-bleed from lg up.
+   See the note in market-tiles.tsx. */
 @media (min-width: 1024px) {
-  .hero-tile-1 { top: 3%;   left: 3.5%; width: clamp(112px, 8.6vw, 130px);  height: clamp(112px, 8.6vw, 130px); }
-  .hero-tile-2 { top: 28%;  left: 0.5%; width: clamp(148px, 12vw, 184px);   height: clamp(148px, 12vw, 184px); }
-  .hero-tile-3 { top: 66%;  left: 4.5%; width: clamp(166px, 14.4vw, 213px); height: clamp(166px, 14.4vw, 213px); }
-  .hero-tile-4 { top: 6%;   right: 3.5%; width: clamp(122px, 9.8vw, 150px); height: clamp(122px, 9.8vw, 150px); }
-  .hero-tile-5 { top: 49%;  right: 0.5%; width: clamp(196px, 18.4vw, 270px); height: clamp(196px, 18.4vw, 270px); }
+  .hero-tile-1 { top: 3%;   left: 6%;    width: clamp(112px, 8.6vw, 130px);  height: clamp(112px, 8.6vw, 130px); }
+  .hero-tile-2 { top: 30%;  left: 2.5%;  width: clamp(148px, 12vw, 184px);   height: clamp(148px, 12vw, 184px); }
+  .hero-tile-3 { top: 68%;  left: 5.5%;  width: clamp(166px, 14.4vw, 213px); height: clamp(166px, 14.4vw, 213px); }
+  .hero-tile-4 { top: 6%;   right: 6%;   width: clamp(122px, 9.8vw, 150px);  height: clamp(122px, 9.8vw, 150px); }
+  .hero-tile-5 { top: 51%;  right: 2.5%; width: clamp(196px, 18.4vw, 270px); height: clamp(196px, 18.4vw, 270px); }
 }
 
 /**
