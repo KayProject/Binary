@@ -1,17 +1,18 @@
 /**
  * Binary wordmark.
  *
- * The two-tone split used to be black/white, which needed a mid-tone ground underneath
- * to read at all — on the light act the white half disappeared. It is drawn in the ink
- * scale instead, so it carries on whichever ground it lands on.
+ * Both halves inherit `currentColor` rather than naming a token. The landing page and the
+ * app run on different token sets — `--ink` on one, `--s-text` on the other — so a
+ * wordmark that named either one was invisible on the other: inside the app's light theme
+ * it was painting white on white, because `--ink` there still resolved to the dark
+ * theme's value.
  */
 export function Logo({ className = "" }: { className?: string }) {
   return (
     <span
       className={`select-none text-lg font-bold italic leading-none tracking-[-0.04em] ${className}`}
     >
-      <span className="text-ink">BI</span>
-      <span className="text-ink-3">NARY</span>
+      BI<span className="opacity-45">NARY</span>
     </span>
   );
 }

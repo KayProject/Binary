@@ -16,10 +16,10 @@ import {
   SunIcon,
   MoonIcon,
   PickIcon,
-  GiftIcon,
 } from "@/components/icons";
 import { Leaderboard } from "@/components/Leaderboard";
 import { MarketCard } from "@/components/app/MarketCard";
+import { GiftBox } from "@/components/app/GiftBox";
 import { MomentScreen, type Moment } from "@/components/moments";
 import type { History, Play } from "@/lib/play/history";
 import { payoutIfWin, sharesFor, takerFee } from "@/lib/polymarket/fees";
@@ -715,20 +715,6 @@ export default function AppHome() {
             {theme === "dark" ? <SunIcon className="h-[18px] w-[18px]" /> : <MoonIcon className="h-[18px] w-[18px]" />}
           </button>
 
-          {/* The faucet. It was a bordered banner across the top of the feed,
-              arguing for something you can do once, above the market you came
-              to decide on. As an icon it waits to be noticed instead: it
-              wiggles every few seconds and the explanation is one tap away. */}
-          {address && faucet && !faucet.claimed && (
-            <button
-              onClick={() => setGiftOpen(true)}
-              aria-label={faucet.claimable ? "Claim your free USDm" : "About free USDm drops"}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-(--s-gold-tint) text-(--s-gold)"
-            >
-              <GiftIcon className={`h-5 w-5 ${faucet.claimable ? "gift-wiggle" : ""}`} />
-            </button>
-          )}
-
           {address ? (
             <>
               {streak > 0 && (
@@ -879,7 +865,7 @@ export default function AppHome() {
             className={`${theme === "dark" ? "app-dark" : "app-light"} w-full rounded-t-3xl border-t border-(--s-line) bg-(--s-card) p-6 pb-8 text-center text-(--s-text) sm:max-w-sm sm:rounded-3xl sm:border sm:pb-6`}
             onClick={(e) => e.stopPropagation()}
           >
-            <GiftIcon className="mx-auto h-12 w-12 text-(--s-gold)" />
+            <GiftBox className="mx-auto h-20 w-20" />
             <p className="mt-4 text-xl font-bold tracking-[-0.02em]">
               {faucet.claimable
                 ? `Your free $${faucet.dripUsd.toFixed(2)}`
@@ -1146,6 +1132,21 @@ export default function AppHome() {
         </section>
           </aside>
         </div>
+      )}
+
+      {/* ── The gift ──────────────────────────────────────────────
+          A present with real money in it, sitting where a present should: its
+          own corner, out of the feed's way, wiggling until you look at it. It
+          was a bordered banner above the market you came to decide on, and
+          then a header glyph too small to read as a box at all. */}
+      {address && faucet && !faucet.claimed && (
+        <button
+          onClick={() => setGiftOpen(true)}
+          aria-label={faucet.claimable ? "Claim your free USDm" : "About free USDm drops"}
+          className="fixed bottom-20 right-5 z-20 flex h-16 w-16 items-center justify-center rounded-full bg-(--s-card) shadow-[0_10px_30px_-8px_rgba(0,0,0,0.6)] ring-1 ring-(--s-line) transition-transform active:scale-95 sm:bottom-6 sm:right-6 sm:h-[4.5rem] sm:w-[4.5rem]"
+        >
+          <GiftBox className="gift-wiggle h-11 w-11 sm:h-12 sm:w-12" />
+        </button>
       )}
 
       {/* ── Bottom nav — a mobile affordance only; at lg the tabs it drives
