@@ -73,7 +73,7 @@ function Hero({ markets }: { markets: Market[] }) {
           has two sides
         </h1>
 
-        <p className="mx-auto mt-7 max-w-[26rem] text-[13px] leading-[1.65] text-ink-3">
+        <p className="mx-auto mt-7 max-w-[26rem] text-[13px] leading-[1.65] text-ink-2">
           The prediction market built for the Mento Dollar. Back a view with USDm, priced
           against Polymarket liquidity and settled on Celo. Binary routes the order and
           never takes the other side of it.
@@ -155,8 +155,9 @@ function Markets({ markets }: { markets: Market[] }) {
 /**
  * A card, and the panel is the data.
  *
- * The saturated block at the top is the market's own YES/NO split drawn at full width —
- * the one figure that matters, at the size that makes it readable across a room.
+ * The bar across the bottom of the panel is the market's own YES share, drawn at full
+ * width. The figure sits in the body rather than over the bar, because a number laid on
+ * a boundary that moves with the price is legible at some prices and not at others.
  */
 function MarketCard({ market, ground }: { market: Market; ground: string }) {
   const yes = Math.round(market.outcomes[0].price * 100);
@@ -166,26 +167,24 @@ function MarketCard({ market, ground }: { market: Market; ground: string }) {
       href="/app"
       className="group flex flex-col overflow-hidden rounded-[22px] border border-rule bg-surface transition-colors hover:border-edge"
     >
-      <div className={`relative aspect-[4/3] ${ground}`}>
-        {/* The split, as a block. The NO share is the ground showing through. */}
-        <div
-          className="absolute inset-x-0 bottom-0 bg-[#0a0a0a]/85"
-          style={{ height: `${100 - yes}%` }}
-        />
-        <div className="absolute inset-0 flex items-end justify-between p-6">
-          <span className="font-mono text-5xl font-medium tabular-nums leading-none text-white mix-blend-difference">
-            {yes}¢
-          </span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white mix-blend-difference">
-            Yes
-          </span>
+      <div className={`relative aspect-[16/10] ${ground}`}>
+        <div className="absolute inset-x-6 bottom-6 h-2.5 rounded-full bg-[#0a0a0a]/15">
+          <div className="h-full rounded-full bg-[#0a0a0a]/85" style={{ width: `${yes}%` }} />
         </div>
       </div>
 
       <div className="flex flex-1 flex-col p-6">
-        <p className="line-clamp-3 text-base font-medium leading-snug text-ink">
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-4xl font-medium tabular-nums leading-none text-ink">
+            {yes}¢
+          </span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-3">Yes</span>
+        </div>
+
+        <p className="mt-4 line-clamp-3 text-base font-medium leading-snug text-ink-2">
           {market.question}
         </p>
+
         <p className="mt-auto pt-5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-3">
           <span className="tabular-nums text-accent">{compactUsd(market.volume24h)}</span>{" "}
           traded in 24h
