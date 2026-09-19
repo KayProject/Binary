@@ -1,44 +1,299 @@
 @import "tailwindcss";
 
+/**
+ * Binary's palette.
+ *
+ * Dark is the ground: this is a money surface and a phone surface, and a white page
+ * behind live prices reads as a document rather than as a market. The landing page is
+ * the one exception, and it opts in through `.act-light` below.
+ *
+ * The status four (good / warning / serious / critical) mean state and nothing else.
+ * YES is --good and NO is --critical; neither may be reused as decoration, because a
+ * green square that means nothing sits next to a green figure that means you won.
+ */
+:root {
+  color-scheme: dark;
+
+  --plane: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-raised: #232321;
+  --rule: #2c2c2a;
+  --edge: #383835;
+
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --ink-3: #898781;
+
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+
+  /* The only accent. It marks a figure that was read from the chain or the broker just
+     now, and it is never decoration. Far enough from --good that a live number can
+     never be mistaken for a winning one. */
+  --accent: #6fe3e0;
+
+  --tracking-display: -0.035em;
+}
+
+/**
+ * The light act — the landing page's upper band only.
+ *
+ * Scoped to a class rather than a media query or a theme attribute, because it is not a
+ * mode anyone chooses. Any element inside it inherits the light values under the same
+ * token names, so a component never needs to know which band it is rendering in.
+ */
+.act-light {
+  color-scheme: light;
+
+  --plane: #f2f2f2;
+  --surface: #ffffff;
+  --surface-raised: #fafafa;
+  --rule: #e2e2e2;
+  --edge: #cfcfcf;
+
+  --ink: #0a0a0a;
+  --ink-2: #5c5c5c;
+  --ink-3: #9a9a9a;
+
+  --accent: #4b3df5;
+
+  background: var(--plane);
+  color: var(--ink);
+}
+
+/* Art only — the scattered hero tiles and card panels. Never state. These sit under
+   their own names precisely so nothing can reach for them to mean something. */
+:root {
+  --tile-vermillion: #ff4d2d;
+  --tile-chartreuse: #ccff2f;
+  --tile-indigo: #5b3df5;
+  --tile-cyan: #24d3ee;
+  --tile-ink: #0a0a0a;
+  --tile-bone: #ececec;
+
+  --tile-gradient: linear-gradient(150deg, var(--tile-indigo) 0%, var(--tile-cyan) 100%);
+  --tile-radius: 22%;
+}
+
+@theme inline {
+  --color-plane: var(--plane);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-rule: var(--rule);
+  --color-edge: var(--edge);
+
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+
+  --color-good: var(--good);
+  --color-warning: var(--warning);
+  --color-serious: var(--serious);
+  --color-critical: var(--critical);
+  --color-accent: var(--accent);
+
+  --color-tile-vermillion: var(--tile-vermillion);
+  --color-tile-chartreuse: var(--tile-chartreuse);
+  --color-tile-indigo: var(--tile-indigo);
+  --color-tile-cyan: var(--tile-cyan);
+  --color-tile-ink: var(--tile-ink);
+  --color-tile-bone: var(--tile-bone);
+
+  --font-sans: var(--font-general-sans), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* /delta still runs on its own Midnight palette and is not part of this pass.
+   These stay so that page keeps rendering; nothing outside /delta may use them. */
 @theme {
-  --color-brand: #0057d5;
-  --color-brand-deep: #0033a0;
-  --color-brand-sky: #2789f5;
-  --color-ink: #04123a;
-  --color-yes: #4ade80;
-  --color-no: #f87171;
-
-  /* Midnight Settlement — the app's dark identity.
-     Gold is reserved for streaks and wins; act-blue is the only action color. */
-  --color-mid: #0b0f1a; /* ground */
-  --color-mid-2: #141b2e; /* raised surface */
-  --color-mid-3: #1e2840; /* borders / pressed */
-  --color-act: #3d74ff; /* action blue */
-  --color-act-soft: #7aa2ff; /* action text on dark tints */
-  --color-gold: #e4c87e; /* streaks + wins only */
-  --color-win: #31d3a2; /* payout green */
-  --color-lose: #ff6b5e; /* NO / negative */
-  --color-ice: #edf0f7; /* primary text */
-  --color-fog: #8e96ab; /* secondary text */
-
-  --font-sans: var(--font-bricolage), system-ui, sans-serif;
-  --font-mono: var(--font-bricolage), system-ui, sans-serif; /* one face everywhere */
+  --color-mid: #0b0f1a;
+  --color-mid-2: #141b2e;
+  --color-mid-3: #1e2840;
+  --color-act: #3d74ff;
+  --color-act-soft: #7aa2ff;
+  --color-gold: #e4c87e;
+  --color-win: #31d3a2;
+  --color-lose: #ff6b5e;
+  --color-ice: #edf0f7;
+  --color-fog: #8e96ab;
 }
 
 html {
   scroll-behavior: smooth;
 }
 
-/* Fine grain. Frosted glass reads as plastic without it — the noise is what
-   makes a translucent panel feel like a surface rather than a flat tint. */
-.grain::after {
-  content: "";
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  background: var(--plane);
+  color: var(--ink);
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--accent);
+  color: #0d0d0d;
+}
+
+/* Declared once, globally, so a new control cannot be added without a focus ring.
+   :focus-visible rather than :focus, so a mouse click never draws it. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Columns of figures must align vertically; prose numbers must not. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/**
+ * The dotted ground, on both acts.
+ *
+ * A radial-gradient rather than an image: a handful of bytes, crisp at every density,
+ * and the spacing tunes in one place. The dot is deliberately faint enough to read as
+ * texture rather than as dots.
+ */
+.dotgrid {
+  background-size: 20px 20px;
+  background-position: -1px -1px;
+}
+
+/* The dot colour is written into each gradient rather than taken from currentColor:
+   currentColor here would need `color` set on the section, which every heading and
+   paragraph inside it would then inherit. */
+.dotgrid-light {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.13) 1px, transparent 1px);
+}
+
+.dotgrid-dark {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+}
+
+/**
+ * The hero scatter, in three tiers.
+ *
+ * Five squircles framing a centred headline. The arrangement never changes; what changes
+ * is scale, and with it how much a tile can honestly hold. Tiers are set by what fits
+ * INSIDE a tile, not by device name. Positions pull toward the edges as the canvas
+ * narrows, because the headline column takes a larger share of a small screen.
+ *
+ * CSS rather than inline styles or generated class names: inline styles cannot carry
+ * media queries, and Tailwind's scanner only sees class strings written out in full.
+ */
+.hero-tile {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.22;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: auto;
+  border-radius: var(--tile-radius);
+  box-shadow: 0 22px 48px -16px rgba(0, 0, 0, 0.32);
+  transition: transform 300ms;
+}
+
+/* A flat 22% is proportionally identical on every tile but reads nothing like it: the
+   eye reads the absolute radius, so the big tiles go blobby while the small ones stay
+   crisp. Capped below lg only, where the spread of tile sizes is widest. */
+@media (max-width: 1023.98px) {
+  .hero-tile,
+  .hero-tile > a {
+    border-radius: clamp(14px, 22%, 36px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-tile {
+    transition: none;
+  }
+}
+
+/* Straightens on hover, so a tile you are pointing at is the one you can read. */
+.hero-tile:hover {
+  transform: rotate(0deg) !important;
+}
+
+/* Phone. Positive coordinates only, so nothing bleeds into the headline column. */
+.hero-tile-1 { top: 2%;  left: 2%;  width: clamp(58px, 15vw, 70px);    height: clamp(58px, 15vw, 70px); transform: rotate(-3deg); }
+.hero-tile-2 { top: 27%; left: 1%;  width: clamp(78px, 20.5vw, 96px);  height: clamp(78px, 20.5vw, 96px); transform: rotate(3deg); }
+.hero-tile-3 { top: 67%; left: 2%;  width: clamp(88px, 23.5vw, 110px); height: clamp(88px, 23.5vw, 110px); transform: rotate(-2deg); }
+.hero-tile-4 { top: 4%;  right: 2%; width: clamp(66px, 17.5vw, 82px);  height: clamp(66px, 17.5vw, 82px); transform: rotate(4deg); }
+.hero-tile-5 { top: 50%; right: 1%; width: clamp(110px, 29vw, 138px);  height: clamp(110px, 29vw, 138px); transform: rotate(-3deg); }
+
+@media (min-width: 768px) {
+  .hero-tile-1 { top: 4%;  left: 3%;  width: 82px;  height: 82px; }
+  .hero-tile-2 { top: 28%; left: 1%;  width: 114px; height: 114px; }
+  .hero-tile-3 { top: 65%; left: 4%;  width: 132px; height: 132px; }
+  .hero-tile-4 { top: 6%;  right: 3%; width: 94px;  height: 94px; }
+  .hero-tile-5 { top: 48%; right: 1%; width: 168px; height: 168px; }
+}
+
+@media (min-width: 1024px) {
+  .hero-tile-1 { top: 4%;   left: 5%;    width: clamp(96px, 7.5vw, 112px);   height: clamp(96px, 7.5vw, 112px); }
+  .hero-tile-2 { top: 29%;  left: 2%;    width: clamp(128px, 10.5vw, 160px); height: clamp(128px, 10.5vw, 160px); }
+  .hero-tile-3 { top: 65%;  left: 6%;    width: clamp(144px, 12.5vw, 185px); height: clamp(144px, 12.5vw, 185px); }
+  .hero-tile-4 { top: 7%;   right: 5%;   width: clamp(106px, 8.5vw, 130px);  height: clamp(106px, 8.5vw, 130px); }
+  .hero-tile-5 { top: 48%;  right: 1.5%; width: clamp(170px, 16vw, 235px);   height: clamp(170px, 16vw, 235px); }
+}
+
+/* ── App shell ──────────────────────────────────────────────────────────
+   /app reads only these semantic tokens, so re-pointing them here re-skins
+   the whole shell without touching its markup. Light and dark are the same
+   palette seen from the two acts. */
+.app-light {
+  --s-bg: #f2f2f2;
+  --s-bg-blur: rgba(242, 242, 242, 0.92);
+  --s-card: #ffffff;
+  --s-line: #e2e2e2;
+  --s-text: #0a0a0a;
+  --s-sub: #5c5c5c;
+  --s-act: #4b3df5;
+  --s-act-soft: #4b3df5;
+  --s-act-tint: rgba(75, 61, 245, 0.08);
+  --s-gold: #8a5a00;
+  --s-gold-tint: rgba(250, 178, 25, 0.14);
+  --s-gold-line: rgba(138, 90, 0, 0.25);
+  --s-gold-solid: #fab219;
+  --s-gold-contrast: #0a0a0a;
+  --s-win: #0ca30c;
+  --s-lose: #d03b3b;
+  --s-lose-tint: rgba(208, 59, 59, 0.08);
+  /* Celebration takeover only. */
+  --s-burst-a: #ffe9b0;
+  --s-burst-b: #fab219;
+  --s-burst-text: #2a1c00;
+  --s-burst-sub: rgba(42, 28, 0, 0.7);
+  --s-burst-chip: rgba(255, 255, 255, 0.55);
+}
+
+.app-dark {
+  --s-bg: #0d0d0d;
+  --s-bg-blur: rgba(13, 13, 13, 0.92);
+  --s-card: #1a1a19;
+  --s-line: #2c2c2a;
+  --s-text: #ffffff;
+  --s-sub: #898781;
+  --s-act: #6fe3e0;
+  --s-act-soft: #6fe3e0;
+  --s-act-tint: rgba(111, 227, 224, 0.12);
+  --s-gold: #fab219;
+  --s-gold-tint: rgba(250, 178, 25, 0.1);
+  --s-gold-line: rgba(250, 178, 25, 0.25);
+  --s-gold-solid: #fab219;
+  --s-gold-contrast: #0d0d0d;
+  --s-win: #31d3a2;
+  --s-lose: #ff6b5e;
+  --s-lose-tint: rgba(255, 107, 94, 0.1);
+  --s-burst-a: #1f1806;
+  --s-burst-b: #3d2f0d;
+  --s-burst-text: #fab219;
+  --s-burst-sub: rgba(250, 178, 25, 0.65);
+  --s-burst-chip: rgba(250, 178, 25, 0.12);
 }
 
 /* Radix accordion open/close — it exposes the measured height as a custom
@@ -58,82 +313,6 @@ html {
   .animate-acc-down, .animate-acc-up { animation-duration: 1ms; }
 }
 
-body {
-  background: #0044bb;
-  color: #ffffff;
-  min-height: 100dvh;
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Fixed gradient backdrop — survives long pages and iOS scroll */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(180deg, #0033a0 0%, #0057d5 55%, #2789f5 100%);
-}
-
-::selection {
-  background: #ffffff;
-  color: #0033a0;
-}
-
-/* ── App themes ─────────────────────────────────────────────────────────
-   The /app shell is themeable: light (the original look) and dark
-   (Midnight Settlement). Components read only these semantic tokens. */
-.app-light {
-  --s-bg: #ffffff;
-  --s-bg-blur: rgba(255, 255, 255, 0.92);
-  --s-card: #f4f5f7;
-  --s-line: #e5e7eb;
-  --s-text: #171923;
-  --s-sub: #6b7280;
-  --s-act: #0057d5;
-  --s-act-soft: #0057d5;
-  --s-act-tint: #e7f0fd;
-  --s-gold: #b45309;
-  --s-gold-tint: #fdf3e0;
-  --s-gold-line: rgba(180, 83, 9, 0.25);
-  --s-gold-solid: #d97706;
-  --s-gold-contrast: #ffffff;
-  --s-win: #16a34a;
-  --s-lose: #c2410c;
-  --s-lose-tint: #fdf0f0;
-  /* Gold-burst takeover (celebration moments only) */
-  --s-burst-a: #fde68a;
-  --s-burst-b: #f59e0b;
-  --s-burst-text: #451a03;
-  --s-burst-sub: rgba(69, 26, 3, 0.7);
-  --s-burst-chip: rgba(255, 255, 255, 0.55);
-}
-.app-dark {
-  --s-bg: #0b0f1a;
-  --s-bg-blur: rgba(11, 15, 26, 0.92);
-  --s-card: #141b2e;
-  --s-line: #1e2840;
-  --s-text: #edf0f7;
-  --s-sub: #8e96ab;
-  --s-act: #3d74ff;
-  --s-act-soft: #7aa2ff;
-  --s-act-tint: rgba(61, 116, 255, 0.15);
-  --s-gold: #e4c87e;
-  --s-gold-tint: rgba(228, 200, 126, 0.1);
-  --s-gold-line: rgba(228, 200, 126, 0.25);
-  --s-gold-solid: #e4c87e;
-  --s-gold-contrast: #0b0f1a;
-  --s-win: #31d3a2;
-  --s-lose: #ff6b5e;
-  --s-lose-tint: rgba(255, 107, 94, 0.1);
-  /* Gold-burst takeover — Midnight keeps its ground, gold takes the light */
-  --s-burst-a: #1a1608;
-  --s-burst-b: #3a2e12;
-  --s-burst-text: #e4c87e;
-  --s-burst-sub: rgba(228, 200, 126, 0.65);
-  --s-burst-chip: rgba(228, 200, 126, 0.12);
-}
-
 /* ── Moment screens (full-screen takeovers) ─────────────────────────── */
 .moment-rise {
   animation: moment-rise 0.35s cubic-bezier(0.2, 0.9, 0.3, 1) both;
@@ -150,46 +329,21 @@ body::before {
   opacity: 0;
 }
 @keyframes moment-rise {
-  from {
-    transform: translateY(24px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 @keyframes moment-pop {
-  0% {
-    transform: scale(0.6);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 @keyframes moment-float {
-  0% {
-    transform: translateY(12px) scale(0.7);
-    opacity: 0;
-  }
-  25% {
-    opacity: 0.9;
-  }
-  100% {
-    transform: translateY(-48px) scale(1.1);
-    opacity: 0;
-  }
+  0% { transform: translateY(12px) scale(0.7); opacity: 0; }
+  25% { opacity: 0.9; }
+  100% { transform: translateY(-48px) scale(1.1); opacity: 0; }
 }
 @keyframes moment-step-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }
 .moment-step-active {
   animation: moment-step-pulse 1.6s ease-in-out infinite;

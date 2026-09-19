@@ -1,12 +1,36 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque } from "next/font/google";
+import localFont from "next/font/local";
+import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-// One face everywhere: Bricolage Grotesque — its optical-size axis holds up
-// from body text to display, and numerals get tabular-nums where they align.
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
+/**
+ * Two families.
+ *
+ * General Sans carries the display type: a wide geometric grotesque with a double-storey
+ * `a`, which holds its shape at the sizes the headline runs at. Self-hosted rather than
+ * pulled at runtime, so the page owes nothing to a third party to render its own
+ * headline. See `src/fonts/LICENSE.md`.
+ *
+ * JetBrains Mono is here for one job: prices and payouts, where a column of figures that
+ * does not align is a bug. The previous build pointed --font-mono at the sans face, so
+ * every "mono" figure on the site was proportional.
+ */
+const generalSans = localFont({
+  variable: "--font-general-sans",
+  display: "swap",
+  src: [
+    { path: "../fonts/GeneralSans-400.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/GeneralSans-500.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/GeneralSans-600.woff2", weight: "600", style: "normal" },
+    { path: "../fonts/GeneralSans-700.woff2", weight: "700", style: "normal" },
+  ],
+});
+
+const mono = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -31,9 +55,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bricolage.variable} h-full antialiased`}
+      className={`${generalSans.variable} ${mono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="flex min-h-full flex-col bg-plane text-ink">{children}</body>
     </html>
   );
 }
