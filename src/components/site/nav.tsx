@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 
@@ -104,9 +105,9 @@ function Bar({ floating = false }: { floating?: boolean }) {
           : ""
       }`}
     >
-      <a href="/" className="shrink-0" aria-label="Binary, home">
+      <Link href="/" className="shrink-0" aria-label="Binary, home">
         <Logo />
-      </a>
+      </Link>
 
       <div className="hidden items-center gap-7 sm:flex">
         {LINKS.map((link) => (
