@@ -7,7 +7,7 @@ const CELLS = landCells();
 
 const BASE_RGB = "255, 255, 255";
 const BASE_ALPHA = 0.2;
-const LIT_RGB = "49, 211, 162"; // --color-win
+const LIT_RGB = "111, 227, 224"; // --accent: a lit cell means live, not won
 const GLOW_RADIUS = 0.055; // fraction of map width
 const SWEEP_PERIOD = 14000; // ms for one idle pass across the map
 
