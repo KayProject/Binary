@@ -53,25 +53,32 @@ function PriceBar({
   const share = Math.min(88, Math.max(12, yes.price * 100));
   const pad = size === "lg" ? "py-3.5 text-[15px]" : "py-2.5 text-sm";
 
+  /**
+   * Proportional, but never below its own label.
+   *
+   * Sizing this by flex-basis alone meant a side priced at 5¢ got 12% of a phone's width,
+   * which is about fourteen pixels of room after the padding — the label truncated to a
+   * single letter and the button read `Y`. Growing from a content-width basis keeps the
+   * split doing its job while making the label the floor it cannot go under. A pair of
+   * long outcome names (team names, not Yes/No) wraps to two rows rather than shrinking.
+   */
+  const side = "min-w-max rounded-full px-3 font-semibold tabular-nums transition active:scale-[0.98]";
+
   return (
-    <div className="flex w-full gap-1.5">
+    <div className="flex w-full flex-wrap gap-1.5">
       <button
         onClick={() => onPick(0)}
-        style={{ flexBasis: `${share}%` }}
-        className={`min-w-0 grow-0 rounded-full bg-(--s-win-tint) px-3 font-semibold tabular-nums text-(--s-win) transition active:scale-[0.98] ${pad}`}
+        style={{ flexGrow: share, flexBasis: "auto" }}
+        className={`${side} bg-(--s-win-tint) text-(--s-win) ${pad}`}
       >
-        <span className="block truncate">
-          {yes.label} {cents(yes.price)}
-        </span>
+        {yes.label} {cents(yes.price)}
       </button>
       <button
         onClick={() => onPick(1)}
-        style={{ flexBasis: `${100 - share}%` }}
-        className={`min-w-0 grow-0 rounded-full bg-(--s-lose-tint) px-3 font-semibold tabular-nums text-(--s-lose) transition active:scale-[0.98] ${pad}`}
+        style={{ flexGrow: 100 - share, flexBasis: "auto" }}
+        className={`${side} bg-(--s-lose-tint) text-(--s-lose) ${pad}`}
       >
-        <span className="block truncate">
-          {no.label} {cents(no.price)}
-        </span>
+        {no.label} {cents(no.price)}
       </button>
     </div>
   );
