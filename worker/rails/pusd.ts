@@ -23,6 +23,16 @@ const offramp = new ethers.utils.Interface([
   "function unwrap(address _asset, address _to, uint256 _amount)",
 ]);
 
+async function polygonGasOverrides(provider: ethers.providers.Provider) {
+  const fee = await provider.getFeeData();
+  const priority = ethers.utils.parseUnits("35", "gwei");
+  const maxFee = (fee.maxFeePerGas ?? fee.gasPrice ?? ethers.utils.parseUnits("100", "gwei")).add(priority);
+  return {
+    maxPriorityFeePerGas: priority,
+    maxFeePerGas: maxFee,
+  };
+}
+
 /** Wrap `amount` USDC.e (6 dec) from the operator EOA into the deposit wallet as pUSD. */
 export async function wrapToDepositWallet(amount: bigint): Promise<{ txHash: string }> {
   const signer = operator(polygonProvider);
@@ -31,19 +41,36 @@ export async function wrapToDepositWallet(amount: bigint): Promise<{ txHash: str
 
   const usdce = new ethers.Contract(ADDR.usdcePolygon, erc20, signer);
   const bal: ethers.BigNumber = await usdce.balanceOf(signer.address);
-  if (bal.lt(amt)) throw new Error(`EOA USDC.e ${bal} < ${amt}`);
+
+  if (bal.isZero()) {
+    const pusd = new ethers.Contract(
+      liveContractConfig().collateral,
+      ["function balanceOf(address) view returns (uint256)"],
+      polygonProvider
+    );
+    const pBal: ethers.BigNumber = await pusd.balanceOf(wallet);
+    if (pBal.gt(0)) {
+      await makeClobClient().updateBalanceAllowance({ asset_type: AssetType.COLLATERAL });
+      return { txHash: "already_wrapped" };
+    }
+    throw new Error(`EOA USDC.e balance is 0 and deposit wallet pUSD is 0`);
+  }
+
+  const toWrap = bal.lt(amt) ? bal : amt;
+
+  const gasOpts = await polygonGasOverrides(polygonProvider);
 
   const allowance = await new ethers.Contract(
     ADDR.usdcePolygon,
     ["function allowance(address, address) view returns (uint256)"],
     polygonProvider
   ).allowance(signer.address, ADDR.collateralOnramp);
-  if (allowance.lt(amt)) {
-    await (await usdce.approve(ADDR.collateralOnramp, ethers.constants.MaxUint256)).wait();
+  if (allowance.lt(toWrap)) {
+    await (await usdce.approve(ADDR.collateralOnramp, ethers.constants.MaxUint256, gasOpts)).wait();
   }
 
   const ramp = new ethers.Contract(ADDR.collateralOnramp, onramp, signer);
-  const tx = await ramp.wrap(ADDR.usdcePolygon, wallet, amt);
+  const tx = await ramp.wrap(ADDR.usdcePolygon, wallet, toWrap, gasOpts);
   await tx.wait();
 
   // Let the CLOB see the new balance so orders don't bounce.

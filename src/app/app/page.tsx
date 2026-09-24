@@ -604,6 +604,8 @@ export default function AppHome() {
 
       if (depositHash) {
         await waitForTx(depositHash).catch(() => {});
+        // Immediately trigger worker to process deposit and bridge to Polygon without waiting
+        fetch("/api/worker/trigger", { method: "POST" }).catch(() => {});
         const fresh = await fetchPlayerState(from).catch(() => null);
         if (fresh) {
           setPlayer(fresh);

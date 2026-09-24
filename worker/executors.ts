@@ -1,14 +1,21 @@
-// One executor per non-terminal state, wiring the measured phase-0 rails into
+// One executor per non-terminal state, wiring the measured rails into
 // the funding state machine. Each leg journals BEFORE moving money so a crash
 // mid-leg leaves a reconciliation trail (see store.journal).
 //
-// Rail selection: deposits ride the FAST rail (Squid one-call, ~66–90 s) by
-// default; FUNDING_RAIL=mesh switches to the cheap Mento+USDT0 path (~20 min,
-// bulk rebalancing only).
+// Deposit rail:
+//   1. Sweep USDm from BinaryDeposits to operator on Celo
+//   2. Swap USDm -> USDT on Celo via Uniswap V3 (0.01% fee pool, ~1s)
+//   3. Bridge USDT Celo -> USDC.e Polygon via Li.Fi / LayerSwap (~27s)
+//   4. Wrap USDC.e Polygon -> pUSD inside deposit wallet (~2s)
+//
+// Withdrawal rail:
+//   1. Unwrap pUSD deposit wallet -> USDC.e operator on Polygon
+//   2. Bridge USDC.e Polygon -> USDT Celo via Li.Fi / LayerSwap (~27s)
+//   3. Swap USDT -> USDm on Celo via Uniswap V3 (~1s)
+//   4. Payout USDm to user via BinaryDeposits payout()
 import type { DepositJob, WithdrawalJob, Executor } from "../src/lib/funding/types";
 import { ADDR, CELO_CHAIN_ID, POLYGON_CHAIN_ID } from "./lib/env";
-import { swapUsdmToUsdt } from "./rails/mento";
-import { usdt0Hop } from "./rails/usdt0";
+import { swapUsdmToUsdt, swapUsdtToUsdm } from "./rails/mento";
 import { executeLifiLeg } from "./rails/lifi";
 import { wrapToDepositWallet, unwrapToOperator } from "./rails/pusd";
 import { sweepIfNeeded, payoutUsdm } from "./rails/celo";
@@ -26,52 +33,22 @@ export const depositExecutors: Partial<Record<string, Executor<string, DepositJo
   RECEIVED: async (job) => {
     await journal(job.id, "sweep", job.amountUsdm.toString());
     await sweepIfNeeded(job.amountUsdm);
-    if (process.env.FUNDING_RAIL === "mesh") {
-      await journal(job.id, "mento_swap");
-      const leg = await swapUsdmToUsdt(job.amountUsdm);
-      return { next: "SWAPPED", leg };
-    }
-    await journal(job.id, "fast_bridge");
-    const leg = await executeLifiLeg({
+
+    await journal(job.id, "celo_swap_usdt", job.amountUsdm.toString());
+    const swapLeg = await swapUsdmToUsdt(job.amountUsdm);
+
+    await journal(job.id, "bridge_celo_polygon", swapLeg.amountOut.toString());
+    const bridgeLeg = await executeLifiLeg({
       fromChainId: CELO_CHAIN_ID,
       toChainId: POLYGON_CHAIN_ID,
-      fromToken: ADDR.usdmCelo,
+      fromToken: ADDR.usdtCelo,
       toToken: ADDR.usdcePolygon,
-      amount: job.amountUsdm,
+      amount: swapLeg.amountOut,
     });
-    return { next: "BRIDGED_FAST", leg };
+    return { next: "BRIDGED_FAST", leg: bridgeLeg };
   },
 
   BRIDGED_FAST: async (job) => {
-    const amount = carried(job, usdmTo6(job.amountUsdm));
-    await journal(job.id, "wrap_pusd", amount.toString());
-    const leg = await wrapToDepositWallet(amount);
-    return { next: "CREDITED", leg: { ...leg, amountOut: amount } };
-  },
-
-  // Cheap rail: SWAPPED → hop1 → hop2 → convert → wrap.
-  SWAPPED: async (job) => {
-    await journal(job.id, "usdt0_hop1");
-    const leg = await usdt0Hop("hop1", carried(job, usdmTo6(job.amountUsdm)));
-    return { next: "BRIDGED_HOP1", leg };
-  },
-  BRIDGED_HOP1: async (job) => {
-    await journal(job.id, "usdt0_hop2");
-    const leg = await usdt0Hop("hop2", carried(job, usdmTo6(job.amountUsdm)));
-    return { next: "BRIDGED_HOP2", leg };
-  },
-  BRIDGED_HOP2: async (job) => {
-    await journal(job.id, "convert_usdt_usdce");
-    const leg = await executeLifiLeg({
-      fromChainId: POLYGON_CHAIN_ID,
-      toChainId: POLYGON_CHAIN_ID,
-      fromToken: ADDR.usdtPolygon,
-      toToken: ADDR.usdcePolygon,
-      amount: carried(job, usdmTo6(job.amountUsdm)),
-    });
-    return { next: "CONVERTED", leg };
-  },
-  CONVERTED: async (job) => {
     const amount = carried(job, usdmTo6(job.amountUsdm));
     await journal(job.id, "wrap_pusd", amount.toString());
     const leg = await wrapToDepositWallet(amount);
@@ -100,17 +77,20 @@ export const withdrawalExecutors: Partial<Record<string, Executor<string, Withdr
       fromChainId: POLYGON_CHAIN_ID,
       toChainId: CELO_CHAIN_ID,
       fromToken: ADDR.usdcePolygon,
-      toToken: ADDR.usdmCelo,
+      toToken: ADDR.usdtCelo,
       amount: carried(job, job.amountUsdc),
     });
     return { next: "BRIDGED", leg };
   },
 
   BRIDGED: async (job) => {
-    const amount = carried(job, job.amountUsdc * 10n ** 12n); // USDm, 18 dec
-    await journal(job.id, "payout", amount.toString());
-    const txHash = await payoutUsdm(job.user, amount);
-    return { next: "PAID", leg: { txHash, amountOut: amount } };
+    const usdtAmount = carried(job, job.amountUsdc);
+    await journal(job.id, "celo_swap_usdm", usdtAmount.toString());
+    const swapLeg = await swapUsdtToUsdm(usdtAmount);
+
+    await journal(job.id, "payout", swapLeg.amountOut.toString());
+    const txHash = await payoutUsdm(job.user, swapLeg.amountOut);
+    return { next: "PAID", leg: { txHash, amountOut: swapLeg.amountOut } };
   },
 
   // Netted against a deposit: paid on Celo directly from the matched deposit's

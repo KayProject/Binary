@@ -56,7 +56,7 @@ async function ensureAllowance(
   );
   const current: ethers.BigNumber = await erc20.allowance(signer.address, spender);
   if (current.gte(amount)) return;
-  await (await erc20.approve(spender, amount)).wait();
+  await (await erc20.approve(spender, ethers.constants.MaxUint256)).wait();
 }
 
 async function executeStep(step: LifiStep): Promise<string> {
@@ -91,12 +91,12 @@ async function executeStep(step: LifiStep): Promise<string> {
   if (step.action.fromChainId !== step.action.toChainId) {
     const t0 = Date.now();
     for (;;) {
-      await new Promise((r) => setTimeout(r, 10_000));
-      const status = await lifi<{ status: string }>(
+      await new Promise((r) => setTimeout(r, 5_000));
+      const status = await lifi<{ status: string; substatus?: string }>(
         `/status?bridge=${step.tool}&fromChain=${step.action.fromChainId}` +
           `&toChain=${step.action.toChainId}&txHash=${tx.hash}`
       ).catch(() => ({ status: "PENDING" }));
-      if (status.status === "DONE") break;
+      if (status.status === "DONE" || status.substatus === "COMPLETED") break;
       if (status.status === "FAILED") throw new Error(`Bridge ${step.tool} reported FAILED (${tx.hash})`);
       if (Date.now() - t0 > 30 * 60_000) throw new Error(`Bridge timed out after 30 min (${tx.hash})`);
     }
