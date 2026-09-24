@@ -38,6 +38,8 @@ import {
   pickData,
   usdToWei,
   usdmAllowance,
+  fetchUsdmBalance,
+  waitForTx,
   type FaucetState,
   type PlayerState,
 } from "@/lib/chain";
@@ -246,6 +248,7 @@ export default function AppHome() {
   const [insightError, setInsightError] = useState<string | null>(null);
   const [topUp, setTopUp] = useState(false);
   const [depositUsd, setDepositUsd] = useState("");
+  const [walletUsdm, setWalletUsdm] = useState<number | null>(null);
   const [withdraw, setWithdraw] = useState(false);
   const [withdrawUsd, setWithdrawUsd] = useState("");
   // Set while a deposit is crossing the bridge; drives the header pill.
@@ -284,6 +287,7 @@ export default function AppHome() {
     if (!address) return;
     fetchPlayerState(address).then(setPlayer).catch(() => {});
     fetchFaucetState(address).then(setFaucet).catch(() => {});
+    fetchUsdmBalance(address).then(setWalletUsdm).catch(() => {});
   }, [address]);
 
   useEffect(() => {
@@ -291,6 +295,12 @@ export default function AppHome() {
     const t = setInterval(refreshPlayer, 30_000);
     return () => clearInterval(t);
   }, [refreshPlayer]);
+
+  useEffect(() => {
+    if (address && topUp) {
+      fetchUsdmBalance(address).then(setWalletUsdm).catch(() => {});
+    }
+  }, [address, topUp]);
 
   useEffect(() => {
     let cancelled = false;
@@ -500,12 +510,31 @@ export default function AppHome() {
     setTxError(null);
     const from = await ensureAddress();
     if (!from) return setTxError(hasWallet ? "Connection declined." : "Open Binary inside MiniPay to play.");
+
+    const currentBal = await fetchUsdmBalance(from).catch(() => null);
+    if (currentBal !== null) setWalletUsdm(currentBal);
+    if (currentBal !== null && currentBal < usd) {
+      setTxError(
+        `Insufficient USDm: you have $${currentBal.toFixed(2)} USDm in your wallet. Note: Binary deposits require USDm (cUSD) on Celo, not USDT.`
+      );
+      return;
+    }
+
     setTxBusy("topup");
     try {
       const wei = usdToWei(usd);
       const allowance = await usdmAllowance(from).catch(() => 0n);
       if (allowance < wei) {
-        await sendTx(USDM, approveUsdmData(wei));
+        const approveHash = await sendTx(USDM, approveUsdmData(wei));
+        if (approveHash) {
+          await waitForTx(approveHash).catch(async () => {
+            for (let i = 0; i < 15; i++) {
+              await new Promise((r) => setTimeout(r, 1000));
+              const a = await usdmAllowance(from).catch(() => 0n);
+              if (a >= wei) break;
+            }
+          });
+        }
       }
       const net = player?.depositedUsd ?? 0;
       let credited: number | null = null;
@@ -520,8 +549,15 @@ export default function AppHome() {
       setDepositUsd("");
       setMoment({ t: "pending", step: 2, usd });
       setTimeout(refreshPlayer, 3_000);
-    } catch {
-      setTxError("Deposit didn’t go through — try again.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("declined") || msg.includes("rejected") || msg.includes("User rejected")) {
+        setTxError("Transaction declined.");
+      } else if (msg.includes("exceeds balance") || msg.includes("TransferFailed")) {
+        setTxError("Insufficient USDm balance to complete deposit.");
+      } else {
+        setTxError("Deposit didn’t go through — try again.");
+      }
     } finally {
       setTxBusy(null);
     }
@@ -946,14 +982,20 @@ export default function AppHome() {
             <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-(--s-sub)">Cash balance</p>
             <p className="mt-1 text-4xl font-semibold tabular-nums tracking-[-0.03em]">${balance.toFixed(2)}</p>
             <button
-              onClick={() => setTopUp(true)}
+              onClick={() => {
+                closePanel();
+                setTopUp(true);
+              }}
               className="mt-3 w-full rounded-full bg-(--s-text) py-3 text-sm font-semibold text-(--s-bg) active:scale-[0.98]"
             >
               Top up with USDm
             </button>
             {balance >= MIN_WITHDRAW && (
               <button
-                onClick={() => setWithdraw(true)}
+                onClick={() => {
+                  closePanel();
+                  setWithdraw(true);
+                }}
                 className="mt-2 w-full rounded-full border border-(--s-line) py-3 text-sm font-bold text-(--s-sub) active:scale-[0.98]"
               >
                 Withdraw
@@ -1359,7 +1401,7 @@ export default function AppHome() {
       {/* ── Top-up sheet ──────────────────────────────────────── */}
       {topUp && (
         <div
-          className="fixed inset-0 z-20 flex items-end bg-black/50 lg:items-center lg:justify-center lg:p-6"
+          className="fixed inset-0 z-40 flex items-end bg-black/50 lg:items-center lg:justify-center lg:p-6"
           onClick={() => setTopUp(false)}
         >
           <div
@@ -1369,9 +1411,25 @@ export default function AppHome() {
             {/* Drag handle — a sheet affordance; the lg modal isn't draggable. */}
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-(--s-line) lg:hidden" />
             <h3 className="mb-1 text-xl font-bold tracking-[-0.02em]">Top up with USDm</h3>
-            <p className="mb-4 text-sm leading-relaxed text-(--s-sub)">
+            <p className="mb-3 text-sm leading-relaxed text-(--s-sub)">
               Your USDm becomes betting power in about 2 minutes. Any amount from ${MIN_DEPOSIT}.
             </p>
+
+            {address && (
+              <div className="mb-3 flex items-center justify-between rounded-[18px] bg-(--s-bg) px-4 py-2.5 text-xs text-(--s-sub)">
+                <span>MiniPay wallet balance</span>
+                <span className="font-mono font-bold text-(--s-text)">
+                  {walletUsdm !== null ? `$${walletUsdm.toFixed(2)} USDm` : "Checking…"}
+                </span>
+              </div>
+            )}
+
+            {address && walletUsdm !== null && walletUsdm < MIN_DEPOSIT && (
+              <div className="mb-3 rounded-[18px] border border-(--s-lose)/30 bg-(--s-lose)/10 p-3 text-xs leading-relaxed text-(--s-lose)">
+                You have ${walletUsdm.toFixed(2)} USDm. Binary top-ups require <strong>USDm (cUSD)</strong> on Celo.
+                If you have USDT in MiniPay, please swap USDT to USDm in MiniPay first.
+              </div>
+            )}
 
             <div className="mb-3 flex items-center gap-2 rounded-[22px] bg-(--s-bg) p-4">
               <span className="text-2xl font-semibold text-(--s-sub)">$</span>
@@ -1418,7 +1476,8 @@ export default function AppHome() {
             {txError && <p className="mb-2 text-center text-xs text-(--s-lose)">{txError}</p>}
             {(() => {
               const usd = parseFloat(depositUsd);
-              const valid = Number.isFinite(usd) && usd >= MIN_DEPOSIT;
+              const hasEnough = walletUsdm === null || walletUsdm >= usd;
+              const valid = Number.isFinite(usd) && usd >= MIN_DEPOSIT && hasEnough;
               return (
                 <button
                   className="w-full rounded-full bg-(--s-text) py-4 text-base font-semibold text-(--s-bg) active:scale-[0.98] disabled:opacity-60"
@@ -1427,11 +1486,13 @@ export default function AppHome() {
                 >
                   {txBusy === "topup"
                     ? "Confirm in your wallet…"
-                    : valid
-                      ? `Top up $${usd.toFixed(2)}`
-                      : depositUsd && Number.isFinite(usd)
-                        ? `Minimum $${MIN_DEPOSIT}`
-                        : "Enter an amount"}
+                    : Number.isFinite(usd) && !hasEnough
+                      ? `Insufficient USDm ($${(walletUsdm ?? 0).toFixed(2)} available)`
+                      : valid
+                        ? `Top up $${usd.toFixed(2)}`
+                        : depositUsd && Number.isFinite(usd)
+                          ? `Minimum $${MIN_DEPOSIT}`
+                          : "Enter an amount"}
                 </button>
               );
             })()}
@@ -1442,7 +1503,7 @@ export default function AppHome() {
       {/* ── Withdraw sheet ────────────────────────────────────── */}
       {withdraw && (
         <div
-          className="fixed inset-0 z-20 flex items-end bg-black/50 lg:items-center lg:justify-center lg:p-6"
+          className="fixed inset-0 z-40 flex items-end bg-black/50 lg:items-center lg:justify-center lg:p-6"
           onClick={() => setWithdraw(false)}
         >
           <div

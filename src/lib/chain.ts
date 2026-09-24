@@ -38,6 +38,13 @@ const erc20Abi = [
   },
   {
     type: "function",
+    name: "balanceOf",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "allowance",
     inputs: [
       { name: "owner", type: "address" },
@@ -206,6 +213,24 @@ export async function usdmAllowance(owner: `0x${string}`): Promise<bigint> {
     functionName: "allowance",
     args: [owner, DEPOSIT_CONTRACT],
   });
+}
+
+export async function fetchUsdmBalance(owner: `0x${string}`): Promise<number> {
+  try {
+    const bal = await publicClient.readContract({
+      address: USDM,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [owner],
+    });
+    return Number(bal) / 1e18;
+  } catch {
+    return 0;
+  }
+}
+
+export async function waitForTx(hash: string): Promise<void> {
+  await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}` });
 }
 
 export interface PlayerState {
