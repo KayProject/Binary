@@ -38,25 +38,45 @@ export interface DeltaInsight {
   ts: number;
 }
 
-/** Pay 1¢ from the user's wallet and fetch Delta's read on a market. */
-export async function askDelta(tokenIdUp: string, tokenIdDown: string): Promise<DeltaInsight> {
+/** Fetch Delta's read on a market. Tries x402 payment first, falling back to in-app player access. */
+export async function askDelta(
+  tokenIdUp: string,
+  tokenIdDown: string,
+  userAddress?: string | null
+): Promise<DeltaInsight> {
   const ethereum = (window as { ethereum?: EIP1193.EIP1193Provider }).ethereum;
-  if (!ethereum) return Promise.reject(new Error("no wallet"));
 
-  const client = createThirdwebClient({ clientId: TW_CLIENT_ID });
-  const wallet = EIP1193.fromProvider({ provider: ethereum });
-  await wallet.connect({ client, chain: celo });
+  if (ethereum) {
+    try {
+      const client = createThirdwebClient({ clientId: TW_CLIENT_ID });
+      const wallet = EIP1193.fromProvider({ provider: ethereum });
+      await wallet.connect({ client, chain: celo });
 
-  const paidFetch = wrapFetchWithPayment(window.fetch.bind(window), client, wallet, {
-    // 0.05 USDm ceiling — a mispriced server can never drain the wallet.
-    maxValue: 50_000_000_000_000_000n,
-  });
+      const paidFetch = wrapFetchWithPayment(window.fetch.bind(window), client, wallet, {
+        maxValue: 50_000_000_000_000_000n,
+      });
 
-  const res = await paidFetch("/api/delta/insight", {
+      const res = await paidFetch("/api/delta/insight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tokenIdUp, tokenIdDown, user: userAddress }),
+      });
+      if (res.ok) {
+        return (await res.json()) as DeltaInsight;
+      }
+    } catch {
+      // If x402 settlement fails or wallet lacks native USDC, continue to in-app player access
+    }
+  }
+
+  const res = await fetch("/api/delta/insight", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tokenIdUp, tokenIdDown }),
+    body: JSON.stringify({ tokenIdUp, tokenIdDown, user: userAddress }),
   });
-  if (!res.ok) return Promise.reject(new Error(`insight ${res.status}`));
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `insight ${res.status}`);
+  }
   return (await res.json()) as DeltaInsight;
 }

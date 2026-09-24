@@ -780,10 +780,11 @@ export default function AppHome() {
       const result = await askDelta(
         market.outcomes[0].clobTokenId,
         market.outcomes[1].clobTokenId,
+        address,
       );
       setInsight(result);
     } catch {
-      setInsightError("Couldn’t get Delta’s read — payment declined or network hiccup.");
+      setInsightError("Couldn’t get Delta’s read — try again.");
     } finally {
       setInsightBusy(false);
     }

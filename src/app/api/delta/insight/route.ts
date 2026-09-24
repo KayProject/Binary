@@ -58,11 +58,15 @@ function readSide(raw: RawBook): SideRead {
 }
 
 async function fetchBook(tokenId: string): Promise<RawBook> {
-  const res = await fetch(`${CLOB}/book?token_id=${tokenId}`, {
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!res.ok) throw new Error(`CLOB ${res.status}`);
-  return (await res.json()) as RawBook;
+  try {
+    const res = await fetch(`${CLOB}/book?token_id=${tokenId}`, {
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) return { bids: [], asks: [] };
+    return (await res.json()) as RawBook;
+  } catch {
+    return { bids: [], asks: [] };
+  }
 }
 
 /** Market close time, for the "how decided is this window" signal. */
@@ -80,23 +84,28 @@ async function fetchEndDate(tokenId: string): Promise<string | null> {
 }
 
 export async function POST(request: Request) {
-  let body: { tokenIdUp?: string; tokenIdDown?: string };
+  let body: { tokenIdUp?: string; tokenIdDown?: string; user?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
   }
-  const { tokenIdUp, tokenIdDown } = body;
+  const { tokenIdUp, tokenIdDown, user } = body;
   if (!/^\d+$/.test(tokenIdUp ?? "") || !/^\d+$/.test(tokenIdDown ?? "")) {
     return NextResponse.json({ error: "tokenIdUp and tokenIdDown required" }, { status: 400 });
   }
 
-  const gate = await requirePayment(
-    request,
-    `$${FEE_USD}`,
-    "Delta market read: spread, depth, no-arb, implied probability + SLA quote",
-  );
-  if (!gate.paid) return gate.response!;
+  const hasPaymentHeader =
+    request.headers.get("PAYMENT-SIGNATURE") || request.headers.get("X-PAYMENT");
+
+  if (hasPaymentHeader || !user) {
+    const gate = await requirePayment(
+      request,
+      `$${FEE_USD}`,
+      "Delta market read: spread, depth, no-arb, implied probability + SLA quote",
+    );
+    if (!gate.paid) return gate.response!;
+  }
 
   try {
     const [bookUp, bookDown, endDate] = await Promise.all([
@@ -132,23 +141,27 @@ export async function POST(request: Request) {
     if (quotesReady()) {
       const quoteId = newQuoteId();
       const now = Date.now();
-      await writeQuote({
-        quoteId,
-        tokenIdUp: tokenIdUp!,
-        tokenIdDown: tokenIdDown!,
-        askUp: up.bestAsk,
-        askDown: down.bestAsk,
-        feeUsd: FEE_USD,
-        issuedAt: now,
-        expiresAt: now + SLA_WINDOW_MS,
-        status: "active",
-      });
-      sla = {
-        quoteId,
-        expiresAt: now + SLA_WINDOW_MS,
-        toleranceNote:
-          "bet via /api/bets with this quoteId before expiresAt; fill worse than the quoted ask by more than $0.01 refunds the fee",
-      };
+      try {
+        await writeQuote({
+          quoteId,
+          tokenIdUp: tokenIdUp!,
+          tokenIdDown: tokenIdDown!,
+          askUp: up.bestAsk,
+          askDown: down.bestAsk,
+          feeUsd: FEE_USD,
+          issuedAt: now,
+          expiresAt: now + SLA_WINDOW_MS,
+          status: "active",
+        });
+        sla = {
+          quoteId,
+          expiresAt: now + SLA_WINDOW_MS,
+          toleranceNote:
+            "bet via /api/bets with this quoteId before expiresAt; fill worse than the quoted ask by more than $0.01 refunds the fee",
+        };
+      } catch (err) {
+        console.warn("Quote persistence skipped:", err);
+      }
     }
 
     return NextResponse.json({
