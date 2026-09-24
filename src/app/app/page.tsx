@@ -29,6 +29,8 @@ import {
   DEPOSIT_CONTRACT,
   FAUCET_CONTRACT,
   USDM,
+  USDT_CELO,
+  LIFI_DIAMOND,
   approveUsdmData,
   checkInData,
   claimData,
@@ -37,7 +39,12 @@ import {
   fetchPlayerState,
   pickData,
   usdToWei,
+  usdtToWei,
   usdmAllowance,
+  usdtAllowance,
+  approveUsdtData,
+  fetchSwapQuote,
+  type SwapQuote,
   fetchUsdmBalance,
   fetchUsdtBalance,
   waitForTx,
@@ -252,6 +259,13 @@ export default function AppHome() {
   const [walletUsdm, setWalletUsdm] = useState<number | null>(null);
   const [walletUsdt, setWalletUsdt] = useState<number | null>(null);
   const [showSwapHelp, setShowSwapHelp] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
+  const [swapAmount, setSwapAmount] = useState("");
+  const [swapQuote, setSwapQuote] = useState<SwapQuote | null>(null);
+  const [swapQuoteBusy, setSwapQuoteBusy] = useState(false);
+  const [swapQuoteError, setSwapQuoteError] = useState<string | null>(null);
+  const [swapStage, setSwapStage] = useState<"idle" | "approving" | "swapping" | "success">("idle");
+  const [swapSuccessMsg, setSwapSuccessMsg] = useState<string | null>(null);
   const [withdraw, setWithdraw] = useState(false);
   const [withdrawUsd, setWithdrawUsd] = useState("");
   // Set while a deposit is crossing the bridge; drives the header pill.
@@ -319,11 +333,11 @@ export default function AppHome() {
   }, [refreshPlayer]);
 
   useEffect(() => {
-    if (address && topUp) {
+    if (address && (topUp || swapOpen)) {
       fetchUsdmBalance(address).then(setWalletUsdm).catch(() => {});
       fetchUsdtBalance(address).then(setWalletUsdt).catch(() => {});
     }
-  }, [address, topUp]);
+  }, [address, topUp, swapOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -586,6 +600,93 @@ export default function AppHome() {
     }
   };
 
+  // Live quote fetch for In-App Swap (USDT -> USDm)
+  useEffect(() => {
+    if (!swapOpen || !address) return;
+    const num = parseFloat(swapAmount);
+    if (!Number.isFinite(num) || num < 0.2) {
+      setSwapQuote(null);
+      setSwapQuoteError(null);
+      setSwapQuoteBusy(false);
+      return;
+    }
+    setSwapQuoteBusy(true);
+    setSwapQuoteError(null);
+    const t = setTimeout(async () => {
+      try {
+        const rawWei = String(usdtToWei(num));
+        const quote = await fetchSwapQuote(USDT_CELO, USDM, rawWei, address);
+        setSwapQuote(quote);
+      } catch (err: unknown) {
+        setSwapQuote(null);
+        setSwapQuoteError(err instanceof Error ? err.message : "No swap route available");
+      } finally {
+        setSwapQuoteBusy(false);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [swapOpen, swapAmount, address]);
+
+  const doSwap = async () => {
+    if (!address || !swapQuote) return;
+    const num = parseFloat(swapAmount);
+    if (!Number.isFinite(num) || num <= 0) return;
+
+    setSwapQuoteError(null);
+    setSwapSuccessMsg(null);
+
+    const from = await ensureAddress();
+    if (!from) return setSwapQuoteError(hasWallet ? "Wallet not connected" : "Open in MiniPay to swap");
+
+    try {
+      const requiredAmount = BigInt(swapQuote.estimate.fromAmount);
+      const spender = (swapQuote.estimate.approvalAddress || LIFI_DIAMOND) as `0x${string}`;
+
+      // Step 1: Check and request USDT allowance if needed
+      const allowance = await usdtAllowance(from, spender).catch(() => 0n);
+      if (allowance < requiredAmount) {
+        setSwapStage("approving");
+        const approveHash = await sendTx(USDT_CELO, approveUsdtData(spender, requiredAmount));
+        if (approveHash) {
+          await waitForTx(approveHash).catch(async () => {
+            for (let i = 0; i < 15; i++) {
+              await new Promise((r) => setTimeout(r, 1000));
+              const a = await usdtAllowance(from, spender).catch(() => 0n);
+              if (a >= requiredAmount) break;
+            }
+          });
+        }
+      }
+
+      // Step 2: Send Li.Fi Diamond swap transaction
+      setSwapStage("swapping");
+      const txTo = swapQuote.transactionRequest.to;
+      const txData = swapQuote.transactionRequest.data;
+      const swapHash = await sendTx(txTo, txData);
+      if (swapHash) {
+        await waitForTx(swapHash);
+      }
+
+      // Step 3: Success & refresh balances
+      const toUsd = Number(BigInt(swapQuote.estimate.toAmount)) / 1e18;
+      setSwapStage("success");
+      setSwapSuccessMsg(`Swapped ${num.toFixed(2)} USDT for ~${toUsd.toFixed(2)} USDm!`);
+
+      // Refresh balances
+      refreshPlayer();
+      fetchUsdmBalance(from).then(setWalletUsdm).catch(() => {});
+      fetchUsdtBalance(from).then(setWalletUsdt).catch(() => {});
+    } catch (err: unknown) {
+      setSwapStage("idle");
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("declined") || msg.includes("rejected") || msg.includes("User rejected")) {
+        setSwapQuoteError("Transaction declined.");
+      } else {
+        setSwapQuoteError("Swap didn’t complete on Celo. Try again.");
+      }
+    }
+  };
+
   // The out-leg: the server signs payout() as owner; the contract pins the
   // destination to this wallet, so the user signs nothing and can lose nothing.
   const MIN_WITHDRAW = 0.5;
@@ -804,6 +905,11 @@ export default function AppHome() {
                 )}
               </button>
             </>
+          ) : isMiniPay ? (
+            <div className="flex items-center gap-1.5 rounded-full bg-(--s-card) px-3 py-1.5 text-xs text-(--s-sub)">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-(--s-act)" />
+              Connecting…
+            </div>
           ) : (
             <button
               onClick={connect}
@@ -857,7 +963,7 @@ export default function AppHome() {
               </button>
             ))}
           </div>
-          {!address && (
+          {!address && !isMiniPay && (
             <div className="mx-5 mt-4 rounded-[22px] border border-(--s-line) bg-(--s-card) p-5">
               <p className="text-[15px] font-bold">Play free. Win real cash.</p>
               <p className="mt-1 text-sm text-(--s-sub)">
@@ -1002,15 +1108,26 @@ export default function AppHome() {
           <div className="mb-5 rounded-[22px] border border-(--s-line) bg-(--s-card) p-5">
             <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-(--s-sub)">Cash balance</p>
             <p className="mt-1 text-4xl font-semibold tabular-nums tracking-[-0.03em]">${balance.toFixed(2)}</p>
-            <button
-              onClick={() => {
-                closePanel();
-                setTopUp(true);
-              }}
-              className="mt-3 w-full rounded-full bg-(--s-text) py-3 text-sm font-semibold text-(--s-bg) active:scale-[0.98]"
-            >
-              Top up with USDm
-            </button>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  closePanel();
+                  setTopUp(true);
+                }}
+                className="w-full rounded-full bg-(--s-text) py-3 text-sm font-semibold text-(--s-bg) active:scale-[0.98]"
+              >
+                Top up USDm
+              </button>
+              <button
+                onClick={() => {
+                  closePanel();
+                  setSwapOpen(true);
+                }}
+                className="w-full rounded-full border border-(--s-line) bg-(--s-bg) py-3 text-sm font-semibold text-(--s-text) transition active:scale-[0.98] hover:border-(--s-act)"
+              >
+                Swap tokens ⚡
+              </button>
+            </div>
             {balance >= MIN_WITHDRAW && (
               <button
                 onClick={() => {
@@ -1023,14 +1140,14 @@ export default function AppHome() {
               </button>
             )}
             <div className="mt-3.5 flex items-center justify-center gap-2 text-xs text-(--s-sub)">
-              <span>Need USDm?</span>
+              <span>Swap in-app or:</span>
               <a
                 href="https://app.mento.org"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold text-(--s-text) underline hover:text-(--s-act-soft)"
               >
-                Swap on Mento ↗
+                Mento ↗
               </a>
               <span>·</span>
               <a
@@ -1457,7 +1574,7 @@ export default function AppHome() {
             </p>
 
             {address && (
-              <div className="mb-3 space-y-1.5 rounded-[18px] bg-(--s-bg) p-3 text-xs">
+              <div className="mb-3 space-y-2 rounded-[18px] bg-(--s-bg) p-3 text-xs">
                 <div className="flex items-center justify-between text-(--s-sub)">
                   <span>MiniPay USDm balance (playable):</span>
                   <span className="font-mono font-bold text-(--s-text)">
@@ -1465,56 +1582,80 @@ export default function AppHome() {
                   </span>
                 </div>
                 {walletUsdt !== null && walletUsdt > 0.01 && (
-                  <div className="flex items-center justify-between border-t border-(--s-line)/50 pt-1.5 text-(--s-sub)">
-                    <span>MiniPay USDT balance (requires swap):</span>
-                    <span className="font-mono font-bold text-(--s-text)">
-                      ${walletUsdt.toFixed(2)} USDT
-                    </span>
+                  <div className="flex items-center justify-between border-t border-(--s-line)/50 pt-2 text-(--s-sub)">
+                    <div>
+                      <span>MiniPay USDT balance: </span>
+                      <span className="font-mono font-bold text-(--s-text)">
+                        ${walletUsdt.toFixed(2)} USDT
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSwapAmount(walletUsdt.toFixed(2));
+                        setTopUp(false);
+                        setSwapOpen(true);
+                      }}
+                      className="rounded-full bg-(--s-act) px-2.5 py-1 text-[11px] font-bold text-(--s-bg) transition active:scale-95 shadow-sm"
+                    >
+                      Swap to USDm ⚡
+                    </button>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Where to swap guidance */}
+            {/* In-app swap card */}
             {address && (
               <div className="mb-3 rounded-[18px] border border-(--s-act)/30 bg-(--s-act-tint) p-3 text-xs">
                 <div className="flex items-center justify-between font-bold text-(--s-act-soft)">
-                  <span>Need USDm? Where to swap:</span>
+                  <span>Need USDm? Swap without leaving Binary:</span>
                   <button
                     type="button"
-                    onClick={() => setShowSwapHelp((s) => !s)}
-                    className="text-[11px] underline"
+                    onClick={() => {
+                      setTopUp(false);
+                      setSwapOpen(true);
+                    }}
+                    className="rounded-full bg-(--s-act) px-3 py-1 text-xs font-bold text-(--s-bg) transition active:scale-95"
                   >
-                    {showSwapHelp ? "Close" : "Instructions ▾"}
+                    Swap tokens ⚡
                   </button>
                 </div>
                 <p className="mt-1 text-[11px] leading-relaxed text-(--s-sub)">
-                  Binary bets run on <strong>USDm (cUSD)</strong> on Celo. If you have USDT, swap to USDm below:
+                  Convert USDT to USDm directly inside Binary. Settles on Celo in seconds.
                 </p>
-                <div className="mt-2 grid grid-cols-2 gap-2 text-center text-xs font-semibold">
-                  <a
-                    href="https://app.mento.org"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-xl border border-(--s-line) bg-(--s-card) py-2 text-(--s-text) transition hover:border-(--s-act)"
+                <div className="mt-2 flex items-center justify-between text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setShowSwapHelp((s) => !s)}
+                    className="text-(--s-act-soft) underline"
                   >
-                    Mento App ↗
-                  </a>
-                  <a
-                    href="https://app.uniswap.org/swap?chain=celo&inputCurrency=0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e&outputCurrency=0x765DE816845861e75A25fCA122bb6898B8B1282a"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-xl border border-(--s-line) bg-(--s-card) py-2 text-(--s-text) transition hover:border-(--s-act)"
-                  >
-                    Uniswap ↗
-                  </a>
+                    {showSwapHelp ? "Hide external options ▴" : "Other swap options ▾"}
+                  </button>
                 </div>
                 {showSwapHelp && (
-                  <div className="mt-2.5 rounded-xl border border-(--s-line)/40 bg-(--s-card) p-2.5 text-[11px] text-(--s-sub) space-y-1">
-                    <p className="font-bold text-(--s-text)">Swap directly in MiniPay:</p>
-                    <p>1. Open your MiniPay wallet home screen.</p>
-                    <p>2. Tap your <strong>USDT</strong> balance and tap <strong>Swap</strong>.</p>
-                    <p>3. Select <strong>USDm (or cUSD)</strong> and confirm. It settles in ~2 seconds with zero gas.</p>
+                  <div className="mt-2.5 pt-2 border-t border-(--s-act)/20 space-y-2">
+                    <div className="grid grid-cols-2 gap-2 text-center text-xs font-semibold">
+                      <a
+                        href="https://app.mento.org"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-xl border border-(--s-line) bg-(--s-card) py-1.5 text-(--s-text) transition hover:border-(--s-act)"
+                      >
+                        Mento App ↗
+                      </a>
+                      <a
+                        href="https://app.uniswap.org/swap?chain=celo&inputCurrency=0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e&outputCurrency=0x765DE816845861e75A25fCA122bb6898B8B1282a"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-xl border border-(--s-line) bg-(--s-card) py-1.5 text-(--s-text) transition hover:border-(--s-act)"
+                      >
+                        Uniswap ↗
+                      </a>
+                    </div>
+                    <p className="text-[10px] text-(--s-sub)">
+                      You can also swap directly on MiniPay home screen: Tap USDT &rarr; Swap &rarr; Select USDm (cUSD).
+                    </p>
                   </div>
                 )}
               </div>
@@ -1562,7 +1703,24 @@ export default function AppHome() {
               contract address. A direct transfer can&apos;t be credited to you.
             </p>
 
-            {txError && <p className="mb-2 text-center text-xs text-(--s-lose)">{txError}</p>}
+            {txError && (
+              <div className="mb-2 space-y-1 text-center">
+                <p className="text-xs text-(--s-lose)">{txError}</p>
+                {walletUsdt !== null && walletUsdt >= MIN_DEPOSIT && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSwapAmount(depositUsd && parseFloat(depositUsd) > 0 ? depositUsd : String(MIN_DEPOSIT));
+                      setTopUp(false);
+                      setSwapOpen(true);
+                    }}
+                    className="inline-block rounded-full bg-(--s-act-tint) px-3 py-1 text-xs font-semibold text-(--s-act-soft) underline"
+                  >
+                    Swap USDT to USDm in-app ⚡
+                  </button>
+                )}
+              </div>
+            )}
             {(() => {
               const usd = parseFloat(depositUsd);
               const hasEnough = walletUsdm === null || walletUsdm >= usd;
@@ -1585,6 +1743,214 @@ export default function AppHome() {
                 </button>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* ── In-App Swap sheet ─────────────────────────────────── */}
+      {swapOpen && (
+        <div
+          className="fixed inset-0 z-40 flex items-end bg-black/50 lg:items-center lg:justify-center lg:p-6"
+          onClick={() => {
+            if (swapStage !== "approving" && swapStage !== "swapping") {
+              setSwapOpen(false);
+              setSwapStage("idle");
+              setSwapSuccessMsg(null);
+            }
+          }}
+        >
+          <div
+            className={`${theme === "dark" ? "app-dark" : "app-light"} w-full rounded-t-3xl border-t border-(--s-line) bg-(--s-card) p-5 pb-8 text-(--s-text) lg:max-w-md lg:rounded-3xl lg:border lg:pb-5 lg:shadow-2xl`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drag handle */}
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-(--s-line) lg:hidden" />
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xl font-bold tracking-[-0.02em]">Swap USDT to USDm</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  if (swapStage !== "approving" && swapStage !== "swapping") {
+                    setSwapOpen(false);
+                    setSwapStage("idle");
+                    setSwapSuccessMsg(null);
+                  }
+                }}
+                className="text-(--s-sub) hover:text-(--s-text) text-lg font-bold px-2 py-1"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="mb-3 text-sm leading-relaxed text-(--s-sub)">
+              Swap instantly without leaving Binary. Powered by Li.Fi &amp; Celo DEX.
+            </p>
+
+            {/* Balances */}
+            <div className="mb-3 grid grid-cols-2 gap-2 rounded-[18px] bg-(--s-bg) p-3 text-xs">
+              <div>
+                <p className="text-(--s-sub)">You pay (USDT):</p>
+                <p className="font-mono font-bold text-sm text-(--s-text) mt-0.5">
+                  {walletUsdt !== null ? `$${walletUsdt.toFixed(2)}` : "—"}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-(--s-sub)">You receive (USDm):</p>
+                <p className="font-mono font-bold text-sm text-(--s-act-soft) mt-0.5">
+                  {walletUsdm !== null ? `$${walletUsdm.toFixed(2)}` : "—"}
+                </p>
+              </div>
+            </div>
+
+            {/* Amount input */}
+            <div className="mb-3 flex items-center justify-between rounded-[22px] bg-(--s-bg) p-4">
+              <div className="flex items-center gap-2 flex-1">
+                <span className="text-2xl font-semibold text-(--s-sub)">$</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  placeholder="5.00"
+                  value={swapAmount}
+                  disabled={swapStage === "approving" || swapStage === "swapping"}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (/^\d*\.?\d{0,2}$/.test(v)) setSwapAmount(v);
+                  }}
+                  className="w-full bg-transparent font-mono text-2xl font-bold tabular-nums outline-none placeholder:text-(--s-sub) placeholder:opacity-50"
+                />
+              </div>
+              {walletUsdt !== null && walletUsdt > 0.05 && (
+                <button
+                  type="button"
+                  onClick={() => setSwapAmount(walletUsdt.toFixed(2))}
+                  className="rounded-full bg-(--s-card) border border-(--s-line) px-3 py-1 text-xs font-bold text-(--s-text) transition active:scale-95"
+                >
+                  MAX
+                </button>
+              )}
+            </div>
+
+            {/* Quick chips */}
+            <div className="mb-3 flex gap-2">
+              {[2, 5, 10, 20].map((v) => (
+                <button
+                  key={v}
+                  disabled={swapStage === "approving" || swapStage === "swapping"}
+                  onClick={() => setSwapAmount(String(v))}
+                  className={`flex-1 rounded-full border py-1.5 text-xs font-semibold tabular-nums transition ${
+                    swapAmount === String(v)
+                      ? "border-(--s-act) bg-(--s-act-tint) text-(--s-act-soft)"
+                      : "border-(--s-line) text-(--s-sub) hover:text-(--s-text)"
+                  }`}
+                >
+                  ${v}
+                </button>
+              ))}
+            </div>
+
+            {/* Quote details */}
+            {swapQuoteBusy && (
+              <div className="mb-3 rounded-[16px] bg-(--s-bg) p-3 text-center text-xs text-(--s-sub)">
+                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-(--s-act) border-t-transparent mr-2 align-middle" />
+                Finding best Celo swap rate…
+              </div>
+            )}
+
+            {!swapQuoteBusy && swapQuote && (
+              <div className="mb-3 rounded-[16px] border border-(--s-line) bg-(--s-bg) p-3 text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-(--s-sub)">Expected USDm output:</span>
+                  <span className="font-mono font-bold text-sm text-(--s-text)">
+                    ~{(Number(BigInt(swapQuote.estimate.toAmount)) / 1e18).toFixed(2)} USDm
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-(--s-sub)">
+                  <span>Rate:</span>
+                  <span>
+                    1 USDT ≈ {(Number(BigInt(swapQuote.estimate.toAmount)) / 1e18 / (parseFloat(swapAmount) || 1)).toFixed(3)} USDm
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-(--s-sub)">
+                  <span>Route:</span>
+                  <span>Li.Fi Diamond (Celo)</span>
+                </div>
+              </div>
+            )}
+
+            {swapQuoteError && (
+              <p className="mb-2 text-center text-xs text-(--s-lose)">{swapQuoteError}</p>
+            )}
+
+            {swapSuccessMsg && (
+              <div className="mb-3 rounded-[16px] border border-emerald-500/30 bg-emerald-500/10 p-3 text-center text-xs text-emerald-400">
+                <p className="font-bold">✓ {swapSuccessMsg}</p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSwapOpen(false);
+                      setSwapStage("idle");
+                      setSwapSuccessMsg(null);
+                      setTopUp(true);
+                    }}
+                    className="flex-1 rounded-full bg-(--s-text) py-2 font-bold text-(--s-bg)"
+                  >
+                    Top up USDm now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSwapOpen(false);
+                      setSwapStage("idle");
+                      setSwapSuccessMsg(null);
+                    }}
+                    className="flex-1 rounded-full border border-(--s-line) py-2 font-bold text-(--s-sub)"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Action button */}
+            {!swapSuccessMsg && (() => {
+              const usd = parseFloat(swapAmount);
+              const hasBalance = walletUsdt === null || walletUsdt >= usd;
+              const valid = Number.isFinite(usd) && usd > 0 && hasBalance;
+              return (
+                <button
+                  className="w-full rounded-full bg-(--s-text) py-4 text-base font-semibold text-(--s-bg) active:scale-[0.98] disabled:opacity-60 transition"
+                  disabled={!valid || !swapQuote || swapQuoteBusy || swapStage === "approving" || swapStage === "swapping"}
+                  onClick={doSwap}
+                >
+                  {swapStage === "approving"
+                    ? "Approving USDT in wallet…"
+                    : swapStage === "swapping"
+                      ? "Swapping on Celo…"
+                      : swapQuoteBusy
+                        ? "Fetching route…"
+                        : Number.isFinite(usd) && !hasBalance
+                          ? `Insufficient USDT ($${(walletUsdt ?? 0).toFixed(2)} available)`
+                          : valid && swapQuote
+                            ? `Swap $${usd.toFixed(2)} USDT → USDm`
+                            : "Enter amount to swap"}
+                </button>
+              );
+            })()}
+
+            <div className="mt-3 flex items-center justify-between text-[11px] text-(--s-sub)">
+              <button
+                type="button"
+                onClick={() => {
+                  setSwapOpen(false);
+                  setTopUp(true);
+                }}
+                className="underline hover:text-(--s-text)"
+              >
+                ← Back to Top up
+              </button>
+              <span>Settles via Celo smart contract</span>
+            </div>
           </div>
         </div>
       )}

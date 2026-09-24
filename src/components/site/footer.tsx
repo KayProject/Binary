@@ -12,7 +12,7 @@ const COLUMNS = [
   {
     title: "Product",
     links: [
-      { label: "Open the app", href: "/app" },
+      { label: "Open the app", href: "/app?enter=1" },
       { label: "Markets", href: "/#markets" },
       { label: "How it works", href: "/#how" },
     ],

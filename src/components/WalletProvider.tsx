@@ -92,8 +92,18 @@ function InjectedBridge({ children }: { children: ReactNode }) {
           else localStorage.removeItem("binary.wallet");
         } catch {}
       });
+      const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      if (search?.get("enter") === "1") {
+        try {
+          sessionStorage.removeItem("binary.disconnected");
+        } catch {}
+      }
+      const explicitlyDisconnected =
+        typeof window !== "undefined" && sessionStorage.getItem("binary.disconnected") === "1";
       const previouslyConnected = !!localStorage.getItem("binary.wallet");
-      const method = previouslyConnected && eth.isMiniPay ? "eth_requestAccounts" : "eth_accounts";
+      // MiniPay users entering the app are auto-connected so they are immediately "through"
+      const shouldAutoRequest = eth.isMiniPay ? !explicitlyDisconnected : previouslyConnected;
+      const method = shouldAutoRequest ? "eth_requestAccounts" : "eth_accounts";
       eth
         .request({ method })
         .then((accounts) => {
@@ -115,6 +125,9 @@ function InjectedBridge({ children }: { children: ReactNode }) {
     const eth = getEth();
     if (!eth) return null;
     try {
+      try {
+        sessionStorage.removeItem("binary.disconnected");
+      } catch {}
       const accounts = (await eth.request({ method: "eth_requestAccounts" })) as string[];
       const a = (accounts[0] as `0x${string}`) ?? null;
       if (a) {
@@ -134,6 +147,7 @@ function InjectedBridge({ children }: { children: ReactNode }) {
     try {
       localStorage.removeItem("binary.wallet");
       sessionStorage.removeItem("binary.opened");
+      sessionStorage.setItem("binary.disconnected", "1");
     } catch {}
   }, []);
 

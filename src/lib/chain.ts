@@ -244,6 +244,67 @@ export async function fetchUsdtBalance(owner: `0x${string}`): Promise<number> {
   }
 }
 
+export const LIFI_DIAMOND = "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE" as const;
+
+/** USDT (6 dec) to base units */
+export const usdtToWei = (usdt: number) => BigInt(Math.round(usdt * 1e6));
+
+export async function usdtAllowance(
+  owner: `0x${string}`,
+  spender: `0x${string}` = LIFI_DIAMOND
+): Promise<bigint> {
+  return publicClient.readContract({
+    address: USDT_CELO,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: [owner, spender],
+  });
+}
+
+export const approveUsdtData = (spender: `0x${string}`, amount: bigint) =>
+  encodeFunctionData({
+    abi: erc20Abi,
+    functionName: "approve",
+    args: [spender, amount],
+  });
+
+export interface SwapQuote {
+  id: string;
+  estimate: {
+    fromAmount: string;
+    toAmount: string;
+    approvalAddress: `0x${string}`;
+    feeCosts?: { amountUSD: string; name: string }[];
+    fromAmountUSD?: string;
+    toAmountUSD?: string;
+  };
+  transactionRequest: {
+    to: `0x${string}`;
+    data: `0x${string}`;
+    value?: string;
+  };
+}
+
+export async function fetchSwapQuote(
+  fromToken: string,
+  toToken: string,
+  fromAmount: string,
+  fromAddress: string
+): Promise<SwapQuote> {
+  const params = new URLSearchParams({
+    fromToken,
+    toToken,
+    fromAmount,
+    fromAddress,
+  });
+  const res = await fetch(`/api/swap/quote?${params.toString()}`);
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to fetch swap quote");
+  }
+  return data as SwapQuote;
+}
+
 export async function waitForTx(hash: string): Promise<void> {
   await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}` });
 }
