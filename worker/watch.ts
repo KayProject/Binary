@@ -13,13 +13,13 @@ const CHUNK = 5_000; // forno getLogs range limit headroom
 export async function scanDeposits(): Promise<DepositJob[]> {
   const latest = await celoProvider.getBlockNumber();
   const saved = await loadCursor();
-  // If no saved cursor, look back up to 25,000 blocks (~7 hours on Celo)
-  // or use INITIAL_CURSOR_BLOCK if set, so cold starts never miss deposits.
+  // Saved cursor from cache/store, or INITIAL_CURSOR_BLOCK override,
+  // or recent 100 blocks (~1.5 min on Celo) on first cold start.
   let from =
     saved ??
     (process.env.INITIAL_CURSOR_BLOCK
       ? parseInt(process.env.INITIAL_CURSOR_BLOCK)
-      : Math.max(0, latest - 25_000));
+      : Math.max(0, latest - 100));
   const created: DepositJob[] = [];
 
   while (from <= latest) {

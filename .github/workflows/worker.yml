@@ -19,6 +19,13 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        id: cache-restore
+        with:
+          path: .jobs
+          key: worker-jobs-${{ github.run_id }}
+          restore-keys: |
+            worker-jobs-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -40,3 +47,8 @@ jobs:
           POLYMARKET_BUILDER_PASSPHRASE: ${{ secrets.POLYMARKET_BUILDER_PASSPHRASE }}
           BUILDER_CODE: ${{ secrets.BUILDER_CODE }}
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: .jobs
+          key: worker-jobs-${{ github.run_id }}
