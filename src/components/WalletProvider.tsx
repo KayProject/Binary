@@ -84,15 +84,26 @@ function InjectedBridge({ children }: { children: ReactNode }) {
       }
       setHasWallet(true);
       setIsMiniPay(!!eth.isMiniPay);
-      eth.on?.("accountsChanged", (accounts) =>
-        setAddress((accounts[0] as `0x${string}`) ?? null)
-      );
-      const method = eth.isMiniPay ? "eth_requestAccounts" : "eth_accounts";
+      eth.on?.("accountsChanged", (accounts) => {
+        const next = (accounts[0] as `0x${string}`) ?? null;
+        setAddress(next);
+        try {
+          if (next) localStorage.setItem("binary.wallet", next);
+          else localStorage.removeItem("binary.wallet");
+        } catch {}
+      });
+      const previouslyConnected = !!localStorage.getItem("binary.wallet");
+      const method = previouslyConnected && eth.isMiniPay ? "eth_requestAccounts" : "eth_accounts";
       eth
         .request({ method })
         .then((accounts) => {
           const a = (accounts as string[])[0];
-          if (a) setAddress(a as `0x${string}`);
+          if (a) {
+            setAddress(a as `0x${string}`);
+            try {
+              localStorage.setItem("binary.wallet", a);
+            } catch {}
+          }
         })
         .catch(() => {})
         .finally(() => setReady(true));
@@ -106,11 +117,24 @@ function InjectedBridge({ children }: { children: ReactNode }) {
     try {
       const accounts = (await eth.request({ method: "eth_requestAccounts" })) as string[];
       const a = (accounts[0] as `0x${string}`) ?? null;
-      setAddress(a);
+      if (a) {
+        setAddress(a);
+        try {
+          localStorage.setItem("binary.wallet", a);
+        } catch {}
+      }
       return a;
     } catch {
       return null;
     }
+  }, []);
+
+  const logout = useCallback(async () => {
+    setAddress(null);
+    try {
+      localStorage.removeItem("binary.wallet");
+      sessionStorage.removeItem("binary.opened");
+    } catch {}
   }, []);
 
   const sendTx = useCallback(
@@ -127,7 +151,7 @@ function InjectedBridge({ children }: { children: ReactNode }) {
 
   return (
     <WalletCtx.Provider
-      value={{ ready, address, isMiniPay, hasWallet, userLabel: null, connect, logout: null, sendTx }}
+      value={{ ready, address, isMiniPay, hasWallet, userLabel: null, connect, logout, sendTx }}
     >
       {children}
     </WalletCtx.Provider>

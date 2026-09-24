@@ -82,7 +82,7 @@ function Hero({ markets }: { markets: Market[] }) {
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <a
-            href="/app"
+            href="/app?enter=1"
             className="rounded-full bg-ink px-7 py-3.5 text-sm font-medium text-plane transition-opacity hover:opacity-85"
           >
             Open the app
@@ -169,7 +169,7 @@ function MarketCard({ market, ground }: { market: Market; ground: string }) {
 
   return (
     <a
-      href="/app"
+      href="/app?enter=1"
       className="group flex flex-col overflow-hidden rounded-[22px] border border-rule bg-surface transition-colors hover:border-edge"
     >
       <div className={`relative aspect-[16/10] ${ground}`}>
@@ -283,7 +283,7 @@ function Close() {
           with real USDm.
         </p>
         <a
-          href="/app"
+          href="/app?enter=1"
           className="mt-8 inline-block rounded-full bg-ink px-8 py-3.5 text-sm font-medium text-plane transition-opacity hover:opacity-85"
         >
           Open the app

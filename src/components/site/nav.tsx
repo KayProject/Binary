@@ -122,7 +122,12 @@ function Bar({ floating = false }: { floating?: boolean }) {
       </div>
 
       <a
-        href="/app"
+        href="/app?enter=1"
+        onClick={() => {
+          try {
+            sessionStorage.setItem("binary.opened", "1");
+          } catch {}
+        }}
         className="shrink-0 rounded-full bg-ink px-5 py-2 text-[13px] font-medium text-plane transition-opacity hover:opacity-85"
       >
         Open app

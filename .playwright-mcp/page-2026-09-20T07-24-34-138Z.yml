@@ -1,0 +1,186 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to content" [ref=e3] [cursor=pointer]:
+      - /url: "#skip-nav"
+    - generic [ref=e4]:
+      - generic [ref=e6]:
+        - button "Horizontal resize handle" [ref=e7]
+        - navigation [ref=e8]:
+          - generic [ref=e11]:
+            - link "Dune" [ref=e12] [cursor=pointer]:
+              - /url: /
+              - img "Dune" [ref=e13]
+            - button "Collapse sidebar" [ref=e21]
+          - list [ref=e26]:
+            - listitem [ref=e27]:
+              - link "Search" [ref=e28] [cursor=pointer]:
+                - /url: /search
+            - listitem [ref=e32]:
+              - link "Catalog" [ref=e33] [cursor=pointer]:
+                - /url: /data
+          - generic [ref=e43]:
+            - generic [ref=e44]:
+              - link "Library section" [ref=e48] [cursor=pointer]:
+                - /url: /auth/login?next=%2Fworkspace%2Fqueries
+                - generic [ref=e55]: Library
+              - generic [ref=e60]:
+                - link "Monitor section" [ref=e62] [cursor=pointer]:
+                  - /url: /auth/login?next=%2Fworkspace%2Factivity
+                  - generic [ref=e66]: Monitor
+                - list [ref=e70]:
+                  - listitem [ref=e71]:
+                    - link "Activity" [ref=e72] [cursor=pointer]:
+                      - /url: /auth/login?next=%2Fworkspace%2Factivity
+                  - listitem [ref=e74]:
+                    - link "Usage" [ref=e75] [cursor=pointer]:
+                      - /url: /auth/login?next=%2Fsettings%2Fusage
+                  - listitem [ref=e77]:
+                    - link "Schedules" [ref=e78] [cursor=pointer]:
+                      - /url: /auth/login?next=%2Fworkspace%2Fschedules
+                  - listitem [ref=e80]:
+                    - link "Alerts" [ref=e81] [cursor=pointer]:
+                      - /url: /auth/login?next=%2Fworkspace%2Falerts
+              - link "Connect section" [ref=e86] [cursor=pointer]:
+                - /url: /auth/login?next=%2Fworkspace%2Fapis
+                - generic [ref=e89]: Connect
+            - generic [ref=e94]:
+              - generic [ref=e96]:
+                - generic [ref=e97]: Get started
+                - generic [ref=e98]: Making onchain finance observable.
+              - generic [ref=e99]:
+                - link "Sign up" [ref=e100] [cursor=pointer]:
+                  - /url: /auth/register?next=%2Fcelo%2Fagents-at-work-hackathon
+                - link "Log in" [ref=e101] [cursor=pointer]:
+                  - /url: /auth/login?next=%2Fcelo%2Fagents-at-work-hackathon
+          - list [ref=e104]:
+            - listitem [ref=e105]:
+              - link "Docs" [ref=e106] [cursor=pointer]:
+                - /url: https://docs.dune.com/
+            - listitem [ref=e115]:
+              - link "Pricing" [ref=e116] [cursor=pointer]:
+                - /url: /pricing
+      - generic [ref=e120]:
+        - generic:
+          - banner
+        - main [ref=e122]:
+          - generic [ref=e123]:
+            - generic [ref=e124]:
+              - generic [ref=e125]:
+                - heading "Agents at Work Hackathon" [level=1] [ref=e126]
+                - generic [ref=e128]:
+                  - button [disabled] [ref=e130] [cursor=pointer]
+                  - link "Log in to take dashboard screenshot" [ref=e134] [cursor=pointer]:
+                    - /url: /auth/login?next=%2Fcelo%2Fagents-at-work-hackathon
+                  - button "Share" [ref=e139] [cursor=pointer]
+              - generic [ref=e140]:
+                - list [ref=e142]:
+                  - listitem [ref=e143]:
+                    - link [ref=e144] [cursor=pointer]:
+                      - /url: /celo
+                      - img "@celo" [ref=e145]
+                      - text: "@celo"
+                  - listitem [ref=e146]:
+                    - generic [ref=e147]:
+                      - text: Updated
+                      - time [ref=e152]: 8 days ago
+                - list [ref=e154]:
+                  - listitem [ref=e155]:
+                    - link "Favorite" [ref=e156] [cursor=pointer]:
+                      - /url: /auth/register?next=%2Fcelo%2Fagents-at-work-hackathon&onboarding=short
+                      - text: "3"
+                  - listitem [ref=e159]:
+                    - button "Data" [ref=e161] [cursor=pointer]
+                  - listitem [ref=e162]:
+                    - link "Run" [ref=e163] [cursor=pointer]:
+                      - /url: /auth/register?next=%2Fcelo%2Fagents-at-work-hackathon&onboarding=short
+            - generic [ref=e165]:
+              - article [ref=e166]
+              - article [ref=e169]
+              - article [ref=e172]
+              - article [ref=e175]
+              - article [ref=e178]
+              - article [ref=e181]
+              - article [ref=e184]
+              - article [ref=e187]
+              - article [ref=e190]
+              - article [ref=e193]
+              - article [ref=e196]
+              - article [ref=e199]
+              - article [ref=e202]:
+                - generic [ref=e205]:
+                  - heading "Agents at Work Hackathon — live leaderboard" [level=1] [ref=e206]
+                  - paragraph [ref=e207]:
+                    - strong [ref=e208]: Celo mainnet · counting window 28 Aug 00:00 → 21 Sep 09:00 GMT · $5,000 in CELO
+                  - paragraph [ref=e209]: Every track is decided by one of the queries on this page, published before the hackathon opens. Click any title to read the exact SQL. Nothing is scored on raw totals alone, and nothing that can be farmed is used as a metric.
+                  - heading "How to read this" [level=2] [ref=e210]
+                  - paragraph [ref=e211]:
+                    - strong [ref=e212]: The headline counters
+                    - text: count every tagged transaction and every x402 settlement attributed to a registered project, and the USD moved in them. Volume is
+                    - strong [ref=e213]: net per transaction between independent parties
+                    - text: ", not gross transfers: one economic event counts once, at its largest leg, and only when the other side is a wallet that moved a token on Celo in the 60 days before 28 August. That is the number a farm cannot inflate, so it is the one on the counter. The daily chart shows gross next to it so the gap is visible."
+                  - paragraph [ref=e214]:
+                    - strong [ref=e215]: Track 1 — Value Moved
+                    - text: ranks on
+                    - emphasis [ref=e216]: adjusted volume
+                    - text: ", not gross. Value counts only between"
+                    - strong [ref=e217]: independent parties
+                    - text: ": the counterparty is not one of your wallets, and moved a token on Celo in the 60 days before 28 August (29 June to 28 August). Excluded by rule: address-to-self, mint and burn, trades against protocol contracts, and transfers touching your own contracts. Volume is then multiplied by"
+                    - code [ref=e218]: least(1, distinct signers / 20)
+                    - text: ", because six figures moved by three wallets is a float, not adoption. That signer count is taken across all of your counted payments, not only the independent ones."
+                  - paragraph [ref=e219]:
+                    - strong [ref=e220]: Track 2 — Real World Adoption
+                    - text: has nothing to do with money moved. A free product with a genuine user base can win it outright. We count
+                    - strong [ref=e221]: EIP-3009 authorisers and sponsored-relay signers, not just gas payers
+                    - text: "— so if you sponsor gas or build a gasless MiniPay flow, your users still count. Last cycle this was the single biggest measurement problem: the best Celo-native UX looked like the worst adoption."
+                  - paragraph [ref=e222]:
+                    - strong [ref=e223]: Best Stablecoin Adoption
+                    - text: judges the same three signals among projects using cNGN, Ripio wFIAT or USA₮, or settling over x402. Note that the facilitator currently settles USDC, USDT and USA₮, so USA₮ is the rail that can do both halves today. cNGN and Ripio count on their own, used anywhere on Celo.
+                  - paragraph [ref=e224]:
+                    - strong [ref=e225]: Track 3 — AskBots CLI Growth
+                    - text: ranks
+                    - emphasis [ref=e226]: improvement
+                    - text: ", not standing. Every project is asked one standard question — \"Overall, how well does this property do what it sets out to do?\" (1-10) — and the gap between round one and round two is what scores, so a rough first round is an opportunity rather than a problem. It is deliberately not the project's own rating questions: a project picks those, so an easy one would clear any floor. The delta counts only when"
+                    - strong [ref=e227]: round two is at least 5.0/10
+                    - text: and both rounds cleared the 10-review minimum. Round two is a separate AskBots project cloned from round one —
+                    - strong [ref=e228]: run it on the weekend of 19-20 September
+                    - text: ". If the table says your row cannot be scored, the fix is usually the project URL on your registration: it must carry your project id, not be the homepage and not an"
+                    - code [ref=e229]: /agent/
+                    - text: link.
+                  - paragraph [ref=e230]:
+                    - strong [ref=e231]: Value counts from two sources
+                    - text: ", because you can only tag one of them: transactions carrying your ERC-8021 attribution tag, and x402 settlements, which the facilitator relayer submits on your behalf and which therefore cannot carry your tag. Settlements are attributed by your registered wallet instead, so"
+                    - strong [ref=e232]: add your agent wallet at registration
+                    - text: or these read zero. Put only real contracts in
+                    - emphasis [ref=e233]: own contracts
+                    - text: ": that field excludes transfers, and a wallet listed there is treated as a wallet, not a contract."
+                  - heading "Eligibility" [level=2] [ref=e234]
+                  - paragraph [ref=e235]:
+                    - text: Every table carries an
+                    - strong [ref=e236]: eligible
+                    - text: column. A project still in
+                    - emphasis [ref=e237]: draft
+                    - text: is registered but has not submitted, and is
+                    - strong [ref=e238]: not eligible for a prize
+                    - text: . Drafts are shown here with their real numbers and their would-be position, so nobody discovers on 21 September that they never pressed publish. Publish before
+                    - strong [ref=e239]: 21 Sep 09:00 GMT
+                    - text: .
+                  - heading "What this page does not show" [level=2] [ref=e240]
+                  - paragraph [ref=e241]:
+                    - text: First-funder collapse and spawn-window clustering are judgement-bearing, so they run in a separate audit rather than on a public board. Anything found there is raised with the team privately first, with
+                    - strong [ref=e242]: 48 hours of right of reply
+                    - text: ", before any public statement. Zero pre-existing users is"
+                    - emphasis [ref=e243]: ambiguous
+                    - text: ", not disqualifying — it is equally what genuine onboarding looks like."
+                  - paragraph [ref=e244]:
+                    - strong [ref=e245]: Sponsored gas is not builder contribution.
+                    - text: The fees table splits what you paid yourself from what our relayer paid for you. Only the first counts.
+  - generic [ref=e247]:
+    - paragraph [ref=e253]:
+      - text: We use cookies to improve your experience on our site. By using this website you agree to our
+      - link "Cookie Policy" [ref=e254] [cursor=pointer]:
+        - /url: /privacy
+      - text: .
+    - generic [ref=e255]:
+      - button "Manage settings" [ref=e256] [cursor=pointer]
+      - button "Accept" [ref=e257] [cursor=pointer]
+  - alert [ref=e258]

@@ -39,6 +39,7 @@ import {
   usdToWei,
   usdmAllowance,
   fetchUsdmBalance,
+  fetchUsdtBalance,
   waitForTx,
   type FaucetState,
   type PlayerState,
@@ -249,6 +250,8 @@ export default function AppHome() {
   const [topUp, setTopUp] = useState(false);
   const [depositUsd, setDepositUsd] = useState("");
   const [walletUsdm, setWalletUsdm] = useState<number | null>(null);
+  const [walletUsdt, setWalletUsdt] = useState<number | null>(null);
+  const [showSwapHelp, setShowSwapHelp] = useState(false);
   const [withdraw, setWithdraw] = useState(false);
   const [withdrawUsd, setWithdrawUsd] = useState("");
   // Set while a deposit is crossing the bridge; drives the header pill.
@@ -277,6 +280,24 @@ export default function AppHome() {
   // Funding-tracker baseline: net deposits + credited pUSD when it opened.
   const pendingBase = useRef<{ net: number; credited: number | null } | null>(null);
 
+  // MiniPay / direct landing guard: if the user hasn't explicitly opened the app
+  // and is not signed in with a wallet, send them to the landing page first.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const search = new URLSearchParams(window.location.search);
+    if (search.get("enter") === "1") {
+      try {
+        sessionStorage.setItem("binary.opened", "1");
+      } catch {}
+      return;
+    }
+    const manuallyOpened = sessionStorage.getItem("binary.opened") === "1";
+    const previouslySignedIn = !!localStorage.getItem("binary.wallet");
+    if (!manuallyOpened && !previouslySignedIn && !address) {
+      window.location.replace("/");
+    }
+  }, [address]);
+
   // Funded = money has entered the pipeline via the deposits contract. The
   // bets API double-checks the credited pUSD balance before every order.
   const funded = (player?.depositedUsd ?? 0) > 0;
@@ -288,6 +309,7 @@ export default function AppHome() {
     fetchPlayerState(address).then(setPlayer).catch(() => {});
     fetchFaucetState(address).then(setFaucet).catch(() => {});
     fetchUsdmBalance(address).then(setWalletUsdm).catch(() => {});
+    fetchUsdtBalance(address).then(setWalletUsdt).catch(() => {});
   }, [address]);
 
   useEffect(() => {
@@ -299,6 +321,7 @@ export default function AppHome() {
   useEffect(() => {
     if (address && topUp) {
       fetchUsdmBalance(address).then(setWalletUsdm).catch(() => {});
+      fetchUsdtBalance(address).then(setWalletUsdt).catch(() => {});
     }
   }, [address, topUp]);
 
@@ -782,14 +805,12 @@ export default function AppHome() {
               </button>
             </>
           ) : (
-            !isMiniPay && (
-              <button
-                onClick={connect}
-                className="rounded-full bg-(--s-text) px-4 py-1.5 text-sm font-semibold text-(--s-bg)"
-              >
-                Sign in
-              </button>
-            )
+            <button
+              onClick={connect}
+              className="rounded-full bg-(--s-text) px-4 py-1.5 text-sm font-semibold text-(--s-bg)"
+            >
+              Sign in
+            </button>
           )}
         </div>
       </header>
@@ -1001,6 +1022,26 @@ export default function AppHome() {
                 Withdraw
               </button>
             )}
+            <div className="mt-3.5 flex items-center justify-center gap-2 text-xs text-(--s-sub)">
+              <span>Need USDm?</span>
+              <a
+                href="https://app.mento.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-(--s-text) underline hover:text-(--s-act-soft)"
+              >
+                Swap on Mento ↗
+              </a>
+              <span>·</span>
+              <a
+                href="https://app.uniswap.org/swap?chain=celo&inputCurrency=0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e&outputCurrency=0x765DE816845861e75A25fCA122bb6898B8B1282a"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-(--s-text) underline hover:text-(--s-act-soft)"
+              >
+                Uniswap ↗
+              </a>
+            </div>
           </div>
 
           <h3 className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.2em] text-(--s-sub)">
@@ -1416,18 +1457,66 @@ export default function AppHome() {
             </p>
 
             {address && (
-              <div className="mb-3 flex items-center justify-between rounded-[18px] bg-(--s-bg) px-4 py-2.5 text-xs text-(--s-sub)">
-                <span>MiniPay wallet balance</span>
-                <span className="font-mono font-bold text-(--s-text)">
-                  {walletUsdm !== null ? `$${walletUsdm.toFixed(2)} USDm` : "Checking…"}
-                </span>
+              <div className="mb-3 space-y-1.5 rounded-[18px] bg-(--s-bg) p-3 text-xs">
+                <div className="flex items-center justify-between text-(--s-sub)">
+                  <span>MiniPay USDm balance (playable):</span>
+                  <span className="font-mono font-bold text-(--s-text)">
+                    {walletUsdm !== null ? `$${walletUsdm.toFixed(2)} USDm` : "Checking…"}
+                  </span>
+                </div>
+                {walletUsdt !== null && walletUsdt > 0.01 && (
+                  <div className="flex items-center justify-between border-t border-(--s-line)/50 pt-1.5 text-(--s-sub)">
+                    <span>MiniPay USDT balance (requires swap):</span>
+                    <span className="font-mono font-bold text-(--s-text)">
+                      ${walletUsdt.toFixed(2)} USDT
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
-            {address && walletUsdm !== null && walletUsdm < MIN_DEPOSIT && (
-              <div className="mb-3 rounded-[18px] border border-(--s-lose)/30 bg-(--s-lose)/10 p-3 text-xs leading-relaxed text-(--s-lose)">
-                You have ${walletUsdm.toFixed(2)} USDm. Binary top-ups require <strong>USDm (cUSD)</strong> on Celo.
-                If you have USDT in MiniPay, please swap USDT to USDm in MiniPay first.
+            {/* Where to swap guidance */}
+            {address && (
+              <div className="mb-3 rounded-[18px] border border-(--s-act)/30 bg-(--s-act-tint) p-3 text-xs">
+                <div className="flex items-center justify-between font-bold text-(--s-act-soft)">
+                  <span>Need USDm? Where to swap:</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowSwapHelp((s) => !s)}
+                    className="text-[11px] underline"
+                  >
+                    {showSwapHelp ? "Close" : "Instructions ▾"}
+                  </button>
+                </div>
+                <p className="mt-1 text-[11px] leading-relaxed text-(--s-sub)">
+                  Binary bets run on <strong>USDm (cUSD)</strong> on Celo. If you have USDT, swap to USDm below:
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-center text-xs font-semibold">
+                  <a
+                    href="https://app.mento.org"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-xl border border-(--s-line) bg-(--s-card) py-2 text-(--s-text) transition hover:border-(--s-act)"
+                  >
+                    Mento App ↗
+                  </a>
+                  <a
+                    href="https://app.uniswap.org/swap?chain=celo&inputCurrency=0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e&outputCurrency=0x765DE816845861e75A25fCA122bb6898B8B1282a"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-xl border border-(--s-line) bg-(--s-card) py-2 text-(--s-text) transition hover:border-(--s-act)"
+                  >
+                    Uniswap ↗
+                  </a>
+                </div>
+                {showSwapHelp && (
+                  <div className="mt-2.5 rounded-xl border border-(--s-line)/40 bg-(--s-card) p-2.5 text-[11px] text-(--s-sub) space-y-1">
+                    <p className="font-bold text-(--s-text)">Swap directly in MiniPay:</p>
+                    <p>1. Open your MiniPay wallet home screen.</p>
+                    <p>2. Tap your <strong>USDT</strong> balance and tap <strong>Swap</strong>.</p>
+                    <p>3. Select <strong>USDm (or cUSD)</strong> and confirm. It settles in ~2 seconds with zero gas.</p>
+                  </div>
+                )}
               </div>
             )}
 

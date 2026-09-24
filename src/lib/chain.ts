@@ -24,6 +24,7 @@ export const DEPOSIT_CONTRACT = "0xE75A70597501453Fb0DFBa9B34eA2b9495d67600" as 
 // owner whitelists. v1 0x344c…9296 (open claims) was abandoned unfunded.
 export const FAUCET_CONTRACT = "0x857bd8d1f94dde5bb38d1acf47fe39df6a058fb5" as const;
 export const USDM = "0x765DE816845861e75A25fCA122bb6898B8B1282a" as const; // 18 dec
+export const USDT_CELO = "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e" as const; // 6 dec
 
 const erc20Abi = [
   {
@@ -224,6 +225,20 @@ export async function fetchUsdmBalance(owner: `0x${string}`): Promise<number> {
       args: [owner],
     });
     return Number(bal) / 1e18;
+  } catch {
+    return 0;
+  }
+}
+
+export async function fetchUsdtBalance(owner: `0x${string}`): Promise<number> {
+  try {
+    const bal = await publicClient.readContract({
+      address: USDT_CELO,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [owner],
+    });
+    return Number(bal) / 1e6;
   } catch {
     return 0;
   }
