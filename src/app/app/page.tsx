@@ -376,13 +376,19 @@ export default function AppHome() {
     if (fundingUsd === null) return;
     const base = pendingBase.current;
     if (!base) return;
+    let ticks = 0;
     const tick = async () => {
-      refreshPlayer();
-      const net = prevPlayer.current?.depositedUsd ?? 0;
-      if (net > base.net) {
-        setMoment((m) =>
-          m?.t === "pending" && m.step < 3 ? { t: "pending", step: 3, usd: m.usd } : m
-        );
+      ticks++;
+      if (address) {
+        try {
+          const fresh = await fetchPlayerState(address);
+          setPlayer(fresh);
+          if (fresh.depositedUsd > base.net) {
+            setMoment((m) =>
+              m?.t === "pending" && m.step < 3 ? { t: "pending", step: 3, usd: m.usd } : m
+            );
+          }
+        } catch {}
       }
       try {
         const r = await fetch("/api/account").then((x) => x.json());
@@ -392,15 +398,25 @@ export default function AppHome() {
             setFundingUsd(null);
             // Take over the tracker or an idle screen; never stomp another moment.
             setMoment((m) =>
-              m === null || m.t === "pending" ? { t: "funded", balance: net } : m
+              m === null || m.t === "pending" ? { t: "funded", balance: (player?.depositedUsd ?? 0) } : m
             );
+            return;
           }
         }
       } catch {}
+
+      // If Celo deposit confirmed and 5 ticks (~40s) have passed, resolve so user is not stuck indefinitely
+      const currentNet = player?.depositedUsd ?? 0;
+      if (currentNet > base.net && ticks >= 5) {
+        setFundingUsd(null);
+        setMoment((m) =>
+          m === null || m.t === "pending" ? { t: "funded", balance: currentNet } : m
+        );
+      }
     };
     const iv = setInterval(tick, 8_000);
     return () => clearInterval(iv);
-  }, [fundingUsd, refreshPlayer]);
+  }, [fundingUsd, address, player?.depositedUsd]);
 
   // Grade past picks against resolved markets (client-side v1: a closed
   // market's outcome price collapses to ~0/1). One result moment per batch.
@@ -579,13 +595,25 @@ export default function AppHome() {
         const r = await fetch("/api/account").then((x) => x.json());
         if (r.configured && typeof r.creditedUsd === "number") credited = r.creditedUsd;
       } catch {}
-      await sendTx(DEPOSIT_CONTRACT, depositData(wei));
+      const depositHash = await sendTx(DEPOSIT_CONTRACT, depositData(wei));
       pendingBase.current = { net, credited };
       setFundingUsd(usd);
       setTopUp(false);
       setDepositUsd("");
       setMoment({ t: "pending", step: 2, usd });
-      setTimeout(refreshPlayer, 3_000);
+
+      if (depositHash) {
+        await waitForTx(depositHash).catch(() => {});
+        const fresh = await fetchPlayerState(from).catch(() => null);
+        if (fresh) {
+          setPlayer(fresh);
+          if (fresh.depositedUsd > net) {
+            setMoment((m) =>
+              m?.t === "pending" && m.step < 3 ? { t: "pending", step: 3, usd: m.usd } : m
+            );
+          }
+        }
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("declined") || msg.includes("rejected") || msg.includes("User rejected")) {
@@ -890,18 +918,20 @@ export default function AppHome() {
                   used to hold it are gone and the bottom nav is a phone affordance. */}
               <button
                 onClick={() =>
-                  fundingUsd !== null
-                    ? setMoment({ t: "pending", step: 2, usd: fundingUsd })
+                  fundingUsd !== null && moment?.t === "pending"
+                    ? setMoment({ t: "pending", step: 3, usd: fundingUsd })
                     : setTab("portfolio")
                 }
                 className="rounded-full bg-(--s-card) px-3.5 py-1.5 text-sm font-semibold tabular-nums"
               >
-                {fundingUsd !== null ? (
+                {balance > 0 ? (
+                  `$${balance.toFixed(2)}`
+                ) : fundingUsd !== null ? (
                   <span className="moment-step-active text-(--s-act)">
                     +${fundingUsd.toFixed(2)}…
                   </span>
                 ) : (
-                  `$${balance.toFixed(2)}`
+                  `$0.00`
                 )}
               </button>
             </>

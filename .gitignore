@@ -53,3 +53,4 @@ worker/node_modules/
 
 # internal docs — never push
 HOW-BINARY-DELTA-WORKS.md
+.jobs/

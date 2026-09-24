@@ -61,9 +61,15 @@ export const providers: Record<number, ethers.providers.JsonRpcProvider> = {
   [ARBITRUM_CHAIN_ID]: arbitrumProvider,
 };
 
-/** Operator EOA — owner+treasury of BinaryDeposits and owner of the deposit wallet. */
+/** Operator EOA — operator of bridge legs and owner of the deposit wallet. */
 export function operator(provider: ethers.providers.Provider = polygonProvider): ethers.Wallet {
   return new ethers.Wallet(required("BINARY_KEY"), provider);
+}
+
+/** Signer for BinaryDeposits admin actions (AGENT_KEY is contract owner). */
+export function depositsOwnerSigner(provider: ethers.providers.Provider = celoProvider): ethers.Wallet {
+  const key = process.env.AGENT_KEY || required("BINARY_KEY");
+  return new ethers.Wallet(key, provider);
 }
 
 export const DEPOSITS_CONTRACT = required("DEPOSITS_CONTRACT_ADDRESS");

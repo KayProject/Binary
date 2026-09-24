@@ -1,48 +1,118 @@
-// Blob-backed persistence: jobs, cursor, journal, and the run lock all live
-// in Vercel Blob under worker/*, so the worker can run from ANY machine —
-// laptop or CI — against one shared state. (The old file-per-job .jobs/ dir
-// was single-machine state; splitting job state across machines double-drives
-// money legs, so the store moved wholesale rather than growing a second
-// backend.)
+// Blob-backed persistence with automatic local file fallback:
+// jobs, cursor, journal, and the run lock live in Vercel Blob under worker/*,
+// falling back to local .jobs/ when Blob is unavailable or blocked (403).
 //
 // Same store discipline as the app's ledger: deterministic paths, max-age 0,
 // every read cache-busted — the CDN pins reads for ~60s otherwise, and a
 // stale job state re-executes a leg.
+import * as fs from "fs";
+import * as path from "path";
 import type { Job } from "../src/lib/funding/types";
 
 const BLOB_API = "https://blob.vercel-storage.com";
 const PREFIX = "worker";
+const LOCAL_DIR = path.resolve(__dirname, "..", ".jobs");
+
+let fallbackToLocal = process.env.WORKER_STORE === "local" || !process.env.BLOB_READ_WRITE_TOKEN;
 
 const token = () => {
   const t = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!t) throw new Error("BLOB_READ_WRITE_TOKEN missing — the worker store lives in Blob");
+  if (!t) {
+    fallbackToLocal = true;
+    return "";
+  }
   return t;
 };
 
 const auth = () => ({ authorization: `Bearer ${token()}`, "x-api-version": "7" });
 
-const publicBase = () =>
-  `https://${token().split("_")[3].toLowerCase()}.public.blob.vercel-storage.com`;
+const publicBase = () => {
+  const t = token();
+  const sub = t ? t.split("_")[3]?.toLowerCase() : "blob";
+  return `https://${sub}.public.blob.vercel-storage.com`;
+};
 
-async function putJson(path: string, body: unknown): Promise<void> {
-  const res = await fetch(`${BLOB_API}/${path}`, {
-    method: "PUT",
-    headers: {
-      ...auth(),
-      "x-content-type": "application/json",
-      "x-add-random-suffix": "0",
-      "x-cache-control-max-age": "0",
-    },
-    body: typeof body === "string" ? body : JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`blob put ${path} ${res.status}: ${await res.text()}`);
+function localFilePath(relPath: string): string {
+  return path.join(LOCAL_DIR, relPath);
 }
 
-async function getJson<T>(path: string): Promise<T | null> {
-  const res = await fetch(`${publicBase()}/${path}?v=${Date.now()}`, { cache: "no-store" });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`blob get ${path} ${res.status}`);
-  return (await res.json()) as T;
+function writeLocal(relPath: string, content: string): void {
+  const full = localFilePath(relPath);
+  fs.mkdirSync(path.dirname(full), { recursive: true });
+  fs.writeFileSync(full, content, "utf8");
+}
+
+function readLocal<T>(relPath: string): T | null {
+  const full = localFilePath(relPath);
+  if (!fs.existsSync(full)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(full, "utf8")) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function putJson(relPath: string, body: unknown): Promise<void> {
+  const content = typeof body === "string" ? body : JSON.stringify(body);
+  if (fallbackToLocal) {
+    writeLocal(relPath, content);
+    return;
+  }
+  try {
+    const res = await fetch(`${BLOB_API}/${relPath}`, {
+      method: "PUT",
+      headers: {
+        ...auth(),
+        "x-content-type": "application/json",
+        "x-add-random-suffix": "0",
+        "x-cache-control-max-age": "0",
+      },
+      body: content,
+    });
+    if (!res.ok) {
+      if (res.status === 403) {
+        console.warn(`[worker-store] Blob 403 on put ${relPath}, falling back to local .jobs/ store`);
+        fallbackToLocal = true;
+        writeLocal(relPath, content);
+        return;
+      }
+      throw new Error(`blob put ${relPath} ${res.status}: ${await res.text()}`);
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("403") || msg.includes("BLOB_READ_WRITE_TOKEN") || msg.includes("blocked")) {
+      console.warn(`[worker-store] Blob unavailable (${msg}), falling back to local .jobs/ store`);
+      fallbackToLocal = true;
+      writeLocal(relPath, content);
+      return;
+    }
+    throw err;
+  }
+}
+
+async function getJson<T>(relPath: string): Promise<T | null> {
+  if (fallbackToLocal) {
+    return readLocal<T>(relPath);
+  }
+  try {
+    const res = await fetch(`${publicBase()}/${relPath}?v=${Date.now()}`, { cache: "no-store" });
+    if (res.status === 404) return null;
+    if (res.status === 403) {
+      console.warn(`[worker-store] Blob 403 on get ${relPath}, falling back to local .jobs/ store`);
+      fallbackToLocal = true;
+      return readLocal<T>(relPath);
+    }
+    if (!res.ok) throw new Error(`blob get ${relPath} ${res.status}`);
+    return (await res.json()) as T;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("403") || msg.includes("BLOB_READ_WRITE_TOKEN") || msg.includes("blocked")) {
+      console.warn(`[worker-store] Blob unavailable (${msg}), falling back to local .jobs/ store`);
+      fallbackToLocal = true;
+      return readLocal<T>(relPath);
+    }
+    throw err;
+  }
 }
 
 // ── Jobs ────────────────────────────────────────────────────────────────────
@@ -65,39 +135,84 @@ export async function saveJob(job: Job): Promise<void> {
   await putJson(jobPath(job.id), JSON.stringify(job, replacer, 2));
 }
 
-export async function loadJobs(): Promise<Job[]> {
-  const urls: string[] = [];
-  let cursor: string | undefined;
-  do {
-    const qs = new URLSearchParams({ prefix: `${PREFIX}/jobs/`, limit: "1000" });
-    if (cursor) qs.set("cursor", cursor);
-    const res = await fetch(`${BLOB_API}?${qs}`, { headers: auth(), cache: "no-store" });
-    if (!res.ok) throw new Error(`blob list ${res.status}`);
-    const page = (await res.json()) as {
-      blobs: Array<{ url: string }>;
-      cursor?: string;
-      hasMore?: boolean;
-    };
-    urls.push(...page.blobs.map((b) => b.url));
-    cursor = page.hasMore ? page.cursor : undefined;
-  } while (cursor);
-
-  const rows = await Promise.all(
-    urls.map(async (url) => {
-      const res = await fetch(`${url}?v=${Date.now()}`, { cache: "no-store" });
-      if (!res.ok) return null;
-      return revive(await res.json()) as Job;
+function loadLocalJobs(): Job[] {
+  const dir = path.join(LOCAL_DIR, PREFIX, "jobs");
+  if (!fs.existsSync(dir)) return [];
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".job.json"));
+  return files
+    .map((f) => {
+      try {
+        const raw = fs.readFileSync(path.join(dir, f), "utf8");
+        return revive(JSON.parse(raw)) as Job;
+      } catch {
+        return null;
+      }
     })
-  );
-  return rows.filter((j): j is Job => !!j);
+    .filter((j): j is Job => !!j);
+}
+
+export async function loadJobs(): Promise<Job[]> {
+  if (fallbackToLocal) {
+    return loadLocalJobs();
+  }
+  try {
+    const urls: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const qs = new URLSearchParams({ prefix: `${PREFIX}/jobs/`, limit: "1000" });
+      if (cursor) qs.set("cursor", cursor);
+      const res = await fetch(`${BLOB_API}?${qs}`, { headers: auth(), cache: "no-store" });
+      if (res.status === 403) {
+        console.warn("[worker-store] Blob 403 on list jobs, falling back to local .jobs/ store");
+        fallbackToLocal = true;
+        return loadLocalJobs();
+      }
+      if (!res.ok) throw new Error(`blob list ${res.status}`);
+      const page = (await res.json()) as {
+        blobs: Array<{ url: string }>;
+        cursor?: string;
+        hasMore?: boolean;
+      };
+      urls.push(...page.blobs.map((b) => b.url));
+      cursor = page.hasMore ? page.cursor : undefined;
+    } while (cursor);
+
+    const rows = await Promise.all(
+      urls.map(async (url) => {
+        const res = await fetch(`${url}?v=${Date.now()}`, { cache: "no-store" });
+        if (!res.ok) return null;
+        return revive(await res.json()) as Job;
+      })
+    );
+    return rows.filter((j): j is Job => !!j);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("403") || msg.includes("blocked")) {
+      fallbackToLocal = true;
+      return loadLocalJobs();
+    }
+    throw err;
+  }
 }
 
 export async function hasJob(id: string): Promise<boolean> {
-  const res = await fetch(`${publicBase()}/${jobPath(id)}?v=${Date.now()}`, {
-    method: "HEAD",
-    cache: "no-store",
-  });
-  return res.ok;
+  if (fallbackToLocal) {
+    return fs.existsSync(localFilePath(jobPath(id)));
+  }
+  try {
+    const res = await fetch(`${publicBase()}/${jobPath(id)}?v=${Date.now()}`, {
+      method: "HEAD",
+      cache: "no-store",
+    });
+    if (res.status === 403) {
+      fallbackToLocal = true;
+      return fs.existsSync(localFilePath(jobPath(id)));
+    }
+    return res.ok;
+  } catch {
+    fallbackToLocal = true;
+    return fs.existsSync(localFilePath(jobPath(id)));
+  }
 }
 
 // ── Journal ─────────────────────────────────────────────────────────────────
@@ -109,8 +224,8 @@ export async function hasJob(id: string): Promise<boolean> {
  */
 export async function journal(jobId: string, action: string, detail = ""): Promise<void> {
   const ts = new Date().toISOString();
-  const path = `${PREFIX}/journal/${ts}-${Math.random().toString(36).slice(2, 8)}.log`;
-  await putJson(path, `${ts} ${jobId} ${action} ${detail}`);
+  const rel = `${PREFIX}/journal/${ts}-${Math.random().toString(36).slice(2, 8)}.log`;
+  await putJson(rel, `${ts} ${jobId} ${action} ${detail}`);
 }
 
 // ── Watcher cursor ──────────────────────────────────────────────────────────

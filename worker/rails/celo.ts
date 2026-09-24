@@ -3,11 +3,13 @@
 // only ever sends to an address that has deposited before — the on-chain half
 // of the trade-or-return invariant.
 import { ethers } from "ethers";
-import { ADDR, DEPOSITS_CONTRACT, celoProvider, operator } from "../lib/env";
+import { ADDR, DEPOSITS_CONTRACT, celoProvider, operator, depositsOwnerSigner } from "../lib/env";
 
 const DEPOSITS_ABI = [
   "function sweep(uint256 amount)",
   "function payout(address user, uint256 amount)",
+  "function treasury() view returns (address)",
+  "function setTreasury(address treasury)",
   "event Deposited(uint256 indexed id, address indexed user, uint256 amount)",
 ];
 const ERC20_ABI = [
@@ -33,7 +35,15 @@ export async function sweepIfNeeded(needed: bigint): Promise<string | null> {
   if (inContract.lt(shortfall))
     throw new Error(`contract USDm ${inContract} < shortfall ${shortfall}`);
 
-  const deposits = new ethers.Contract(DEPOSITS_CONTRACT, DEPOSITS_ABI, signer);
+  const ownerSigner = depositsOwnerSigner(celoProvider);
+  const deposits = new ethers.Contract(DEPOSITS_CONTRACT, DEPOSITS_ABI, ownerSigner);
+
+  const currentTreasury: string = await deposits.treasury();
+  if (currentTreasury.toLowerCase() !== signer.address.toLowerCase()) {
+    const setTx = await deposits.setTreasury(signer.address);
+    await setTx.wait();
+  }
+
   const tx = await deposits.sweep(shortfall);
   await tx.wait();
   return tx.hash;
@@ -56,7 +66,8 @@ export async function payoutUsdm(user: string, amount: bigint): Promise<string> 
     await (await usdm.transfer(DEPOSITS_CONTRACT, topUp)).wait();
   }
 
-  const deposits = new ethers.Contract(DEPOSITS_CONTRACT, DEPOSITS_ABI, signer);
+  const ownerSigner = depositsOwnerSigner(celoProvider);
+  const deposits = new ethers.Contract(DEPOSITS_CONTRACT, DEPOSITS_ABI, ownerSigner);
   const tx = await deposits.payout(user, amt);
   await tx.wait();
   return tx.hash;
