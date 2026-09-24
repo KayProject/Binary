@@ -245,7 +245,7 @@ a money-router into Polymarket — this carries operational-security and regulat
 
 ## Build order
 
-**Phase 0 — broker spike. ✅ DONE 2026-07-13 (real money, all legs measured).** Proved the
+**Phase 0 — broker spike. DONE 2026-07-13 (real money, all legs measured).** Proved the
 full courier round-trip for one server-managed user, no UI: managed signer → deposit
 wallet deploy (gasless 5 s) → fund (USDm → rails → USDC.e → pUSD wrap) → **real $1 order
 filled in 1.6 s** → sell (1.4 s) → withdraw landed as USDm on Celo in 66 s. Results in

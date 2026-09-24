@@ -1125,7 +1125,7 @@ export default function AppHome() {
                 }}
                 className="w-full rounded-full border border-(--s-line) bg-(--s-bg) py-3 text-sm font-semibold text-(--s-text) transition active:scale-[0.98] hover:border-(--s-act)"
               >
-                Swap tokens ⚡
+                Swap tokens
               </button>
             </div>
             {balance >= MIN_WITHDRAW && (
@@ -1598,7 +1598,7 @@ export default function AppHome() {
                       }}
                       className="rounded-full bg-(--s-act) px-2.5 py-1 text-[11px] font-bold text-(--s-bg) transition active:scale-95 shadow-sm"
                     >
-                      Swap to USDm ⚡
+                      Swap to USDm
                     </button>
                   </div>
                 )}
@@ -1618,7 +1618,7 @@ export default function AppHome() {
                     }}
                     className="rounded-full bg-(--s-act) px-3 py-1 text-xs font-bold text-(--s-bg) transition active:scale-95"
                   >
-                    Swap tokens ⚡
+                    Swap tokens
                   </button>
                 </div>
                 <p className="mt-1 text-[11px] leading-relaxed text-(--s-sub)">
@@ -1716,7 +1716,7 @@ export default function AppHome() {
                     }}
                     className="inline-block rounded-full bg-(--s-act-tint) px-3 py-1 text-xs font-semibold text-(--s-act-soft) underline"
                   >
-                    Swap USDT to USDm in-app ⚡
+                    Swap USDT to USDm in-app
                   </button>
                 )}
               </div>
@@ -1883,7 +1883,7 @@ export default function AppHome() {
 
             {swapSuccessMsg && (
               <div className="mb-3 rounded-[16px] border border-emerald-500/30 bg-emerald-500/10 p-3 text-center text-xs text-emerald-400">
-                <p className="font-bold">✓ {swapSuccessMsg}</p>
+                <p className="font-bold">{swapSuccessMsg}</p>
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"

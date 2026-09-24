@@ -65,7 +65,7 @@ auth header or contacting the Builder Program — documented in PHASE0.md.
 |---|---|---|---|
 | Mento USDm→USDT | ~0% (−0.06%) | −0.05% (gain), 8.3 s | 07-13 |
 | Mesh hop1 Celo→Arb | 0.03% + ~$0.07, est 1–3 min | **0.03% exactly, 23 s** | 07-13 |
-| Mesh hop2 Arb→Polygon | 0% + ~$0.08, est 1–2 min | **0%, 1,146 s (~19 min)** ⚠️ | 07-13 |
+| Mesh hop2 Arb→Polygon | 0% + ~$0.08, est 1–2 min | **0%, 1,146 s (~19 min)** (slow) | 07-13 |
 | USDT→USDC.e swap | ~0.01–0.05% | 0.14% (LI.FI/Sushi) | 07-13 |
 | pUSD wrap (new, post-V2) | — | 4.6 s, gasless | 07-13 |
 | Safe deploy (gasless) | ~10–30 s | 5.0 s (Safe now unused — see below) | 07-13 |

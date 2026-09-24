@@ -6,6 +6,7 @@
 // results that aren't wins stay on the app surface and say it straight.
 
 import { useEffect, useRef, useState } from "react";
+import { StreakIcon } from "@/components/icons";
 
 export type Moment =
   | { t: "picked"; label: string; price: number; question: string; streak: number }
@@ -157,12 +158,12 @@ export function MomentScreen({
         <div className="relative flex flex-1 flex-col items-center justify-center gap-4 px-6 pb-8">
           {moment.t === "picked" && (
             <>
-              <Headline>LOCKED ⚡</Headline>
+              <Headline>LOCKED</Headline>
               <p className="text-center text-sm text-(--m-sub)">{moment.question}</p>
               <Chip>
                 {moment.label} · {cents(moment.price)}
               </Chip>
-              {moment.streak > 0 && <p className="font-mono text-sm">🔥 Streak: {moment.streak}</p>}
+              {moment.streak > 0 && <p className="font-mono text-sm">Streak: {moment.streak}</p>}
               <div className="mt-6 w-full space-y-1">
                 {shareBtn(
                   "My pick",
@@ -203,7 +204,7 @@ export function MomentScreen({
 
           {moment.t === "checkedin" && (
             <>
-              <p className="moment-pop text-7xl">🔥</p>
+              <StreakIcon className="moment-pop h-16 w-16 text-(--m-text)" />
               <Headline>DAY {moment.streak}</Headline>
               <p className="text-center text-sm text-(--m-sub)">
                 {moment.streak >= 30
@@ -218,7 +219,7 @@ export function MomentScreen({
                 {shareBtn(
                   "My streak",
                   `${moment.streak}-day streak`,
-                  `🔥 ${moment.streak}-day streak calling markets on Binary — binary-io.vercel.app`,
+                  `${moment.streak}-day streak calling markets on Binary — binary-io.vercel.app`,
                   "Share my streak"
                 )}
                 <button className={ghostBtn} onClick={onClose}>
@@ -232,7 +233,7 @@ export function MomentScreen({
             <>
               <Headline>YOU CALLED IT</Headline>
               <p className="text-center text-sm text-(--m-sub)">{moment.question}</p>
-              <Chip>{moment.label} ✓</Chip>
+              <Chip>{moment.label}</Chip>
               <p className="text-center font-mono text-sm text-(--m-sub)">
                 A $2 bet would&apos;ve paid{" "}
                 <span className="font-bold text-(--m-text)">${moment.wouldHavePaid.toFixed(2)}</span>
@@ -241,7 +242,7 @@ export function MomentScreen({
                 {shareBtn(
                   "Called it",
                   `${moment.label} on “${moment.question}”`,
-                  `Called it: ${moment.label} on “${moment.question}” ✓ — binary-io.vercel.app`,
+                  `Called it: ${moment.label} on “${moment.question}” — binary-io.vercel.app`,
                   "Share the call"
                 )}
                 <button className={ghostBtn} onClick={onGoBet}>
@@ -255,7 +256,7 @@ export function MomentScreen({
             <>
               <p className="text-center text-2xl font-black italic">Not this one.</p>
               <p className="text-center text-sm text-(--m-sub)">{moment.question}</p>
-              <Chip>{moment.label} ✕</Chip>
+              <Chip>{moment.label}</Chip>
               <p className="text-center text-sm text-(--m-sub)">
                 The market went the other way. Your streak doesn&apos;t care — it counts showing up.
               </p>
@@ -331,7 +332,7 @@ export function MomentScreen({
                   [
                     [`${moment.wins}–${moment.losses}`, "record on graded picks"],
                     [String(moment.picks), "picks locked"],
-                    [`🔥 ${moment.streak}`, "current streak"],
+                    [String(moment.streak), "current streak"],
                     [String(moment.longest), "longest streak"],
                   ] as const
                 ).map(([big, small]) => (
@@ -346,7 +347,7 @@ export function MomentScreen({
                 {shareBtn(
                   "My week",
                   `${moment.wins}–${moment.losses} this week`,
-                  `My week on Binary: ${moment.wins}–${moment.losses} on graded picks, 🔥 ${moment.streak}-day streak — binary-io.vercel.app`,
+                  `My week on Binary: ${moment.wins}–${moment.losses} on graded picks, ${moment.streak}-day streak — binary-io.vercel.app`,
                   "Share my week"
                 )}
                 <button className={ghostBtn} onClick={onClose}>
@@ -398,7 +399,7 @@ export function MomentScreen({
                     })
                   }
                 >
-                  {copied ? "Copied ✓" : "Share"}
+                  {copied ? "Copied" : "Share"}
                 </button>
                 <button className={ghostBtn} onClick={onClose}>
                   Close
